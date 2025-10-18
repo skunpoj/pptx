@@ -32,6 +32,9 @@ COPY app.py .
 COPY demo.py .
 COPY example_usage.py .
 
+# Copy environment file if it exists
+COPY .env* ./
+
 # Create a non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
