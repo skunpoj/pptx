@@ -18,6 +18,10 @@ from dataclasses import dataclass
 from flask import Flask, request, jsonify, send_file, render_template_string
 from flask_cors import CORS
 import uuid
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 @dataclass
@@ -656,11 +660,16 @@ def generate_presentation():
     try:
         data = request.get_json()
         
-        # Validate required fields
-        required_fields = ['api_key', 'topic', 'tone', 'target_audience', 'slide_count', 'color_palette']
+        # Validate required fields (removed api_key from required fields)
+        required_fields = ['topic', 'tone', 'target_audience', 'slide_count', 'color_palette']
         for field in required_fields:
             if field not in data:
                 return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # Get API key from environment variable
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return jsonify({'error': 'Gemini API key not configured. Please set GEMINI_API_KEY environment variable.'}), 500
         
         # Create configuration
         config = PresentationConfig(
@@ -676,8 +685,8 @@ def generate_presentation():
         # Generate unique session ID
         session_id = str(uuid.uuid4())
         
-        # Create generator
-        generator = GeminiPresentationGenerator(data['api_key'])
+        # Create generator using environment API key
+        generator = GeminiPresentationGenerator(api_key)
         active_generators[session_id] = generator
         
         # Generate presentation outline
@@ -881,14 +890,11 @@ HTML_TEMPLATE = '''
 <body>
     <div class="container">
         <h1>🎯 PowerPoint Generator with Gemini AI</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;">
+            ✅ Gemini API key is configured and ready to use
+        </p>
         
         <form id="presentationForm">
-            <div class="form-group">
-                <label for="apiKey">Gemini API Key:</label>
-                <input type="password" id="apiKey" name="apiKey" required 
-                       placeholder="Enter your Gemini API key">
-            </div>
-            
             <div class="form-group">
                 <label for="topic">Presentation Topic:</label>
                 <input type="text" id="topic" name="topic" required 
@@ -965,7 +971,6 @@ HTML_TEMPLATE = '''
             try {
                 const formData = new FormData(e.target);
                 const data = {
-                    api_key: formData.get('apiKey'),
                     topic: formData.get('topic'),
                     tone: formData.get('tone'),
                     target_audience: formData.get('audience'),
@@ -1003,6 +1008,9 @@ HTML_TEMPLATE = '''
                         `).join('')}
                     `;
                     
+                    // Store outline data for later use
+                    outline.dataset.outline = JSON.stringify(result.outline);
+                    
                     // Show download button
                     document.getElementById('downloadBtn').style.display = 'inline-block';
                 } else {
@@ -1033,7 +1041,7 @@ HTML_TEMPLATE = '''
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        outline: JSON.parse(document.getElementById('outline').dataset.outline || '{}')
+                        outline: JSON.parse(document.getElementById('outline').dataset.outline)
                     })
                 });
                 
