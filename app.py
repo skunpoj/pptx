@@ -92,18 +92,106 @@ class GeminiPresentationGenerator:
         """
         
         try:
+            print(f"Calling Gemini API with prompt length: {len(prompt)}")
             response = self.model.generate_content(prompt)
+            print(f"Gemini API response received: {type(response)}")
+            
             # Extract JSON from response
             content = response.text.strip()
+            print(f"Raw response content (first 500 chars): {content[:500]}")
+            
             if content.startswith('```json'):
                 content = content[7:]
             if content.endswith('```'):
                 content = content[:-3]
             
-            return json.loads(content)
+            # Try to find JSON in the response if it's not at the start
+            if not content.startswith('{'):
+                # Look for JSON object in the response
+                start_idx = content.find('{')
+                if start_idx != -1:
+                    content = content[start_idx:]
+                    # Find the matching closing brace
+                    brace_count = 0
+                    end_idx = start_idx
+                    for i, char in enumerate(content):
+                        if char == '{':
+                            brace_count += 1
+                        elif char == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end_idx = i + 1
+                                break
+                    content = content[:end_idx]
+            
+            print(f"Processed content for JSON parsing: {content[:200]}...")
+            
+            parsed_json = json.loads(content)
+            print(f"Successfully parsed JSON with {len(parsed_json.get('slides', []))} slides")
+            return parsed_json
+            
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"Content that failed to parse: {content}")
+            # Return a fallback outline
+            return self._create_fallback_outline(config)
         except Exception as e:
             print(f"Error generating outline: {e}")
-            return None
+            print(f"Exception type: {type(e)}")
+            # Return a fallback outline
+            return self._create_fallback_outline(config)
+    
+    def _create_fallback_outline(self, config: PresentationConfig) -> Dict:
+        """Create a simple fallback outline when Gemini API fails."""
+        print("Creating fallback outline due to API failure")
+        
+        slides = []
+        
+        # Title slide
+        slides.append({
+            "slide_number": 1,
+            "type": "title",
+            "title": config.topic,
+            "content": f"An overview of {config.topic}",
+            "speaker_notes": f"Introduce the topic: {config.topic}",
+            "layout": "title_slide",
+            "chart_data": None
+        })
+        
+        # Content slides
+        for i in range(2, min(config.slide_count + 1, 8)):  # Limit to 7 additional slides
+            slide_num = i
+            slide_title = f"Key Point {slide_num - 1}"
+            slide_content = f"This slide covers an important aspect of {config.topic}. " \
+                          f"Content would be tailored for {config.target_audience} " \
+                          f"in a {config.tone} tone."
+            
+            slides.append({
+                "slide_number": slide_num,
+                "type": "content",
+                "title": slide_title,
+                "content": slide_content,
+                "speaker_notes": f"Discuss key point {slide_num - 1} about {config.topic}",
+                "layout": "single_column",
+                "chart_data": None
+            })
+        
+        # Conclusion slide
+        slides.append({
+            "slide_number": len(slides) + 1,
+            "type": "conclusion",
+            "title": "Conclusion",
+            "content": f"Summary of key points about {config.topic}",
+            "speaker_notes": f"Wrap up the presentation on {config.topic}",
+            "layout": "single_column",
+            "chart_data": None
+        })
+        
+        return {
+            "title": config.topic,
+            "subtitle": f"Presented to {config.target_audience}",
+            "slides": slides
+        }
     
     def create_html_slides(self, outline: Dict, config: PresentationConfig) -> List[str]:
         """Create HTML files for each slide based on the outline."""
@@ -593,9 +681,11 @@ def generate_presentation():
         active_generators[session_id] = generator
         
         # Generate presentation outline
+        print(f"Generating outline for topic: {config.topic}")
         outline = generator.generate_presentation_outline(config)
         if not outline:
-            return jsonify({'error': 'Failed to generate presentation outline'}), 500
+            print("Failed to generate presentation outline - returning error")
+            return jsonify({'error': 'Failed to generate presentation outline. Please check your API key and try again.'}), 500
         
         # Create HTML slides
         html_files = generator.create_html_slides(outline, config)
