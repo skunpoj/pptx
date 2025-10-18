@@ -17,12 +17,12 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the skill directory for html2pptx first
+COPY skill/ ./skill/
+
 # Copy package.json and install Node.js dependencies
 COPY package.json .
 RUN npm install
-
-# Copy the skill directory for html2pptx
-COPY skill/ ./skill/
 
 # Install html2pptx globally
 RUN npm install -g ./skill/html2pptx.tgz
