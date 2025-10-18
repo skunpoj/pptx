@@ -1,0 +1,15 @@
+{
+  "name": "pptx-gemini-app",
+  "version": "1.0.0",
+  "description": "PowerPoint presentation generator using Gemini AI and html2pptx",
+  "main": "app.py",
+  "scripts": {
+    "install-html2pptx": "npm install -g ./skill/html2pptx.tgz",
+    "setup": "npm run install-html2pptx && pip install -r requirements.txt"
+  },
+  "dependencies": {
+    "@ant/html2pptx": "file:./skill/html2pptx.tgz",
+    "pptxgenjs": "^3.12.0",
+    "playwright": "^1.40.0"
+  }
+}
