@@ -1,27 +1,19 @@
-FROM node:18-alpine
+FROM node:18-bullseye-slim
 
 # Install required system dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     python3 \
-    py3-pip \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    build-base \
-    g++ \
-    cairo-dev \
-    jpeg-dev \
-    pango-dev \
-    giflib-dev \
-    pixman-dev
+    python3-pip \
+    build-essential \
+    libcairo2-dev \
+    libjpeg-dev \
+    libpango1.0-dev \
+    libgif-dev \
+    libpixman-1-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for Playwright
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
-    NODE_ENV=production
+# Set environment variables
+ENV NODE_ENV=production
 
 # Create app directory
 WORKDIR /app
@@ -33,6 +25,9 @@ COPY package*.json ./
 COPY skills/pptx/html2pptx.tgz /tmp/html2pptx.tgz
 RUN npm install -g pptxgenjs jszip sharp playwright /tmp/html2pptx.tgz && \
     rm /tmp/html2pptx.tgz
+
+# Install Playwright Chromium browser
+RUN npx playwright install --with-deps chromium
 
 # Install app dependencies
 RUN npm ci --only=production

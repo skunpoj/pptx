@@ -1,6 +1,6 @@
 # Changelog
 
-## [Fixed] Module Resolution Issues - October 24, 2025
+## [Fixed] Complete Application Setup - October 24, 2025
 
 ### 🐛 Fixed Issues
 
@@ -12,6 +12,11 @@
 - Node.js was loading `pptxgen.es.js` (ES module) but treating it as CommonJS
 - Module resolution conflict between ES modules and CommonJS in pptxgenjs package
 - Missing peer dependencies causing import failures
+
+**Problem 3: `ENOENT: no such file or directory` - Playwright cache missing**
+- html2pptx requires Playwright with Chromium browser
+- Alpine Linux base image had system Chromium but Playwright couldn't use it
+- Error: `Could not read directory: /root/.cache/ms-playwright`
 
 ### ✅ Solutions Implemented
 
@@ -38,10 +43,18 @@
    - Graceful fallback mechanisms
    - Console logging for dependency installation status
 
+5. **Switched to Debian-based Docker Image**
+   - Changed from `node:18-alpine` to `node:18-bullseye-slim`
+   - Alpine Linux doesn't support Playwright's browser installation properly
+   - Debian allows `npx playwright install --with-deps chromium` to work correctly
+   - Properly installs all browser dependencies for html2pptx rendering
+
 ### 📝 Files Modified
 
-- `server.js` - Enhanced workspace setup with smart dependency linking
-- `Dockerfile` - Added missing `jszip` dependency
+- `server.js` - Enhanced workspace setup with smart dependency linking + fixed ES/CommonJS imports
+- `Dockerfile` - Switched to Debian base image + added jszip + proper Playwright installation
+- `CHANGELOG.md` - Complete documentation of all fixes
+- `FIX-APPLIED.md` - Quick reference guide
 
 ### 🚀 How to Apply the Fix
 
@@ -60,6 +73,7 @@ npm start
 
 ### 🔍 Technical Details
 
+#### Fix 1: Symlink Dependencies
 **Before:**
 ```javascript
 // Package resolution failing
@@ -95,6 +109,22 @@ for (const dep of depsToLink) {
 const { stdout, stderr } = await execPromise(
     `cd ${workDir} && node convert.js 2>&1`
 );
+```
+
+#### Fix 2: Use CommonJS Import for pptxgenjs
+**Before (in generated convert.js):**
+```javascript
+import pptxgen from "pptxgenjs";  // ❌ Loads wrong module version
+import { html2pptx } from "@ant/html2pptx";
+```
+
+**After:**
+```javascript
+import { createRequire } from 'module';
+import { html2pptx } from "@ant/html2pptx";
+
+const require = createRequire(import.meta.url);
+const pptxgen = require("pptxgenjs");  // ✅ Loads CommonJS version correctly
 ```
 
 ### ✨ Benefits
