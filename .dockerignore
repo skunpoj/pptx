@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+workspace
+*.md
+.git
+.gitignore
+.DS_Store
+*.tar.gz
