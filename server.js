@@ -38,18 +38,6 @@ app.post('/api/generate', async (req, res) => {
             JSON.stringify(packageJson, null, 2)
         );
         
-        // Create symlinks to global node_modules
-        const nodeModulesPath = path.join(workDir, 'node_modules');
-        await fs.mkdir(nodeModulesPath, { recursive: true });
-        
-        // Create symlinks for required packages
-        try {
-            await execPromise(`ln -sf /usr/local/lib/node_modules/pptxgenjs ${nodeModulesPath}/pptxgenjs`);
-            await execPromise(`ln -sf /usr/local/lib/node_modules/@ant ${nodeModulesPath}/@ant`);
-        } catch (e) {
-            console.log('Warning: Could not create symlinks, will rely on NODE_PATH');
-        }
-        
         // Call Claude API to structure content
         const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
@@ -143,9 +131,12 @@ ${text}`
         await fs.writeFile(path.join(workDir, 'convert.js'), scriptContent);
         
         // Run conversion
+        console.log(`Running conversion in ${workDir}`);
         const { stdout, stderr } = await execPromise(
             `cd ${workDir} && node convert.js 2>&1`
         );
+        console.log('Conversion output:', stdout);
+        if (stderr) console.error('Conversion stderr:', stderr);
         
         // Read the generated PowerPoint
         const pptxPath = path.join(workDir, 'presentation.pptx');
@@ -168,7 +159,12 @@ ${text}`
         
     } catch (error) {
         console.error('Error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('Error stdout:', error.stdout);
+        console.error('Error stderr:', error.stderr);
+        
+        // Provide more detailed error message
+        const errorMsg = error.stdout || error.stderr || error.message;
+        res.status(500).json({ error: errorMsg });
         
         // Cleanup on error
         try {
@@ -267,8 +263,8 @@ function generateSlideHTML(slide, theme) {
 }
 
 function generateConversionScript(htmlFiles, slides) {
-    return `const pptxgen = require("pptxgenjs");
-const { html2pptx } = require("@ant/html2pptx");
+    return `const pptxgen = require("/usr/local/lib/node_modules/pptxgenjs");
+const { html2pptx } = require("/usr/local/lib/node_modules/@ant/html2pptx");
 
 async function createPresentation() {
     const pptx = new pptxgen();
