@@ -27,11 +27,11 @@ app.post('/api/generate', async (req, res) => {
         // Create workspace directory
         await fs.mkdir(workDir, { recursive: true });
         
-        // Create package.json for workspace
+        // Create package.json for workspace (using ES modules)
         const packageJson = {
             "name": "pptx-workspace",
             "version": "1.0.0",
-            "type": "commonjs"
+            "type": "module"
         };
         await fs.writeFile(
             path.join(workDir, 'package.json'), 
@@ -133,7 +133,7 @@ ${text}`
         // Run conversion
         console.log(`Running conversion in ${workDir}`);
         const { stdout, stderr } = await execPromise(
-            `cd ${workDir} && node convert.js 2>&1`
+            `cd ${workDir} && NODE_PATH=/usr/local/lib/node_modules node convert.js 2>&1`
         );
         console.log('Conversion output:', stdout);
         if (stderr) console.error('Conversion stderr:', stderr);
@@ -263,8 +263,8 @@ function generateSlideHTML(slide, theme) {
 }
 
 function generateConversionScript(htmlFiles, slides) {
-    return `const pptxgen = require("/usr/local/lib/node_modules/pptxgenjs");
-const { html2pptx } = require("/usr/local/lib/node_modules/@ant/html2pptx");
+    return `import pptxgen from "pptxgenjs";
+import { html2pptx } from "@ant/html2pptx";
 
 async function createPresentation() {
     const pptx = new pptxgen();
