@@ -227,7 +227,9 @@
         }
         
         .preview {
-            height: 400px;
+            min-height: 400px;
+            height: auto;
+            max-height: 100%;
             overflow-y: auto;
             padding: 0.5rem;
         }
@@ -462,9 +464,33 @@
                 <div style="background: #f8f9ff; border: 2px solid #e0e7ff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
                     <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #555;">🤖 AI Prompt Generator</h3>
                     <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Describe what presentation you want, and AI will generate the content for you!</p>
-                    <textarea id="promptInput" placeholder="Example: Create a presentation about sustainable energy solutions for business executives, focusing on solar and wind power with cost analysis" style="height: 80px; margin-bottom: 0.5rem;"></textarea>
+                    <textarea id="promptInput" placeholder="Describe your presentation topic here... For example: Create a quarterly business review for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team. Include data visualizations and action items." style="height: 80px; margin-bottom: 0.5rem;"></textarea>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <div>
+                            <label style="display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.25rem;">Number of slides:</label>
+                            <input type="number" id="numSlides" value="6" min="3" max="20" style="width: 100%; padding: 0.5rem; border: 2px solid #ddd; border-radius: 8px; font-size: 0.9rem;">
+                        </div>
+                        <div style="display: flex; align-items: flex-end;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem;">
+                                <input type="checkbox" id="generateImages" style="width: 18px; height: 18px; cursor: pointer;">
+                                <span style="font-size: 0.85rem; color: #555;">Generate AI images for slides</span>
+                            </label>
+                        </div>
+                    </div>
+                    
                     <button class="btn-primary" onclick="generateFromPrompt()" id="promptBtn" style="width: 100%; padding: 0.75rem;">
                         ✨ Generate Content from Idea
+                    </button>
+                </div>
+                
+                <!-- File Upload Section -->
+                <div style="background: #f0fff4; border: 2px solid #86efac; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #555;">📎 Upload Files</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Upload documents, PDFs, or text files to convert into slides</p>
+                    <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md" style="margin-bottom: 0.5rem; font-size: 0.85rem;">
+                    <button class="btn-secondary" onclick="processUploadedFiles()" id="uploadBtn" style="width: 100%; padding: 0.75rem;">
+                        📤 Convert Files to Slides
                     </button>
                 </div>
 
@@ -699,8 +725,35 @@ AI will automatically:
                     html += `<div style="color: ${textColor}; opacity: 0.9; font-size: 0.9rem; margin-top: 0.25rem;">${slide.subtitle}</div>`;
                 }
                 
+                if (slide.header) {
+                    html += `<div style="color: ${isTitle ? 'rgba(255,255,255,0.9)' : theme.colorSecondary}; font-size: 0.85rem; margin-top: 0.25rem; font-style: italic;">${slide.header}</div>`;
+                }
+                
+                if (slide.imageDescription) {
+                    html += `<div style="background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 0.5rem; margin-top: 0.5rem; border-radius: 4px; font-size: 0.75rem; color: #666; text-align: center;">📸 ${slide.imageDescription}</div>`;
+                }
+                
                 if (slide.content && slide.content.length > 0) {
-                    if (slide.layout === 'two-column') {
+                    if (slide.layout === 'three-column') {
+                        const third = Math.ceil(slide.content.length / 3);
+                        const col1 = slide.content.slice(0, third);
+                        const col2 = slide.content.slice(third, third * 2);
+                        const col3 = slide.content.slice(third * 2);
+                        
+                        html += `
+                            <div class="slide-content" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
+                                <ul style="margin: 0; padding-left: 1rem; font-size: 0.75rem; line-height: 1.3;">
+                                    ${col1.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                                <ul style="margin: 0; padding-left: 1rem; font-size: 0.75rem; line-height: 1.3;">
+                                    ${col2.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                                <ul style="margin: 0; padding-left: 1rem; font-size: 0.75rem; line-height: 1.3;">
+                                    ${col3.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    } else if (slide.layout === 'two-column') {
                         const half = Math.ceil(slide.content.length / 2);
                         const col1 = slide.content.slice(0, half);
                         const col2 = slide.content.slice(half);
@@ -713,6 +766,31 @@ AI will automatically:
                                 <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.4;">
                                     ${col2.map(item => `<li>${item}</li>`).join('')}
                                 </ul>
+                            </div>
+                        `;
+                    } else if (slide.layout === 'framework') {
+                        html += `
+                            <div class="slide-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
+                                ${slide.content.map(item => `
+                                    <div style="background: #f8f9fa; border-left: 3px solid ${theme.colorAccent}; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; line-height: 1.4;">
+                                        ${item}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    } else if (slide.layout === 'process-flow') {
+                        html += `
+                            <div class="slide-content" style="margin-top: 0.5rem;">
+                                ${slide.content.map((item, idx) => `
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <span style="background: ${theme.colorAccent}; color: white; font-weight: bold; min-width: 1.5rem; height: 1.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">
+                                            ${idx + 1}
+                                        </span>
+                                        <span style="flex: 1; background: linear-gradient(90deg, ${theme.colorPrimary}15 0%, ${theme.colorPrimary}05 100%); padding: 0.35rem 0.75rem; border-left: 2px solid ${theme.colorAccent}; font-size: 0.8rem; line-height: 1.3;">
+                                            ${item}
+                                        </span>
+                                    </div>
+                                `).join('')}
                             </div>
                         `;
                     } else {
@@ -873,9 +951,11 @@ Implementation strategies involve setting measurable sustainability goals with c
             }
         }
 
-        // Generate content from AI prompt
+        // Generate content from AI prompt with slide count and image generation
         async function generateFromPrompt() {
             const prompt = document.getElementById('promptInput').value.trim();
+            const numSlides = parseInt(document.getElementById('numSlides').value) || 6;
+            const generateImages = document.getElementById('generateImages').checked;
             const apiKey = getApiKey();
             
             if (!apiKey) {
@@ -900,7 +980,13 @@ Implementation strategies involve setting measurable sustainability goals with c
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ prompt, apiKey, provider: currentProvider })
+                    body: JSON.stringify({ 
+                        prompt, 
+                        apiKey, 
+                        provider: currentProvider,
+                        numSlides,
+                        generateImages
+                    })
                 });
                 
                 if (!response.ok) {
@@ -923,6 +1009,80 @@ Implementation strategies involve setting measurable sustainability goals with c
                 promptBtn.disabled = false;
                 promptBtn.innerHTML = '✨ Generate Content from Idea';
             }
+        }
+        
+        // Process uploaded files
+        async function processUploadedFiles() {
+            const fileInput = document.getElementById('fileUpload');
+            const files = fileInput.files;
+            const apiKey = getApiKey();
+            
+            if (!apiKey) {
+                showStatus('⚠️ Please enter your API key first!', 'error');
+                return;
+            }
+            
+            if (files.length === 0) {
+                showStatus('⚠️ Please select at least one file!', 'error');
+                return;
+            }
+            
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span class="spinner"></span> Processing files...';
+            
+            showStatus('📄 Reading and converting files...', 'info');
+            
+            try {
+                const fileContents = [];
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const text = await readFileAsText(file);
+                    fileContents.push({
+                        filename: file.name,
+                        content: text
+                    });
+                }
+                
+                const response = await fetch('/api/process-files', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        files: fileContents, 
+                        apiKey, 
+                        provider: currentProvider 
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'File processing failed');
+                }
+                
+                const result = await response.json();
+                document.getElementById('textInput').value = result.content;
+                showStatus('✅ Files processed! Review and click "Preview Slides" to see the design.', 'success');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('❌ Error: ' + error.message, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '📤 Convert Files to Slides';
+            }
+        }
+        
+        // Helper function to read file as text
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error('Failed to read file'));
+                reader.readAsText(file);
+            });
         }
     </script>
 </body>

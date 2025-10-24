@@ -123,28 +123,35 @@ async function callAI(provider, apiKey, userPrompt) {
 
 // Content generation endpoint - generates presentation content from a prompt
 app.post('/api/generate-content', async (req, res) => {
-    const { prompt, apiKey, provider = 'anthropic' } = req.body;
+    const { prompt, apiKey, provider = 'anthropic', numSlides = 6, generateImages = false } = req.body;
     
     if (!prompt || !apiKey) {
         return res.status(400).json({ error: 'Prompt and API key are required' });
     }
     
     try {
-        const userPrompt = `You are a professional content writer for presentations. Based on the following idea/prompt, generate comprehensive content that can be used to create a presentation.
+        const imageInstructions = generateImages 
+            ? `\n7. For slides that would benefit from visuals, include image placeholders like: [IMAGE: description of what image should show]\n8. Suggest relevant images for data visualization, concepts, or key points`
+            : '';
+        
+        const userPrompt = `You are a professional content writer for presentations. Based on the following idea/prompt, generate comprehensive content that can be used to create a presentation with EXACTLY ${numSlides} slides (including the title slide).
 
 USER PROMPT:
 ${prompt}
 
 INSTRUCTIONS:
-1. Generate 4-6 paragraphs of well-structured content
-2. Each paragraph should cover a key aspect or topic
-3. Write in a clear, professional style
-4. Include specific details, examples, or data points where appropriate
-5. Make the content informative and engaging
-6. Focus on the main points that would make good presentation slides
+1. Generate content for EXACTLY ${numSlides} slides (including title slide)
+2. Create ${numSlides - 1} distinct topic sections/paragraphs for content slides
+3. Each paragraph should cover a key aspect or topic that will become a slide
+4. Write in a clear, professional, consultant-style presentation format
+5. Include specific details, examples, data points, and actionable insights
+6. Make the content strategic, analytical, and business-focused
+${imageInstructions}
+7. Structure content with clear frameworks, models, or methodologies where appropriate
+8. Include comparative analysis, pros/cons, or before/after scenarios when relevant
 
 OUTPUT FORMAT:
-Write the content as plain text paragraphs separated by blank lines. Do NOT include any JSON, markdown formatting, or structural elements. Just write the presentation content directly.
+Write the content as ${numSlides - 1} well-structured paragraphs separated by blank lines. Each paragraph should be substantial enough to create a full slide. Do NOT include any JSON, markdown formatting, or structural elements. Just write the presentation content directly.
 
 Generate the content now:`;
 
@@ -153,6 +160,49 @@ Generate the content now:`;
         
     } catch (error) {
         console.error('Content generation error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// File processing endpoint - converts uploaded files to presentation content
+app.post('/api/process-files', async (req, res) => {
+    const { files, apiKey, provider = 'anthropic' } = req.body;
+    
+    if (!files || !Array.isArray(files) || files.length === 0 || !apiKey) {
+        return res.status(400).json({ error: 'Files and API key are required' });
+    }
+    
+    try {
+        // Combine all file contents
+        let combinedContent = '';
+        files.forEach(file => {
+            combinedContent += `\n\n=== File: ${file.filename} ===\n\n${file.content}`;
+        });
+        
+        const userPrompt = `You are a professional content writer for presentations. I will provide you with content from ${files.length} file(s). Your task is to analyze and synthesize this content into a well-structured presentation narrative.
+
+FILES CONTENT:
+${combinedContent}
+
+INSTRUCTIONS:
+1. Analyze all the provided files and extract the key information
+2. Synthesize the content into a coherent presentation narrative
+3. Structure the content into 5-8 logical sections suitable for slides
+4. Each section should be a substantial paragraph covering a key aspect
+5. Maintain the important details, data, and insights from the source files
+6. Write in a clear, professional style appropriate for business presentations
+7. Organize content logically with a clear flow and narrative arc
+
+OUTPUT FORMAT:
+Write the synthesized content as well-structured paragraphs separated by blank lines. Do NOT include any JSON, markdown formatting, or file references. Just write the presentation content directly.
+
+Generate the synthesized presentation content now:`;
+
+        const content = await callAI(provider, apiKey, userPrompt);
+        res.json({ content });
+        
+    } catch (error) {
+        console.error('File processing error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -166,17 +216,32 @@ app.post('/api/preview', async (req, res) => {
     }
     
     try {
-        const userPrompt = `You are a presentation design expert. Analyze the user's content below and create a structured presentation outline based EXACTLY on what they provided.
+        const userPrompt = `You are a presentation design expert specializing in consultant-style presentations. Analyze the user's content below and create a structured presentation outline based EXACTLY on what they provided.
 
 CRITICAL REQUIREMENTS:
 1. Use the ACTUAL content provided by the user below
-2. Create 4-8 slides total (including title slide)
-3. Keep content BRIEF - presentations should be concise:
-   - Bullet points: 3-5 per slide MAX
-   - Each bullet: under 12 words
-   - Paragraphs: 1-2 sentences MAX
-4. Choose a color palette that matches the content theme
-5. Extract the main title from the user's content for the title slide
+2. Create 4-12 slides total (including title slide)
+3. Design in CONSULTANT STYLE with strategic frameworks:
+   - Use clear headers and sub-headers
+   - Include strategic insights and key takeaways
+   - Add visual indicators like arrows (→, ⇒, ↔), boxes (□, ■), and icons (✓, ★, ◆)
+   - Structure content with frameworks (e.g., "Key Drivers →", "Impact:", "Next Steps:")
+   - Keep bullets concise but impactful (under 15 words each)
+4. Advanced graphical representation:
+   - Use layout types: "bullets", "two-column", "three-column", "framework", "process-flow"
+   - For process flows: use arrows and numbered steps
+   - For comparisons: use side-by-side columns with headers
+   - For frameworks: use structured sections with visual separators
+5. Choose a professional color palette that matches the content theme
+6. Extract the main title from the user's content for the title slide
+7. Include image placeholders if content mentions [IMAGE: ...] with descriptions
+
+Layout options:
+- "bullets": Standard bullet list
+- "two-column": Split content into two columns
+- "three-column": Split content into three columns  
+- "framework": Structured framework with sections and headers
+- "process-flow": Step-by-step process with arrows and numbers
 
 Output as JSON:
 {
@@ -197,15 +262,23 @@ Output as JSON:
     },
     {
       "type": "content",
-      "title": "Slide Title",
-      "content": ["Brief point 1", "Brief point 2", "Brief point 3"],
-      "layout": "bullets"
+      "title": "Slide Title with Strategic Header",
+      "content": ["✓ Key insight with impact", "→ Strategic direction", "■ Core principle"],
+      "layout": "bullets",
+      "imageDescription": "Optional: description of image to generate"
     },
     {
       "type": "content", 
-      "title": "Slide Title",
-      "content": ["Point 1", "Point 2"],
-      "layout": "two-column"
+      "title": "Framework or Model Name",
+      "content": ["Section A: Details", "Section B: More details"],
+      "layout": "two-column",
+      "header": "Optional strategic context or question"
+    },
+    {
+      "type": "content",
+      "title": "Process or Journey",
+      "content": ["1. First step → Action", "2. Second step → Result", "3. Third step → Outcome"],
+      "layout": "process-flow"
     }
   ]
 }
@@ -262,17 +335,32 @@ app.post('/api/generate', async (req, res) => {
         if (slideData) {
             finalSlideData = slideData;
         } else {
-            const userPrompt = `You are a presentation design expert. Analyze the user's content below and create a structured presentation outline based EXACTLY on what they provided.
+            const userPrompt = `You are a presentation design expert specializing in consultant-style presentations. Analyze the user's content below and create a structured presentation outline based EXACTLY on what they provided.
 
 CRITICAL REQUIREMENTS:
 1. Use the ACTUAL content provided by the user below
-2. Create 4-8 slides total (including title slide)
-3. Keep content BRIEF - presentations should be concise:
-   - Bullet points: 3-5 per slide MAX
-   - Each bullet: under 12 words
-   - Paragraphs: 1-2 sentences MAX
-4. Choose a color palette that matches the content theme
-5. Extract the main title from the user's content for the title slide
+2. Create 4-12 slides total (including title slide)
+3. Design in CONSULTANT STYLE with strategic frameworks:
+   - Use clear headers and sub-headers
+   - Include strategic insights and key takeaways
+   - Add visual indicators like arrows (→, ⇒, ↔), boxes (□, ■), and icons (✓, ★, ◆)
+   - Structure content with frameworks (e.g., "Key Drivers →", "Impact:", "Next Steps:")
+   - Keep bullets concise but impactful (under 15 words each)
+4. Advanced graphical representation:
+   - Use layout types: "bullets", "two-column", "three-column", "framework", "process-flow"
+   - For process flows: use arrows and numbered steps
+   - For comparisons: use side-by-side columns with headers
+   - For frameworks: use structured sections with visual separators
+5. Choose a professional color palette that matches the content theme
+6. Extract the main title from the user's content for the title slide
+7. Include image placeholders if content mentions [IMAGE: ...] with descriptions
+
+Layout options:
+- "bullets": Standard bullet list
+- "two-column": Split content into two columns
+- "three-column": Split content into three columns  
+- "framework": Structured framework with sections and headers
+- "process-flow": Step-by-step process with arrows and numbers
 
 Output as JSON:
 {
@@ -293,15 +381,23 @@ Output as JSON:
     },
     {
       "type": "content",
-      "title": "Slide Title",
-      "content": ["Brief point 1", "Brief point 2", "Brief point 3"],
-      "layout": "bullets"
+      "title": "Slide Title with Strategic Header",
+      "content": ["✓ Key insight with impact", "→ Strategic direction", "■ Core principle"],
+      "layout": "bullets",
+      "imageDescription": "Optional: description of image to generate"
     },
     {
       "type": "content", 
-      "title": "Slide Title",
-      "content": ["Point 1", "Point 2"],
-      "layout": "two-column"
+      "title": "Framework or Model Name",
+      "content": ["Section A: Details", "Section B: More details"],
+      "layout": "two-column",
+      "header": "Optional strategic context or question"
+    },
+    {
+      "type": "content",
+      "title": "Process or Journey",
+      "content": ["1. First step → Action", "2. Second step → Result", "3. Third step → Outcome"],
+      "layout": "process-flow"
     }
   ]
 }
@@ -487,7 +583,48 @@ function generateSlideHTML(slide, theme) {
 </html>`;
     }
     
-    // Content slide
+    // Three-column layout
+    if (slide.layout === 'three-column' && slide.content.length >= 3) {
+        const third = Math.ceil(slide.content.length / 3);
+        const col1 = slide.content.slice(0, third);
+        const col2 = slide.content.slice(third, third * 2);
+        const col3 = slide.content.slice(third * 2);
+        
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+    ${generateCSS(theme)}
+    </style>
+</head>
+<body class="col" style="width: 960px; height: 540px; padding: 2rem;">
+    <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: 2rem; font-weight: bold; margin: 0 0 1rem 0;">
+        ${escapeHtml(slide.title)}
+    </h2>
+    ${slide.header ? `<p style="color: ${theme.colorSecondary}; font-size: 1rem; margin-bottom: 1rem;">${escapeHtml(slide.header)}</p>` : ''}
+    <div class="fill-height row gap-lg items-fill-width" style="display: flex; gap: 1.5rem;">
+        <section style="flex: 1;">
+            <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
+                ${col1.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+            </ul>
+        </section>
+        <section style="flex: 1;">
+            <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
+                ${col2.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+            </ul>
+        </section>
+        <section style="flex: 1;">
+            <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.5;">
+                ${col3.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+            </ul>
+        </section>
+    </div>
+</body>
+</html>`;
+    }
+    
+    // Two-column layout
     if (slide.layout === 'two-column' && slide.content.length >= 2) {
         const half = Math.ceil(slide.content.length / 2);
         const col1 = slide.content.slice(0, half);
@@ -505,6 +642,7 @@ function generateSlideHTML(slide, theme) {
     <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: 2.25rem; font-weight: bold; margin: 0 0 1.5rem 0;">
         ${escapeHtml(slide.title)}
     </h2>
+    ${slide.header ? `<p style="color: ${theme.colorSecondary}; font-size: 1.1rem; margin-bottom: 1rem; font-weight: 600;">${escapeHtml(slide.header)}</p>` : ''}
     <div class="fill-height row gap-lg items-fill-width" style="display: flex; gap: 2rem;">
         <section style="flex: 1;">
             <ul style="margin: 0; padding-left: 1.5rem; font-size: 1.125rem; line-height: 1.6;">
@@ -521,7 +659,64 @@ function generateSlideHTML(slide, theme) {
 </html>`;
     }
     
-    // Standard bullet list
+    // Framework layout with structured sections
+    if (slide.layout === 'framework') {
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+    ${generateCSS(theme)}
+    </style>
+</head>
+<body class="col" style="width: 960px; height: 540px; padding: 2rem;">
+    <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: 2.25rem; font-weight: bold; margin: 0 0 1rem 0; border-bottom: 3px solid ${theme.colorAccent}; padding-bottom: 0.5rem;">
+        ${escapeHtml(slide.title)}
+    </h2>
+    ${slide.header ? `<p style="color: ${theme.colorSecondary}; font-size: 1.1rem; margin-bottom: 1.5rem; font-style: italic;">${escapeHtml(slide.header)}</p>` : ''}
+    <div class="fill-height" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        ${slide.content.map(item => `
+            <div style="background: ${theme.colorBackground}; border-left: 4px solid ${theme.colorAccent}; padding: 1rem; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <p style="margin: 0; font-size: 1.05rem; line-height: 1.6; color: ${theme.colorText};">${escapeHtml(item)}</p>
+            </div>
+        `).join('')}
+    </div>
+</body>
+</html>`;
+    }
+    
+    // Process flow layout with arrows and steps
+    if (slide.layout === 'process-flow') {
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+    ${generateCSS(theme)}
+    </style>
+</head>
+<body class="col" style="width: 960px; height: 540px; padding: 2rem;">
+    <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: 2.25rem; font-weight: bold; margin: 0 0 1.5rem 0;">
+        ${escapeHtml(slide.title)}
+    </h2>
+    ${slide.header ? `<p style="color: ${theme.colorSecondary}; font-size: 1.1rem; margin-bottom: 1.5rem;">${escapeHtml(slide.header)}</p>` : ''}
+    <div class="fill-height" style="display: flex; flex-direction: column; justify-content: center; gap: 1rem;">
+        ${slide.content.map((item, idx) => `
+            <div style="display: flex; align-items: center; gap: 1rem; ${idx < slide.content.length - 1 ? 'margin-bottom: 0.5rem;' : ''}">
+                <div style="background: ${theme.colorAccent}; color: white; font-weight: bold; min-width: 2.5rem; height: 2.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                    ${idx + 1}
+                </div>
+                <div style="flex: 1; background: linear-gradient(90deg, ${theme.colorPrimary}15 0%, ${theme.colorPrimary}05 100%); padding: 0.75rem 1.5rem; border-left: 3px solid ${theme.colorAccent}; font-size: 1.1rem; line-height: 1.5;">
+                    ${escapeHtml(item)}
+                </div>
+            </div>
+        `).join('')}
+    </div>
+</body>
+</html>`;
+    }
+    
+    // Standard bullet list (default)
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -534,6 +729,8 @@ function generateSlideHTML(slide, theme) {
     <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: 2.25rem; font-weight: bold; margin: 0 0 1.5rem 0;">
         ${escapeHtml(slide.title)}
     </h2>
+    ${slide.header ? `<p style="color: ${theme.colorSecondary}; font-size: 1.1rem; margin-bottom: 1rem;">${escapeHtml(slide.header)}</p>` : ''}
+    ${slide.imageDescription ? `<div style="background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; text-align: center; color: ${theme.colorSecondary}; font-style: italic;">📸 Image: ${escapeHtml(slide.imageDescription)}</div>` : ''}
     <div class="fill-height" style="display: flex; flex-direction: column; justify-content: center;">
         <ul style="margin: 0; padding-left: 1.5rem; font-size: 1.25rem; line-height: 1.8;">
             ${slide.content.map(item => `<li style="margin-bottom: 0.75rem;">${escapeHtml(item)}</li>`).join('')}
