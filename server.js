@@ -12,75 +12,15 @@ const PORT = 3000;
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(express.static('public'));
 
-// Main endpoint to generate presentation
-app.post('/api/generate', async (req, res) => {
+// Preview endpoint - returns slide structure without generating PPTX
+app.post('/api/preview', async (req, res) => {
     const { text, apiKey } = req.body;
     
     if (!text || !apiKey) {
         return res.status(400).json({ error: 'Text and API key are required' });
     }
-
-    const sessionId = Date.now().toString();
-    const workDir = path.join(__dirname, 'workspace', sessionId);
     
     try {
-        // Create workspace directory
-        await fs.mkdir(workDir, { recursive: true });
-        
-        // Create package.json for workspace (using ES modules)
-        const packageJson = {
-            "name": "pptx-workspace",
-            "version": "1.0.0",
-            "type": "module"
-        };
-        await fs.writeFile(
-            path.join(workDir, 'package.json'), 
-            JSON.stringify(packageJson, null, 2)
-        );
-        
-        // Create node_modules with symlinks to global packages
-        const nodeModulesPath = path.join(workDir, 'node_modules');
-        await fs.mkdir(nodeModulesPath, { recursive: true });
-        
-        // Symlink global packages
-        const globalModulesPath = '/usr/local/lib/node_modules';
-        try {
-            // Create symlinks for the packages
-            await fs.symlink(
-                path.join(globalModulesPath, 'pptxgenjs'),
-                path.join(nodeModulesPath, 'pptxgenjs'),
-                'dir'
-            );
-            
-            // Create @ant directory for scoped package
-            await fs.mkdir(path.join(nodeModulesPath, '@ant'), { recursive: true });
-            await fs.symlink(
-                path.join(globalModulesPath, '@ant/html2pptx'),
-                path.join(nodeModulesPath, '@ant', 'html2pptx'),
-                'dir'
-            );
-            
-            // Also symlink dependencies that pptxgenjs needs
-            const depsToLink = ['jszip', 'sharp', 'playwright'];
-            for (const dep of depsToLink) {
-                try {
-                    await fs.symlink(
-                        path.join(globalModulesPath, dep),
-                        path.join(nodeModulesPath, dep),
-                        'dir'
-                    );
-                } catch (e) {
-                    // Dependency might not exist or already linked
-                }
-            }
-            
-            console.log('Symlinks created for dependencies');
-        } catch (symlinkError) {
-            // Fallback: If symlinks fail, try copying
-            console.log('Symlink failed, falling back to npm install:', symlinkError.message);
-            await execPromise(`cd ${workDir} && npm install pptxgenjs @ant/html2pptx --no-save --no-audit --no-fund 2>&1`);
-        }
-        
         // Call Claude API to structure content
         const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
@@ -155,22 +95,181 @@ ${text}`
         responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         const slideData = JSON.parse(responseText);
         
+        // Return the slide structure for preview
+        res.json(slideData);
+        
+    } catch (error) {
+        console.error('Preview error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Main endpoint to generate presentation
+app.post('/api/generate', async (req, res) => {
+    const { text, apiKey, slideData } = req.body;
+    
+    if (!text || !apiKey) {
+        return res.status(400).json({ error: 'Text and API key are required' });
+    }
+
+    const sessionId = Date.now().toString();
+    const workDir = path.join(__dirname, 'workspace', sessionId);
+    
+    try {
+        // If slideData is provided, use it; otherwise generate it
+        let finalSlideData;
+        
+        if (slideData) {
+            finalSlideData = slideData;
+        } else {
+            // Call Claude API to structure content
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey.trim(),
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 4000,
+                    messages: [{
+                        role: "user",
+                        content: `You are a presentation design expert. Analyze this content and create a structured presentation outline.
+
+CRITICAL REQUIREMENTS:
+1. Create 4-8 slides total (including title slide)
+2. Keep content BRIEF - presentations should be concise:
+   - Bullet points: 3-5 per slide MAX
+   - Each bullet: under 12 words
+   - Paragraphs: 1-2 sentences MAX
+3. Choose a color palette that matches the content theme (refer to options like Classic Blue, Teal & Coral, Bold Red, etc.)
+4. Design approach: Consider what visual style fits this topic
+
+Output as JSON:
+{
+  "designTheme": {
+    "name": "Theme name",
+    "description": "Why this theme fits the content",
+    "colorPrimary": "#1C2833",
+    "colorSecondary": "#2E4053",
+    "colorAccent": "#F39C12",
+    "colorBackground": "#FFFFFF",
+    "colorText": "#1d1d1d"
+  },
+  "slides": [
+    {
+      "type": "title",
+      "title": "Main Title",
+      "subtitle": "Optional subtitle"
+    },
+    {
+      "type": "content",
+      "title": "Slide Title",
+      "content": ["Brief point 1", "Brief point 2", "Brief point 3"],
+      "layout": "bullets"
+    },
+    {
+      "type": "content", 
+      "title": "Slide Title",
+      "content": ["Point 1", "Point 2"],
+      "layout": "two-column"
+    }
+  ]
+}
+
+DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON.
+
+Content to convert:
+${text}`
+                    }]
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            let responseText = data.content[0].text;
+            responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+            finalSlideData = JSON.parse(responseText);
+        }
+        
+        // Create workspace directory
+        await fs.mkdir(workDir, { recursive: true });
+        
+        // Create package.json for workspace (using ES modules)
+        const packageJson = {
+            "name": "pptx-workspace",
+            "version": "1.0.0",
+            "type": "module"
+        };
+        await fs.writeFile(
+            path.join(workDir, 'package.json'), 
+            JSON.stringify(packageJson, null, 2)
+        );
+        
+        // Create node_modules with symlinks to global packages
+        const nodeModulesPath = path.join(workDir, 'node_modules');
+        await fs.mkdir(nodeModulesPath, { recursive: true });
+        
+        // Symlink global packages
+        const globalModulesPath = '/usr/local/lib/node_modules';
+        try {
+            // Create symlinks for the packages
+            await fs.symlink(
+                path.join(globalModulesPath, 'pptxgenjs'),
+                path.join(nodeModulesPath, 'pptxgenjs'),
+                'dir'
+            );
+            
+            // Create @ant directory for scoped package
+            await fs.mkdir(path.join(nodeModulesPath, '@ant'), { recursive: true });
+            await fs.symlink(
+                path.join(globalModulesPath, '@ant/html2pptx'),
+                path.join(nodeModulesPath, '@ant', 'html2pptx'),
+                'dir'
+            );
+            
+            // Also symlink dependencies that pptxgenjs needs
+            const depsToLink = ['jszip', 'sharp', 'playwright'];
+            for (const dep of depsToLink) {
+                try {
+                    await fs.symlink(
+                        path.join(globalModulesPath, dep),
+                        path.join(nodeModulesPath, dep),
+                        'dir'
+                    );
+                } catch (e) {
+                    // Dependency might not exist or already linked
+                }
+            }
+            
+            console.log('Symlinks created for dependencies');
+        } catch (symlinkError) {
+            // Fallback: If symlinks fail, try copying
+            console.log('Symlink failed, falling back to npm install:', symlinkError.message);
+            await execPromise(`cd ${workDir} && npm install pptxgenjs @ant/html2pptx --no-save --no-audit --no-fund 2>&1`);
+        }
+        
         // Generate CSS file with theme
-        const cssContent = generateCSS(slideData.designTheme);
+        const cssContent = generateCSS(finalSlideData.designTheme);
         await fs.writeFile(path.join(workDir, 'theme.css'), cssContent);
         
         // Generate HTML slides
         const htmlFiles = [];
-        for (let i = 0; i < slideData.slides.length; i++) {
-            const slide = slideData.slides[i];
-            const htmlContent = generateSlideHTML(slide, slideData.designTheme);
+        for (let i = 0; i < finalSlideData.slides.length; i++) {
+            const slide = finalSlideData.slides[i];
+            const htmlContent = generateSlideHTML(slide, finalSlideData.designTheme);
             const filename = `slide${i}.html`;
             await fs.writeFile(path.join(workDir, filename), htmlContent);
             htmlFiles.push(filename);
         }
         
         // Generate conversion script
-        const scriptContent = generateConversionScript(htmlFiles, slideData.slides);
+        const scriptContent = generateConversionScript(htmlFiles, finalSlideData.slides);
         await fs.writeFile(path.join(workDir, 'convert.js'), scriptContent);
         
         // Run conversion

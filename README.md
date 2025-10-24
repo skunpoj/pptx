@@ -5,6 +5,7 @@ Professional AI-powered text-to-PowerPoint converter using **Claude AI** for con
 ## ✨ Features
 
 - 🤖 **AI-Powered**: Claude analyzes your content and creates intelligent slide structure
+- 👁️ **Live Preview**: See your slides before generating - preview structure, theme, and colors
 - 🎨 **Professional Design**: Uses html2pptx workflow for high-quality layouts
 - 🌈 **Smart Theming**: AI chooses color palettes that match your content
 - 📊 **Clean Layouts**: Professional typography, spacing, and visual hierarchy
@@ -46,10 +47,15 @@ Professional AI-powered text-to-PowerPoint converter using **Claude AI** for con
    - Paste any text (article, notes, report, etc.)
    - Or click "Load example text" to try it out
 
-3. **Generate presentation**
-   - Click "Generate Professional PowerPoint"
-   - AI analyzes and structures your content
+3. **Preview your slides** (recommended)
+   - Click "👁️ Preview Slides"
+   - See the AI-designed structure, theme, and colors
+   - Review slide titles and content
+
+4. **Generate presentation**
+   - Click "✨ Generate Professional PowerPoint"
    - Downloads a professional .pptx file
+   - Preview data is reused for faster generation
 
 ## 🎯 How It Works
 
@@ -58,9 +64,10 @@ Professional AI-powered text-to-PowerPoint converter using **Claude AI** for con
 This app follows the **html2pptx best practices** from the Claude PPTX skill:
 
 1. **AI Analysis**: Claude examines your content and creates a structured outline
-2. **Design Selection**: AI chooses colors and layouts that match your topic
-3. **HTML Generation**: Creates professional HTML slides with proper typography
-4. **PowerPoint Conversion**: html2pptx converts HTML to high-quality .pptx
+2. **Live Preview**: See the slide structure, theme, and colors before generating
+3. **Design Selection**: AI chooses colors and layouts that match your topic
+4. **HTML Generation**: Creates professional HTML slides with proper typography
+5. **PowerPoint Conversion**: html2pptx converts HTML to high-quality .pptx
 
 ### Why This Is Better
 
@@ -100,8 +107,18 @@ text2ppt-pro/
 ### Flow
 
 ```
-User Text → Claude API (structure) → HTML Slides → html2pptx → PowerPoint File
+User Text → Claude API (structure) → Live Preview → HTML Slides → html2pptx → PowerPoint File
+                                           ↓
+                                    Review & Approve
 ```
+
+**Preview Mode**: 
+- `/api/preview` - Returns slide structure as JSON (~3-5 seconds)
+- Frontend renders visual preview of slides
+
+**Generate Mode**:
+- `/api/generate` - Uses cached preview data if available
+- Creates HTML slides and converts to PPTX (~10-15 seconds)
 
 ## 💡 Tips for Best Results
 
@@ -174,11 +191,21 @@ regular check-ins, and deliberate culture building.
 | Feature | Basic Version | Pro Version (This App) |
 |---------|--------------|------------------------|
 | AI Structuring | ✅ | ✅ |
+| Live Preview | ❌ | ✅ Full slide preview |
 | Color Themes | ❌ | ✅ Content-aware |
 | Typography | Basic | Professional |
 | Layout Quality | Simple | html2pptx powered |
 | Consistency | Variable | Design system |
+| User Control | Direct generate | Preview → Review → Generate |
 | Setup | None | Node.js required |
+
+## 📖 Documentation
+
+- **[QUICKSTART-PREVIEW.md](QUICKSTART-PREVIEW.md)** - Quick guide to using the preview feature
+- **[SLIDE-PREVIEW-FEATURE.md](SLIDE-PREVIEW-FEATURE.md)** - Technical documentation
+- **[PREVIEW-GUIDE.md](PREVIEW-GUIDE.md)** - Visual guide showing what to expect
+- **[PREVIEW-DEMO.md](PREVIEW-DEMO.md)** - Step-by-step visual walkthrough
+- **[IMPLEMENTATION-SUMMARY.md](IMPLEMENTATION-SUMMARY.md)** - Complete implementation details
 
 ## 🤝 Credits
 

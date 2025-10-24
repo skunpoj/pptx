@@ -157,17 +157,21 @@
             color: #667eea;
         }
         
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
             background: #d0d9ff;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         
         .btn-generate {
-            width: 100%;
             padding: 1.25rem;
             font-size: 1.1rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            margin-top: 1rem;
         }
         
         .btn-generate:hover:not(:disabled) {
@@ -390,9 +394,14 @@ AI will automatically:
                 
                 <div id="status"></div>
                 
-                <button class="btn-generate" onclick="generatePresentation()" id="generateBtn">
-                    ✨ Generate Professional PowerPoint
-                </button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 1rem;">
+                    <button class="btn-secondary" onclick="generatePreview()" id="previewBtn" style="padding: 1rem; font-size: 1rem; font-weight: 600;">
+                        👁️ Preview Slides
+                    </button>
+                    <button class="btn-generate" onclick="generatePresentation()" id="generateBtn" style="margin-top: 0; padding: 1rem; font-size: 1rem;">
+                        ✨ Generate PowerPoint
+                    </button>
+                </div>
             </div>
 
             <div class="card">
@@ -412,6 +421,9 @@ AI will automatically:
     </div>
 
     <script>
+        // Global variable to store slide data
+        let currentSlideData = null;
+
         // Load API key from localStorage
         window.addEventListener('load', () => {
             const savedKey = localStorage.getItem('anthropic_api_key');
@@ -432,6 +444,127 @@ AI will automatically:
             showStatus('✅ API key saved!', 'success');
         }
 
+        // Generate preview of slides
+        async function generatePreview() {
+            const text = document.getElementById('textInput').value.trim();
+            const apiKey = localStorage.getItem('anthropic_api_key');
+            
+            if (!apiKey) {
+                showStatus('⚠️ Please enter your API key first!', 'error');
+                document.getElementById('apiKey').focus();
+                return;
+            }
+            
+            if (!text) {
+                showStatus('⚠️ Please enter some text!', 'error');
+                return;
+            }
+            
+            const previewBtn = document.getElementById('previewBtn');
+            previewBtn.disabled = true;
+            previewBtn.innerHTML = '<span class="spinner"></span> Generating preview...';
+            
+            showStatus('🤖 AI is analyzing your content...', 'info');
+            document.getElementById('preview').innerHTML = '<div style="text-align: center; padding: 2rem;"><span class="spinner" style="width: 2rem; height: 2rem; border-width: 3px;"></span><p style="margin-top: 1rem; color: #666;">AI is designing your slides...</p></div>';
+            
+            try {
+                const response = await fetch('/api/preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text, apiKey })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Preview generation failed');
+                }
+                
+                const slideData = await response.json();
+                currentSlideData = slideData;
+                
+                // Display preview
+                displayPreview(slideData);
+                showStatus('✅ Preview ready! Click "Generate PowerPoint" to create your file.', 'success');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('preview').innerHTML = '';
+                if (error.message.includes('401') || error.message.includes('authentication')) {
+                    showStatus('❌ Invalid API key. Please check and try again.', 'error');
+                } else {
+                    showStatus('❌ Error: ' + error.message, 'error');
+                }
+            } finally {
+                previewBtn.disabled = false;
+                previewBtn.innerHTML = '👁️ Preview Slides';
+            }
+        }
+
+        function displayPreview(slideData) {
+            const preview = document.getElementById('preview');
+            const theme = slideData.designTheme;
+            
+            let html = `
+                <div style="background: #f0f4ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid ${theme.colorPrimary};">
+                    <strong style="color: ${theme.colorPrimary};">🎨 ${theme.name}</strong>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #666;">${theme.description}</p>
+                </div>
+            `;
+            
+            slideData.slides.forEach((slide, index) => {
+                const isTitle = slide.type === 'title';
+                const bgColor = isTitle ? theme.colorPrimary : '#ffffff';
+                const textColor = isTitle ? '#ffffff' : '#333';
+                const borderColor = isTitle ? theme.colorPrimary : '#dee2e6';
+                
+                html += `
+                    <div class="slide-preview ${isTitle ? 'title-slide' : ''}" style="background: ${bgColor}; border-color: ${borderColor};">
+                        <div class="slide-header">
+                            <span class="slide-number" style="background: ${theme.colorAccent};">Slide ${index + 1}</span>
+                            <span class="slide-type" style="color: ${isTitle ? 'rgba(255,255,255,0.8)' : '#666'};">${slide.type === 'title' ? 'Title Slide' : slide.layout || 'Content'}</span>
+                        </div>
+                        <div class="slide-title" style="color: ${textColor};">${slide.title}</div>
+                `;
+                
+                if (slide.subtitle) {
+                    html += `<div style="color: ${textColor}; opacity: 0.9; font-size: 0.9rem; margin-top: 0.25rem;">${slide.subtitle}</div>`;
+                }
+                
+                if (slide.content && slide.content.length > 0) {
+                    if (slide.layout === 'two-column') {
+                        const half = Math.ceil(slide.content.length / 2);
+                        const col1 = slide.content.slice(0, half);
+                        const col2 = slide.content.slice(half);
+                        
+                        html += `
+                            <div class="slide-content" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+                                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.4;">
+                                    ${col1.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.4;">
+                                    ${col2.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="slide-content">
+                                <ul style="margin: 0.5rem 0 0 0; padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.4;">
+                                    ${slide.content.map(item => `<li>${item}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+                }
+                
+                html += `</div>`;
+            });
+            
+            preview.innerHTML = html;
+        }
+
         async function generatePresentation() {
             const text = document.getElementById('textInput').value.trim();
             const apiKey = localStorage.getItem('anthropic_api_key');
@@ -447,11 +580,16 @@ AI will automatically:
                 return;
             }
             
+            // If no preview generated yet, generate one first
+            if (!currentSlideData) {
+                await generatePreview();
+                if (!currentSlideData) return; // Preview failed
+            }
+            
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Generating presentation...';
-            showStatus('🤖 AI is analyzing your content and designing slides...', 'info');
-            document.getElementById('preview').innerHTML = '';
+            btn.innerHTML = '<span class="spinner"></span> Creating PowerPoint...';
+            showStatus('📊 Generating your professional PowerPoint...', 'info');
             
             try {
                 const response = await fetch('/api/generate', {
@@ -459,7 +597,7 @@ AI will automatically:
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ text, apiKey })
+                    body: JSON.stringify({ text, apiKey, slideData: currentSlideData })
                 });
                 
                 if (!response.ok) {
@@ -508,6 +646,8 @@ Key applications include early cancer detection through image analysis, predicti
 The integration of AI with electronic health records enables personalized medicine by analyzing patient data to recommend optimal treatments. Natural language processing helps extract insights from medical literature and patient notes.
 
 Challenges remain including data privacy concerns, the need for regulatory frameworks, potential algorithmic bias, and ensuring AI systems are explainable to healthcare providers. Despite these hurdles, AI promises to make healthcare more accessible and effective for everyone.`;
+            // Auto-generate preview when example is loaded
+            setTimeout(() => generatePreview(), 500);
         }
     </script>
 </body>
