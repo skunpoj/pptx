@@ -517,6 +517,15 @@ ${text}`;
         
         // Read the generated PowerPoint
         const pptxPath = path.join(workDir, 'presentation.pptx');
+        
+        // Check if file exists before reading
+        try {
+            await fs.access(pptxPath);
+        } catch (error) {
+            console.error('PPTX file not found at:', pptxPath);
+            throw new Error(`Failed to create presentation file. Path: ${pptxPath}`);
+        }
+        
         const pptxBuffer = await fs.readFile(pptxPath);
         
         // Send file back
