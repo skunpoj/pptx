@@ -27,6 +27,29 @@ app.post('/api/generate', async (req, res) => {
         // Create workspace directory
         await fs.mkdir(workDir, { recursive: true });
         
+        // Create package.json for workspace
+        const packageJson = {
+            "name": "pptx-workspace",
+            "version": "1.0.0",
+            "type": "commonjs"
+        };
+        await fs.writeFile(
+            path.join(workDir, 'package.json'), 
+            JSON.stringify(packageJson, null, 2)
+        );
+        
+        // Create symlinks to global node_modules
+        const nodeModulesPath = path.join(workDir, 'node_modules');
+        await fs.mkdir(nodeModulesPath, { recursive: true });
+        
+        // Create symlinks for required packages
+        try {
+            await execPromise(`ln -sf /usr/local/lib/node_modules/pptxgenjs ${nodeModulesPath}/pptxgenjs`);
+            await execPromise(`ln -sf /usr/local/lib/node_modules/@ant ${nodeModulesPath}/@ant`);
+        } catch (e) {
+            console.log('Warning: Could not create symlinks, will rely on NODE_PATH');
+        }
+        
         // Call Claude API to structure content
         const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
@@ -121,7 +144,7 @@ ${text}`
         
         // Run conversion
         const { stdout, stderr } = await execPromise(
-            `cd ${workDir} && NODE_PATH="$(npm root -g)" node convert.js 2>&1`
+            `cd ${workDir} && node convert.js 2>&1`
         );
         
         // Read the generated PowerPoint
