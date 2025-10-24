@@ -22,9 +22,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install html2pptx globally first
+# Install html2pptx and pptxgenjs globally first
 COPY skills/pptx/html2pptx.tgz /tmp/html2pptx.tgz
-RUN npm install -g /tmp/html2pptx.tgz && rm /tmp/html2pptx.tgz
+RUN npm install -g pptxgenjs /tmp/html2pptx.tgz && rm /tmp/html2pptx.tgz
 
 # Install app dependencies
 RUN npm ci --only=production
