@@ -38,6 +38,30 @@ app.post('/api/generate', async (req, res) => {
             JSON.stringify(packageJson, null, 2)
         );
         
+        // Create node_modules with symlinks to global packages
+        const nodeModulesPath = path.join(workDir, 'node_modules');
+        await fs.mkdir(nodeModulesPath, { recursive: true });
+        
+        // Symlink global packages
+        const globalModulesPath = '/usr/local/lib/node_modules';
+        try {
+            await fs.symlink(
+                path.join(globalModulesPath, 'pptxgenjs'),
+                path.join(nodeModulesPath, 'pptxgenjs'),
+                'dir'
+            );
+            await fs.symlink(
+                path.join(globalModulesPath, '@ant'),
+                path.join(nodeModulesPath, '@ant'),
+                'dir'
+            );
+            console.log('Symlinks created for dependencies');
+        } catch (symlinkError) {
+            // Fallback: If symlinks fail, try copying
+            console.log('Symlink failed, falling back to npm install');
+            await execPromise(`cd ${workDir} && npm install pptxgenjs @ant/html2pptx --no-save --no-audit --no-fund 2>&1`);
+        }
+        
         // Call Claude API to structure content
         const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
@@ -133,7 +157,7 @@ ${text}`
         // Run conversion
         console.log(`Running conversion in ${workDir}`);
         const { stdout, stderr } = await execPromise(
-            `cd ${workDir} && NODE_PATH=/usr/local/lib/node_modules node convert.js 2>&1`
+            `cd ${workDir} && node convert.js 2>&1`
         );
         console.log('Conversion output:', stdout);
         if (stderr) console.error('Conversion stderr:', stderr);
