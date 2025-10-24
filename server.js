@@ -45,20 +45,39 @@ app.post('/api/generate', async (req, res) => {
         // Symlink global packages
         const globalModulesPath = '/usr/local/lib/node_modules';
         try {
+            // Create symlinks for the packages
             await fs.symlink(
                 path.join(globalModulesPath, 'pptxgenjs'),
                 path.join(nodeModulesPath, 'pptxgenjs'),
                 'dir'
             );
+            
+            // Create @ant directory for scoped package
+            await fs.mkdir(path.join(nodeModulesPath, '@ant'), { recursive: true });
             await fs.symlink(
-                path.join(globalModulesPath, '@ant'),
-                path.join(nodeModulesPath, '@ant'),
+                path.join(globalModulesPath, '@ant/html2pptx'),
+                path.join(nodeModulesPath, '@ant', 'html2pptx'),
                 'dir'
             );
+            
+            // Also symlink dependencies that pptxgenjs needs
+            const depsToLink = ['jszip', 'sharp', 'playwright'];
+            for (const dep of depsToLink) {
+                try {
+                    await fs.symlink(
+                        path.join(globalModulesPath, dep),
+                        path.join(nodeModulesPath, dep),
+                        'dir'
+                    );
+                } catch (e) {
+                    // Dependency might not exist or already linked
+                }
+            }
+            
             console.log('Symlinks created for dependencies');
         } catch (symlinkError) {
             // Fallback: If symlinks fail, try copying
-            console.log('Symlink failed, falling back to npm install');
+            console.log('Symlink failed, falling back to npm install:', symlinkError.message);
             await execPromise(`cd ${workDir} && npm install pptxgenjs @ant/html2pptx --no-save --no-audit --no-fund 2>&1`);
         }
         

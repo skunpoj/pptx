@@ -31,7 +31,7 @@ COPY package*.json ./
 
 # Install html2pptx and all dependencies globally
 COPY skills/pptx/html2pptx.tgz /tmp/html2pptx.tgz
-RUN npm install -g pptxgenjs sharp playwright /tmp/html2pptx.tgz && \
+RUN npm install -g pptxgenjs jszip sharp playwright /tmp/html2pptx.tgz && \
     rm /tmp/html2pptx.tgz
 
 # Install app dependencies
