@@ -306,8 +306,11 @@ function generateSlideHTML(slide, theme) {
 }
 
 function generateConversionScript(htmlFiles, slides) {
-    return `import pptxgen from "pptxgenjs";
+    return `import { createRequire } from 'module';
 import { html2pptx } from "@ant/html2pptx";
+
+const require = createRequire(import.meta.url);
+const pptxgen = require("pptxgenjs");
 
 async function createPresentation() {
     const pptx = new pptxgen();

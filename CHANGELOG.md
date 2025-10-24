@@ -9,7 +9,8 @@
 - ES module imports were failing even with NODE_PATH set
 
 **Problem 2: `SyntaxError: Cannot use import statement outside a module`**
-- Module resolution was picking up wrong entry points
+- Node.js was loading `pptxgen.es.js` (ES module) but treating it as CommonJS
+- Module resolution conflict between ES modules and CommonJS in pptxgenjs package
 - Missing peer dependencies causing import failures
 
 ### ✅ Solutions Implemented
@@ -25,7 +26,14 @@
    - Changed from: `npm install -g pptxgenjs sharp playwright`
    - Changed to: `npm install -g pptxgenjs jszip sharp playwright`
 
-3. **Improved Error Handling**
+3. **Fixed Module Import Strategy**
+   - Use `createRequire` from Node.js `module` to load CommonJS version of pptxgenjs
+   - Avoids ES/CommonJS module conflict
+   - Ensures compatibility when `"type": "module"` is set in package.json
+   - Changed from: `import pptxgen from "pptxgenjs";`
+   - Changed to: `const require = createRequire(import.meta.url); const pptxgen = require("pptxgenjs");`
+
+4. **Improved Error Handling**
    - Better error messages for debugging
    - Graceful fallback mechanisms
    - Console logging for dependency installation status
