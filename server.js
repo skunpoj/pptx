@@ -167,8 +167,6 @@ function generateCSS(theme) {
 }
 
 function generateSlideHTML(slide, theme) {
-    const css = fs.readFileSync(path.join(__dirname, 'workspace', Date.now().toString(), 'theme.css'), 'utf8').catch(() => '');
-    
     if (slide.type === 'title') {
         return `<!DOCTYPE html>
 <html>
