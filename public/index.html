@@ -360,20 +360,17 @@
             <div class="card">
                 <h2>📝 Your Content</h2>
                 
-                <!-- AI Prompt Generator Section -->
-                <div style="background: #f8f9ff; border: 2px solid #e0e7ff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
-                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #555;">🤖 AI Content Generator</h3>
-                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Describe your presentation or attach files below. AI will use your prompt to control how content is structured and converted into slides.</p>
-                    <textarea id="promptInput" placeholder="Create a quarterly business review for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team. Include data visualizations and action items." style="height: 80px; margin-bottom: 0.5rem;"></textarea>
+                <textarea id="textInput" placeholder="Create a quarterly business review for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team. Include data visualizations and action items.
+
+"></textarea>
+                
+                <!-- File Upload and Options Section -->
+                <div style="background: #f0fff4; border: 2px solid #86efac; border-radius: 12px; padding: 1rem; margin-top: 1rem; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #555;">📎 Attach Files (Optional)</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Upload files to use as base content or template. AI will use the text above to control how the files are converted.</p>
+                    <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" style="font-size: 0.85rem; margin-bottom: 0.75rem;">
                     
-                    <!-- File Upload integrated -->
-                    <div style="background: #f0fff4; border: 2px solid #86efac; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.5rem;">
-                        <label style="display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.5rem;">📎 Attach Files (optional):</label>
-                        <p style="font-size: 0.75rem; color: #666; margin-bottom: 0.5rem;">Upload files to use as base content or template. AI will use your prompt above to control how the files are converted.</p>
-                        <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" style="font-size: 0.85rem;">
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                         <div>
                             <label style="display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.25rem;">Number of slides:</label>
                             <input type="number" id="numSlides" value="6" min="3" max="20" style="width: 100%; padding: 0.5rem; border: 2px solid #ddd; border-radius: 8px; font-size: 0.9rem;">
@@ -381,20 +378,20 @@
                         <div style="display: flex; align-items: flex-end;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem;">
                                 <input type="checkbox" id="generateImages" style="width: 18px; height: 18px; cursor: pointer;">
-                                <span style="font-size: 0.85rem; color: #555;">Generate AI images for slides</span>
+                                <span style="font-size: 0.85rem; color: #555;">Generate AI images</span>
                             </label>
                         </div>
                     </div>
                     
-                    <button class="btn-primary" onclick="generateFromPrompt()" id="promptBtn" style="width: 100%; padding: 0.75rem;">
-                        ✨ Generate Content
+                    <button class="btn-primary" onclick="generateFromPrompt()" id="promptBtn" style="width: 100%; padding: 0.75rem; margin-top: 0.75rem;">
+                        ✨ Generate Content from Text/Files
                     </button>
                 </div>
-
+                
                 <!-- Example Categories -->
                 <div style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
                     <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #555;">📚 Example Templates</h3>
-                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Choose a category to load example content:</p>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Choose a category to load example content into the text area above:</p>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
                         <button class="btn-secondary" onclick="loadExampleByCategory('tech')" style="padding: 0.5rem; font-size: 0.85rem;">
                             💻 Technology
@@ -416,21 +413,6 @@
                         </button>
                     </div>
                 </div>
-
-                <textarea id="textInput" placeholder="Paste your text here or use the tools above to generate content...
-
-You can also write directly:
-• Meeting notes
-• Blog post or article
-• Research findings
-• Product description
-• Business proposal
-
-AI will automatically:
-✓ Structure content into slides
-✓ Choose appropriate colors
-✓ Design professional layouts
-✓ Create visual hierarchy"></textarea>
                 
                 <div id="status"></div>
                 
@@ -448,11 +430,6 @@ AI will automatically:
                 <h2>👁️ Slide Preview</h2>
                 <div class="preview" id="preview"></div>
             </div>
-        </div>
-
-        <div class="footer">
-            <p>Professional presentations • Claude AI content structuring • html2pptx rendering</p>
-            <p style="font-size: 0.8rem; margin-top: 0.5rem;">All processing happens on your server • Your API key is stored locally</p>
         </div>
 
         <div class="card" id="apiCard" style="margin-top: 1.5rem;">
@@ -553,6 +530,11 @@ AI will automatically:
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="footer">
+            <p>Professional presentations • Claude AI content structuring • html2pptx rendering</p>
+            <p style="font-size: 0.8rem; margin-top: 0.5rem;">All processing happens on your server • Your API key is stored locally</p>
         </div>
     </div>
 
@@ -950,7 +932,7 @@ Implementation strategies involve setting measurable sustainability goals with c
 
         // Generate content from AI prompt with slide count and image generation
         async function generateFromPrompt() {
-            const prompt = document.getElementById('promptInput').value.trim();
+            const prompt = document.getElementById('textInput').value.trim();
             const numSlides = parseInt(document.getElementById('numSlides').value) || 6;
             const generateImages = document.getElementById('generateImages').checked;
             const apiKey = getApiKey();
@@ -963,7 +945,7 @@ Implementation strategies involve setting measurable sustainability goals with c
             }
             
             if (!prompt && files.length === 0) {
-                showStatus('⚠️ Please describe your presentation or attach files!', 'error');
+                showStatus('⚠️ Please enter text or attach files!', 'error');
                 return;
             }
             
@@ -1000,50 +982,50 @@ Implementation strategies involve setting measurable sustainability goals with c
                         ? `${prompt}\n\nUse the following file content as the base:\n${combinedFiles}`
                         : `Analyze and convert the following files into a well-structured presentation with ${numSlides} slides:\n${combinedFiles}`;
                     
-                    const response = await fetch('/api/generate-content', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ 
+                const response = await fetch('/api/generate-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
                             prompt: finalPrompt, 
-                            apiKey, 
-                            provider: currentProvider,
-                            numSlides,
-                            generateImages
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.error || 'Content generation failed');
-                    }
-                    
-                    const result = await response.json();
+                        apiKey, 
+                        provider: currentProvider,
+                        numSlides,
+                        generateImages
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Content generation failed');
+                }
+                
+                const result = await response.json();
                     content = result.content;
-                    
+                
                 } else {
                     // No files, just use the prompt
                     const response = await fetch('/api/generate-content', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
                             prompt, 
-                            apiKey, 
+                        apiKey, 
                             provider: currentProvider,
                             numSlides,
                             generateImages
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const error = await response.json();
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
                         throw new Error(error.error || 'Content generation failed');
-                    }
-                    
-                    const result = await response.json();
+                }
+                
+                const result = await response.json();
                     content = result.content;
                 }
                 
@@ -1055,11 +1037,11 @@ Implementation strategies involve setting measurable sustainability goals with c
                 if (error.message.includes('401') || error.message.includes('authentication')) {
                     showStatus('❌ Invalid API key. Please check and try again.', 'error');
                 } else {
-                    showStatus('❌ Error: ' + error.message, 'error');
+                showStatus('❌ Error: ' + error.message, 'error');
                 }
             } finally {
                 promptBtn.disabled = false;
-                promptBtn.innerHTML = '✨ Generate Content';
+                promptBtn.innerHTML = '✨ Generate Content from Text/Files';
             }
         }
         
