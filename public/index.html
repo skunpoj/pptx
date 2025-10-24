@@ -377,9 +377,46 @@
         <div class="main-grid">
             <div class="card">
                 <h2>📝 Your Content</h2>
-                <textarea id="textInput" placeholder="Paste your text here...
+                
+                <!-- AI Prompt Generator Section -->
+                <div style="background: #f8f9ff; border: 2px solid #e0e7ff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #555;">🤖 AI Prompt Generator</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Describe what presentation you want, and AI will generate the content for you!</p>
+                    <textarea id="promptInput" placeholder="Example: Create a presentation about sustainable energy solutions for business executives, focusing on solar and wind power with cost analysis" style="height: 80px; margin-bottom: 0.5rem;"></textarea>
+                    <button class="btn-primary" onclick="generateFromPrompt()" id="promptBtn" style="width: 100%; padding: 0.75rem;">
+                        ✨ Generate Content from Idea
+                    </button>
+                </div>
 
-Examples:
+                <!-- Example Categories -->
+                <div style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #555;">📚 Example Templates</h3>
+                    <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Choose a category to load example content:</p>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                        <button class="btn-secondary" onclick="loadExampleByCategory('tech')" style="padding: 0.5rem; font-size: 0.85rem;">
+                            💻 Technology
+                        </button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('business')" style="padding: 0.5rem; font-size: 0.85rem;">
+                            💼 Business
+                        </button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('education')" style="padding: 0.5rem; font-size: 0.85rem;">
+                            📚 Education
+                        </button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('health')" style="padding: 0.5rem; font-size: 0.85rem;">
+                            🏥 Healthcare
+                        </button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('marketing')" style="padding: 0.5rem; font-size: 0.85rem;">
+                            📈 Marketing
+                        </button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('environment')" style="padding: 0.5rem; font-size: 0.85rem;">
+                            🌍 Environment
+                        </button>
+                    </div>
+                </div>
+
+                <textarea id="textInput" placeholder="Paste your text here or use the tools above to generate content...
+
+You can also write directly:
 • Meeting notes
 • Blog post or article
 • Research findings
@@ -409,10 +446,6 @@ AI will automatically:
                 <div class="preview" id="preview"></div>
             </div>
         </div>
-
-        <button class="example-btn" onclick="loadExample()">
-            💡 Load example text
-        </button>
 
         <div class="footer">
             <p>Professional presentations • Claude AI content structuring • html2pptx rendering</p>
@@ -636,8 +669,9 @@ AI will automatically:
             status.className = `status ${type}`;
         }
 
-        function loadExample() {
-            document.getElementById('textInput').value = `The Future of Artificial Intelligence in Healthcare
+        // Example templates by category
+        const exampleTemplates = {
+            tech: `The Future of Artificial Intelligence in Healthcare
 
 Artificial intelligence is revolutionizing healthcare by improving diagnostics, personalizing treatment plans, and accelerating drug discovery. Machine learning algorithms can now detect diseases from medical images with accuracy rivaling human experts.
 
@@ -645,9 +679,118 @@ Key applications include early cancer detection through image analysis, predicti
 
 The integration of AI with electronic health records enables personalized medicine by analyzing patient data to recommend optimal treatments. Natural language processing helps extract insights from medical literature and patient notes.
 
-Challenges remain including data privacy concerns, the need for regulatory frameworks, potential algorithmic bias, and ensuring AI systems are explainable to healthcare providers. Despite these hurdles, AI promises to make healthcare more accessible and effective for everyone.`;
-            // Auto-generate preview when example is loaded
-            setTimeout(() => generatePreview(), 500);
+Challenges remain including data privacy concerns, the need for regulatory frameworks, potential algorithmic bias, and ensuring AI systems are explainable to healthcare providers. Despite these hurdles, AI promises to make healthcare more accessible and effective for everyone.`,
+            
+            business: `Digital Transformation Strategy for Modern Enterprises
+
+Digital transformation is no longer optional for businesses seeking to remain competitive in today's fast-paced market. Companies must embrace cloud computing, data analytics, and automation to streamline operations and improve customer experiences.
+
+Key pillars of successful transformation include cloud migration for scalability, data-driven decision making through advanced analytics, customer experience optimization using digital channels, and process automation to reduce costs and errors.
+
+The journey requires strong leadership commitment, clear vision and roadmap, investment in technology infrastructure, and a culture of continuous innovation. Companies must also focus on upskilling employees to work effectively with new technologies.
+
+Success metrics include improved operational efficiency, enhanced customer satisfaction, faster time to market for new products, and increased revenue through digital channels. Regular assessment and adjustment of strategies ensures continued relevance and competitive advantage.`,
+            
+            education: `Innovative Teaching Methods for the 21st Century Classroom
+
+Modern education must evolve to prepare students for a rapidly changing world. Traditional lecture-based approaches are giving way to interactive, technology-enhanced learning experiences that foster critical thinking and collaboration.
+
+Effective teaching strategies include project-based learning where students solve real-world problems, flipped classroom models that maximize in-class interaction time, gamification to increase engagement and motivation, and personalized learning paths adapted to individual student needs.
+
+Technology integration enhances learning through virtual reality field trips, collaborative online platforms for group projects, adaptive learning software that adjusts to student progress, and digital portfolios showcasing student achievements.
+
+Assessment methods are also evolving beyond traditional tests to include peer evaluation, self-reflection exercises, practical demonstrations of skills, and ongoing formative feedback that guides learning. These approaches better prepare students for future careers and lifelong learning.`,
+            
+            health: `Mental Health Awareness in the Modern Workplace
+
+Mental health has become a critical concern for organizations worldwide. Creating supportive work environments that prioritize employee wellbeing leads to improved productivity, reduced turnover, and stronger company culture.
+
+Common workplace stressors include high workload and tight deadlines, lack of work-life balance, insufficient recognition and support, unclear expectations and poor communication, and limited opportunities for growth and development.
+
+Effective organizational strategies include flexible work arrangements, mental health resources and counseling services, stress management workshops, open communication channels for concerns, and leadership training on mental health awareness.
+
+Individual practices that support mental health include regular exercise and physical activity, mindfulness and meditation practices, maintaining social connections, setting healthy boundaries, and seeking professional help when needed. Creating a culture where mental health is openly discussed reduces stigma and encourages people to seek support.`,
+            
+            marketing: `Content Marketing Strategies for 2024
+
+Content marketing continues to evolve as consumer behaviors shift and new platforms emerge. Successful brands focus on creating authentic, valuable content that resonates with their target audience across multiple channels.
+
+Key trends shaping content strategy include short-form video dominance on platforms like TikTok and Instagram Reels, interactive content that engages audiences through quizzes and polls, user-generated content that builds community and trust, and AI-powered personalization for tailored experiences.
+
+Essential components of effective campaigns include consistent brand voice across all channels, data-driven optimization based on performance metrics, multi-platform distribution for maximum reach, and authentic storytelling that connects emotionally with audiences.
+
+Measuring success requires tracking engagement rates and time spent with content, conversion metrics and ROI analysis, audience growth and retention, brand sentiment and awareness, and content performance across different channels. Regular analysis enables continuous improvement and strategic adjustments.`,
+            
+            environment: `Sustainable Business Practices for a Greener Future
+
+Environmental sustainability has become a business imperative as consumers, investors, and regulators demand responsible corporate behavior. Companies that embrace sustainable practices gain competitive advantages while contributing to global environmental goals.
+
+Key areas for action include reducing carbon footprint through energy efficiency and renewable energy adoption, implementing circular economy principles to minimize waste, sustainable supply chain management with ethical sourcing, and water conservation in operations and products.
+
+Business benefits of sustainability include cost savings through resource efficiency, enhanced brand reputation and customer loyalty, access to green financing and investment, improved risk management and regulatory compliance, and attraction of top talent who value corporate responsibility.
+
+Implementation strategies involve setting measurable sustainability goals with clear timelines, conducting environmental impact assessments, engaging stakeholders in sustainability initiatives, transparent reporting of progress and challenges, and continuous innovation in sustainable products and processes. Leadership commitment and employee engagement are essential for success.`
+        };
+
+        function loadExampleByCategory(category) {
+            const text = exampleTemplates[category];
+            if (text) {
+                document.getElementById('textInput').value = text;
+                showStatus(`📝 ${category.charAt(0).toUpperCase() + category.slice(1)} example loaded. Click "Preview Slides" to see the design.`, 'info');
+            }
+        }
+
+        // Generate content from AI prompt
+        async function generateFromPrompt() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            const apiKey = localStorage.getItem('anthropic_api_key');
+            
+            if (!apiKey) {
+                showStatus('⚠️ Please enter your API key first!', 'error');
+                document.getElementById('apiKey').focus();
+                return;
+            }
+            
+            if (!prompt) {
+                showStatus('⚠️ Please describe what presentation you want to create!', 'error');
+                return;
+            }
+            
+            const promptBtn = document.getElementById('promptBtn');
+            promptBtn.disabled = true;
+            promptBtn.innerHTML = '<span class="spinner"></span> Generating content...';
+            
+            showStatus('🤖 AI is creating content from your idea...', 'info');
+            
+            try {
+                const response = await fetch('/api/generate-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt, apiKey })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Content generation failed');
+                }
+                
+                const result = await response.json();
+                document.getElementById('textInput').value = result.content;
+                showStatus('✅ Content generated! Review and click "Preview Slides" to see the design.', 'success');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                if (error.message.includes('401') || error.message.includes('authentication')) {
+                    showStatus('❌ Invalid API key. Please check and try again.', 'error');
+                } else {
+                    showStatus('❌ Error: ' + error.message, 'error');
+                }
+            } finally {
+                promptBtn.disabled = false;
+                promptBtn.innerHTML = '✨ Generate Content from Idea';
+            }
         }
     </script>
 </body>

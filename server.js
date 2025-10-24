@@ -12,6 +12,64 @@ const PORT = 3000;
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(express.static('public'));
 
+// Content generation endpoint - generates presentation content from a prompt
+app.post('/api/generate-content', async (req, res) => {
+    const { prompt, apiKey } = req.body;
+    
+    if (!prompt || !apiKey) {
+        return res.status(400).json({ error: 'Prompt and API key are required' });
+    }
+    
+    try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-api-key": apiKey.trim(),
+                "anthropic-version": "2023-06-01"
+            },
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 3000,
+                messages: [{
+                    role: "user",
+                    content: `You are a professional content writer for presentations. Based on the following idea/prompt, generate comprehensive content that can be used to create a presentation.
+
+USER PROMPT:
+${prompt}
+
+INSTRUCTIONS:
+1. Generate 4-6 paragraphs of well-structured content
+2. Each paragraph should cover a key aspect or topic
+3. Write in a clear, professional style
+4. Include specific details, examples, or data points where appropriate
+5. Make the content informative and engaging
+6. Focus on the main points that would make good presentation slides
+
+OUTPUT FORMAT:
+Write the content as plain text paragraphs separated by blank lines. Do NOT include any JSON, markdown formatting, or structural elements. Just write the presentation content directly.
+
+Generate the content now:`
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const content = data.content[0].text.trim();
+        
+        res.json({ content });
+        
+    } catch (error) {
+        console.error('Content generation error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Preview endpoint - returns slide structure without generating PPTX
 app.post('/api/preview', async (req, res) => {
     const { text, apiKey } = req.body;
@@ -92,8 +150,24 @@ ${text}`
 
         const data = await response.json();
         let responseText = data.content[0].text;
+        
+        // Clean up the response text to extract JSON
         responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-        const slideData = JSON.parse(responseText);
+        
+        // Try to parse JSON with better error handling
+        let slideData;
+        try {
+            slideData = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON Parse Error:', parseError);
+            console.error('Response text:', responseText);
+            throw new Error('Failed to parse AI response. Please try again.');
+        }
+        
+        // Validate the structure
+        if (!slideData.designTheme || !slideData.slides || !Array.isArray(slideData.slides)) {
+            throw new Error('Invalid slide structure received from AI');
+        }
         
         // Return the slide structure for preview
         res.json(slideData);
@@ -193,8 +267,28 @@ ${text}`
 
             const data = await response.json();
             let responseText = data.content[0].text;
+            
+            // Clean up the response text to extract JSON
             responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-            finalSlideData = JSON.parse(responseText);
+            
+            // Try to parse JSON with better error handling
+            try {
+                finalSlideData = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('JSON Parse Error in generate:', parseError);
+                console.error('Response text:', responseText);
+                throw new Error('Failed to parse AI response. Please try again.');
+            }
+            
+            // Validate the structure
+            if (!finalSlideData.designTheme || !finalSlideData.slides || !Array.isArray(finalSlideData.slides)) {
+                throw new Error('Invalid slide structure received from AI');
+            }
+        }
+        
+        // Additional validation for slideData
+        if (!finalSlideData || !finalSlideData.slides || finalSlideData.slides.length === 0) {
+            throw new Error('No slides data available. Please generate preview first.');
         }
         
         // Create workspace directory

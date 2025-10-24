@@ -4,12 +4,19 @@ Professional AI-powered text-to-PowerPoint converter using **Claude AI** for con
 
 ## ✨ Features
 
+### Core Features
 - 🤖 **AI-Powered**: Claude analyzes your content and creates intelligent slide structure
 - 👁️ **Live Preview**: See your slides before generating - preview structure, theme, and colors
 - 🎨 **Professional Design**: Uses html2pptx workflow for high-quality layouts
 - 🌈 **Smart Theming**: AI chooses color palettes that match your content
 - 📊 **Clean Layouts**: Professional typography, spacing, and visual hierarchy
 - 💾 **Real PowerPoint**: Downloads actual .pptx files compatible with PowerPoint/Google Slides
+
+### 🆕 New Features (October 2024)
+- ✨ **AI Prompt Generator**: Describe your presentation idea, AI creates the content
+- 📚 **Example Templates**: 6 professional categories (Tech, Business, Education, Healthcare, Marketing, Environment)
+- 🔧 **Enhanced Error Handling**: Better validation and user-friendly error messages
+- 🎯 **Improved Workflow**: Multiple pathways to create presentations
 
 ## 🚀 Quick Start
 
@@ -43,9 +50,20 @@ Professional AI-powered text-to-PowerPoint converter using **Claude AI** for con
    - Paste it in the API Configuration section
    - Click "Save Key"
 
-2. **Add your content**
+2. **Create your content** (3 ways)
+   
+   **Option A: AI Prompt Generator** 🆕
+   - Describe what presentation you want
+   - Click "✨ Generate Content from Idea"
+   - Example: "Create a presentation about cybersecurity for small businesses"
+   
+   **Option B: Example Templates** 🆕
+   - Click any category (💻 Tech, 💼 Business, 📚 Education, 🏥 Healthcare, 📈 Marketing, 🌍 Environment)
+   - Professional content loads instantly
+   
+   **Option C: Manual Input**
    - Paste any text (article, notes, report, etc.)
-   - Or click "Load example text" to try it out
+   - Write your own content
 
 3. **Preview your slides** (recommended)
    - Click "👁️ Preview Slides"
@@ -201,10 +219,20 @@ regular check-ins, and deliberate culture building.
 
 ## 📖 Documentation
 
+### Getting Started
+- **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** - ⭐ Quick reference card (START HERE)
+- **[USER-GUIDE.md](USER-GUIDE.md)** - Comprehensive user guide with examples
 - **[QUICKSTART-PREVIEW.md](QUICKSTART-PREVIEW.md)** - Quick guide to using the preview feature
-- **[SLIDE-PREVIEW-FEATURE.md](SLIDE-PREVIEW-FEATURE.md)** - Technical documentation
+
+### For Users
 - **[PREVIEW-GUIDE.md](PREVIEW-GUIDE.md)** - Visual guide showing what to expect
 - **[PREVIEW-DEMO.md](PREVIEW-DEMO.md)** - Step-by-step visual walkthrough
+
+### For Developers
+- **[IMPROVEMENTS-APPLIED.md](IMPROVEMENTS-APPLIED.md)** - 🆕 Latest improvements (Oct 2024)
+- **[TESTING-CHECKLIST.md](TESTING-CHECKLIST.md)** - 🆕 Complete testing suite
+- **[COMPLETION-SUMMARY.md](COMPLETION-SUMMARY.md)** - 🆕 Project completion status
+- **[SLIDE-PREVIEW-FEATURE.md](SLIDE-PREVIEW-FEATURE.md)** - Technical documentation
 - **[IMPLEMENTATION-SUMMARY.md](IMPLEMENTATION-SUMMARY.md)** - Complete implementation details
 
 ## 🤝 Credits
