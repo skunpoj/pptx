@@ -12,15 +12,9 @@ const PORT = 3000;
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(express.static('public'));
 
-// Content generation endpoint - generates presentation content from a prompt
-app.post('/api/generate-content', async (req, res) => {
-    const { prompt, apiKey } = req.body;
-    
-    if (!prompt || !apiKey) {
-        return res.status(400).json({ error: 'Prompt and API key are required' });
-    }
-    
-    try {
+// Helper function to call AI API based on provider
+async function callAI(provider, apiKey, userPrompt) {
+    if (provider === 'anthropic') {
         const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: {
@@ -30,10 +24,113 @@ app.post('/api/generate-content', async (req, res) => {
             },
             body: JSON.stringify({
                 model: "claude-sonnet-4-20250514",
-                max_tokens: 3000,
+                max_tokens: 4000,
                 messages: [{
                     role: "user",
-                    content: `You are a professional content writer for presentations. Based on the following idea/prompt, generate comprehensive content that can be used to create a presentation.
+                    content: userPrompt
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.content[0].text.trim();
+    } 
+    else if (provider === 'openai') {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey.trim()}`
+            },
+            body: JSON.stringify({
+                model: "gpt-4o",
+                messages: [{
+                    role: "user",
+                    content: userPrompt
+                }],
+                max_tokens: 4000
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content.trim();
+    }
+    else if (provider === 'gemini') {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey.trim()}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: userPrompt
+                    }]
+                }],
+                generationConfig: {
+                    maxOutputTokens: 4000
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.candidates[0].content.parts[0].text.trim();
+    }
+    else if (provider === 'openrouter') {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey.trim()}`,
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": "AI Text2PPT Pro"
+            },
+            body: JSON.stringify({
+                model: "anthropic/claude-3.5-sonnet",
+                messages: [{
+                    role: "user",
+                    content: userPrompt
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content.trim();
+    }
+    
+    throw new Error('Unsupported AI provider');
+}
+
+// Content generation endpoint - generates presentation content from a prompt
+app.post('/api/generate-content', async (req, res) => {
+    const { prompt, apiKey, provider = 'anthropic' } = req.body;
+    
+    if (!prompt || !apiKey) {
+        return res.status(400).json({ error: 'Prompt and API key are required' });
+    }
+    
+    try {
+        const userPrompt = `You are a professional content writer for presentations. Based on the following idea/prompt, generate comprehensive content that can be used to create a presentation.
 
 USER PROMPT:
 ${prompt}
@@ -49,19 +146,9 @@ INSTRUCTIONS:
 OUTPUT FORMAT:
 Write the content as plain text paragraphs separated by blank lines. Do NOT include any JSON, markdown formatting, or structural elements. Just write the presentation content directly.
 
-Generate the content now:`
-                }]
-            })
-        });
+Generate the content now:`;
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data.content[0].text.trim();
-        
+        const content = await callAI(provider, apiKey, userPrompt);
         res.json({ content });
         
     } catch (error) {
@@ -72,36 +159,24 @@ Generate the content now:`
 
 // Preview endpoint - returns slide structure without generating PPTX
 app.post('/api/preview', async (req, res) => {
-    const { text, apiKey } = req.body;
+    const { text, apiKey, provider = 'anthropic' } = req.body;
     
     if (!text || !apiKey) {
         return res.status(400).json({ error: 'Text and API key are required' });
     }
     
     try {
-        // Call Claude API to structure content
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "x-api-key": apiKey.trim(),
-                "anthropic-version": "2023-06-01"
-            },
-            body: JSON.stringify({
-                model: "claude-sonnet-4-20250514",
-                max_tokens: 4000,
-                messages: [{
-                    role: "user",
-                    content: `You are a presentation design expert. Analyze this content and create a structured presentation outline.
+        const userPrompt = `You are a presentation design expert. Analyze the user's content below and create a structured presentation outline based EXACTLY on what they provided.
 
 CRITICAL REQUIREMENTS:
-1. Create 4-8 slides total (including title slide)
-2. Keep content BRIEF - presentations should be concise:
+1. Use the ACTUAL content provided by the user below
+2. Create 4-8 slides total (including title slide)
+3. Keep content BRIEF - presentations should be concise:
    - Bullet points: 3-5 per slide MAX
    - Each bullet: under 12 words
    - Paragraphs: 1-2 sentences MAX
-3. Choose a color palette that matches the content theme (refer to options like Classic Blue, Teal & Coral, Bold Red, etc.)
-4. Design approach: Consider what visual style fits this topic
+4. Choose a color palette that matches the content theme
+5. Extract the main title from the user's content for the title slide
 
 Output as JSON:
 {
@@ -137,30 +212,21 @@ Output as JSON:
 
 DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON.
 
-Content to convert:
-${text}`
-                }]
-            })
-        });
+USER'S ACTUAL CONTENT TO CONVERT:
+${text}`;
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error?.message || `API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        let responseText = data.content[0].text;
+        const responseText = await callAI(provider, apiKey, userPrompt);
         
         // Clean up the response text to extract JSON
-        responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        let cleanedText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         
         // Try to parse JSON with better error handling
         let slideData;
         try {
-            slideData = JSON.parse(responseText);
+            slideData = JSON.parse(cleanedText);
         } catch (parseError) {
             console.error('JSON Parse Error:', parseError);
-            console.error('Response text:', responseText);
+            console.error('Response text:', cleanedText);
             throw new Error('Failed to parse AI response. Please try again.');
         }
         
@@ -180,7 +246,7 @@ ${text}`
 
 // Main endpoint to generate presentation
 app.post('/api/generate', async (req, res) => {
-    const { text, apiKey, slideData } = req.body;
+    const { text, apiKey, provider = 'anthropic', slideData } = req.body;
     
     if (!text || !apiKey) {
         return res.status(400).json({ error: 'Text and API key are required' });
@@ -196,29 +262,17 @@ app.post('/api/generate', async (req, res) => {
         if (slideData) {
             finalSlideData = slideData;
         } else {
-            // Call Claude API to structure content
-            const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": apiKey.trim(),
-                    "anthropic-version": "2023-06-01"
-                },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 4000,
-                    messages: [{
-                        role: "user",
-                        content: `You are a presentation design expert. Analyze this content and create a structured presentation outline.
+            const userPrompt = `You are a presentation design expert. Analyze the user's content below and create a structured presentation outline based EXACTLY on what they provided.
 
 CRITICAL REQUIREMENTS:
-1. Create 4-8 slides total (including title slide)
-2. Keep content BRIEF - presentations should be concise:
+1. Use the ACTUAL content provided by the user below
+2. Create 4-8 slides total (including title slide)
+3. Keep content BRIEF - presentations should be concise:
    - Bullet points: 3-5 per slide MAX
    - Each bullet: under 12 words
    - Paragraphs: 1-2 sentences MAX
-3. Choose a color palette that matches the content theme (refer to options like Classic Blue, Teal & Coral, Bold Red, etc.)
-4. Design approach: Consider what visual style fits this topic
+4. Choose a color palette that matches the content theme
+5. Extract the main title from the user's content for the title slide
 
 Output as JSON:
 {
@@ -254,29 +308,20 @@ Output as JSON:
 
 DO NOT OUTPUT ANYTHING OTHER THAN VALID JSON.
 
-Content to convert:
-${text}`
-                    }]
-                })
-            });
+USER'S ACTUAL CONTENT TO CONVERT:
+${text}`;
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            let responseText = data.content[0].text;
+            const responseText = await callAI(provider, apiKey, userPrompt);
             
             // Clean up the response text to extract JSON
-            responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+            let cleanedText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
             
             // Try to parse JSON with better error handling
             try {
-                finalSlideData = JSON.parse(responseText);
+                finalSlideData = JSON.parse(cleanedText);
             } catch (parseError) {
                 console.error('JSON Parse Error in generate:', parseError);
-                console.error('Response text:', responseText);
+                console.error('Response text:', cleanedText);
                 throw new Error('Failed to parse AI response. Please try again.');
             }
             

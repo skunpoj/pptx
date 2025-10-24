@@ -355,21 +355,101 @@
         </div>
 
         <div class="card" id="apiCard">
-            <h2>🔑 API Configuration</h2>
-            <div class="api-section" id="apiSection">
-                <h3>Setup Your Anthropic API Key</h3>
-                <div class="info-box">
-                    <strong>To get your API key:</strong>
-                    <ol>
-                        <li>Go to <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></li>
-                        <li>Sign up or log in</li>
-                        <li>Navigate to "API Keys"</li>
-                        <li>Create and copy your key</li>
-                    </ol>
+            <h2 onclick="toggleApiSection()" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                <span>🔑 API Configuration</span>
+                <span id="apiToggleIcon" style="font-size: 1.2rem;">▼</span>
+            </h2>
+            
+            <div id="apiSectionContainer" style="margin-top: 1rem;">
+                <!-- Provider Selection -->
+                <div style="background: #f0f4ff; border: 2px solid #e0e7ff; border-radius: 12px; padding: 1rem; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 0.75rem; color: #555;">Select AI Provider</h3>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                        <button class="provider-btn active" onclick="selectProvider('anthropic')" id="provider-anthropic" style="padding: 0.75rem; border: 2px solid #667eea; background: #e0e7ff; border-radius: 8px; cursor: pointer; font-weight: 600; color: #667eea;">
+                            Anthropic
+                        </button>
+                        <button class="provider-btn" onclick="selectProvider('openai')" id="provider-openai" style="padding: 0.75rem; border: 2px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #666;">
+                            OpenAI
+                        </button>
+                        <button class="provider-btn" onclick="selectProvider('gemini')" id="provider-gemini" style="padding: 0.75rem; border: 2px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #666;">
+                            Gemini
+                        </button>
+                        <button class="provider-btn" onclick="selectProvider('openrouter')" id="provider-openrouter" style="padding: 0.75rem; border: 2px solid #ddd; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; color: #666;">
+                            OpenRouter
+                        </button>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
-                    <button class="btn-primary" onclick="saveApiKey()">Save Key</button>
+
+                <!-- Anthropic Section -->
+                <div class="api-section provider-section" id="section-anthropic">
+                    <h3>Anthropic Claude API</h3>
+                    <div class="info-box">
+                        <strong>To get your API key:</strong>
+                        <ol>
+                            <li>Go to <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></li>
+                            <li>Sign up or log in</li>
+                            <li>Navigate to "API Keys"</li>
+                            <li>Create and copy your key</li>
+                        </ol>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="apiKey-anthropic" placeholder="sk-ant-api03-...">
+                        <button class="btn-primary" onclick="saveApiKey('anthropic')">Save Key</button>
+                    </div>
+                </div>
+
+                <!-- OpenAI Section -->
+                <div class="api-section provider-section" id="section-openai" style="display: none;">
+                    <h3>OpenAI API</h3>
+                    <div class="info-box">
+                        <strong>To get your API key:</strong>
+                        <ol>
+                            <li>Go to <a href="https://platform.openai.com/" target="_blank">platform.openai.com</a></li>
+                            <li>Sign up or log in</li>
+                            <li>Navigate to "API Keys"</li>
+                            <li>Create and copy your key</li>
+                        </ol>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="apiKey-openai" placeholder="sk-...">
+                        <button class="btn-primary" onclick="saveApiKey('openai')">Save Key</button>
+                    </div>
+                </div>
+
+                <!-- Gemini Section -->
+                <div class="api-section provider-section" id="section-gemini" style="display: none;">
+                    <h3>Google Gemini API</h3>
+                    <div class="info-box">
+                        <strong>To get your API key:</strong>
+                        <ol>
+                            <li>Go to <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                            <li>Sign up or log in</li>
+                            <li>Click "Create API Key"</li>
+                            <li>Copy your key</li>
+                        </ol>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="apiKey-gemini" placeholder="AIza...">
+                        <button class="btn-primary" onclick="saveApiKey('gemini')">Save Key</button>
+                    </div>
+                </div>
+
+                <!-- OpenRouter Section -->
+                <div class="api-section provider-section" id="section-openrouter" style="display: none;">
+                    <h3>OpenRouter API</h3>
+                    <div class="info-box">
+                        <strong>To get your API key:</strong>
+                        <ol>
+                            <li>Go to <a href="https://openrouter.ai/" target="_blank">openrouter.ai</a></li>
+                            <li>Sign up or log in</li>
+                            <li>Navigate to "Keys"</li>
+                            <li>Create and copy your key</li>
+                        </ol>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="apiKey-openrouter" placeholder="sk-or-...">
+                        <button class="btn-primary" onclick="saveApiKey('openrouter')">Save Key</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -456,35 +536,89 @@ AI will automatically:
     <script>
         // Global variable to store slide data
         let currentSlideData = null;
+        let currentProvider = 'anthropic';
 
-        // Load API key from localStorage
+        // Load API keys and provider from localStorage
         window.addEventListener('load', () => {
-            const savedKey = localStorage.getItem('anthropic_api_key');
-            if (savedKey) {
-                document.getElementById('apiKey').value = savedKey;
-                document.getElementById('apiSection').classList.add('active');
+            // Load saved provider
+            const savedProvider = localStorage.getItem('ai_provider') || 'anthropic';
+            currentProvider = savedProvider;
+            selectProvider(savedProvider);
+            
+            // Load all saved keys
+            ['anthropic', 'openai', 'gemini', 'openrouter'].forEach(provider => {
+                const savedKey = localStorage.getItem(`${provider}_api_key`);
+                if (savedKey) {
+                    document.getElementById(`apiKey-${provider}`).value = savedKey;
+                }
+            });
+            
+            // Check if collapsed state was saved
+            const isCollapsed = localStorage.getItem('api_section_collapsed') === 'true';
+            if (isCollapsed) {
+                toggleApiSection();
             }
         });
 
-        function saveApiKey() {
-            const apiKey = document.getElementById('apiKey').value.trim();
+        function toggleApiSection() {
+            const container = document.getElementById('apiSectionContainer');
+            const icon = document.getElementById('apiToggleIcon');
+            
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                icon.textContent = '▼';
+                localStorage.setItem('api_section_collapsed', 'false');
+            } else {
+                container.style.display = 'none';
+                icon.textContent = '▶';
+                localStorage.setItem('api_section_collapsed', 'true');
+            }
+        }
+
+        function selectProvider(provider) {
+            currentProvider = provider;
+            localStorage.setItem('ai_provider', provider);
+            
+            // Update button styles
+            document.querySelectorAll('.provider-btn').forEach(btn => {
+                btn.style.border = '2px solid #ddd';
+                btn.style.background = 'white';
+                btn.style.color = '#666';
+            });
+            
+            const activeBtn = document.getElementById(`provider-${provider}`);
+            activeBtn.style.border = '2px solid #667eea';
+            activeBtn.style.background = '#e0e7ff';
+            activeBtn.style.color = '#667eea';
+            
+            // Show/hide sections
+            document.querySelectorAll('.provider-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById(`section-${provider}`).style.display = 'block';
+        }
+
+        function saveApiKey(provider) {
+            const apiKey = document.getElementById(`apiKey-${provider}`).value.trim();
             if (!apiKey) {
                 showStatus('Please enter your API key', 'error');
                 return;
             }
-            localStorage.setItem('anthropic_api_key', apiKey);
-            document.getElementById('apiSection').classList.add('active');
-            showStatus('✅ API key saved!', 'success');
+            localStorage.setItem(`${provider}_api_key`, apiKey);
+            showStatus(`✅ ${provider.charAt(0).toUpperCase() + provider.slice(1)} API key saved!`, 'success');
+        }
+
+        function getApiKey() {
+            return localStorage.getItem(`${currentProvider}_api_key`);
         }
 
         // Generate preview of slides
         async function generatePreview() {
             const text = document.getElementById('textInput').value.trim();
-            const apiKey = localStorage.getItem('anthropic_api_key');
+            const apiKey = getApiKey();
             
             if (!apiKey) {
                 showStatus('⚠️ Please enter your API key first!', 'error');
-                document.getElementById('apiKey').focus();
                 return;
             }
             
@@ -506,7 +640,7 @@ AI will automatically:
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ text, apiKey })
+                    body: JSON.stringify({ text, apiKey, provider: currentProvider })
                 });
                 
                 if (!response.ok) {
@@ -600,11 +734,10 @@ AI will automatically:
 
         async function generatePresentation() {
             const text = document.getElementById('textInput').value.trim();
-            const apiKey = localStorage.getItem('anthropic_api_key');
+            const apiKey = getApiKey();
             
             if (!apiKey) {
                 showStatus('⚠️ Please enter your API key first!', 'error');
-                document.getElementById('apiKey').focus();
                 return;
             }
             
@@ -630,7 +763,7 @@ AI will automatically:
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ text, apiKey, slideData: currentSlideData })
+                    body: JSON.stringify({ text, apiKey, provider: currentProvider, slideData: currentSlideData })
                 });
                 
                 if (!response.ok) {
@@ -743,11 +876,10 @@ Implementation strategies involve setting measurable sustainability goals with c
         // Generate content from AI prompt
         async function generateFromPrompt() {
             const prompt = document.getElementById('promptInput').value.trim();
-            const apiKey = localStorage.getItem('anthropic_api_key');
+            const apiKey = getApiKey();
             
             if (!apiKey) {
                 showStatus('⚠️ Please enter your API key first!', 'error');
-                document.getElementById('apiKey').focus();
                 return;
             }
             
@@ -768,7 +900,7 @@ Implementation strategies involve setting measurable sustainability goals with c
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ prompt, apiKey })
+                    body: JSON.stringify({ prompt, apiKey, provider: currentProvider })
                 });
                 
                 if (!response.ok) {
