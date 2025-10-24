@@ -9,7 +9,14 @@ RUN apk add --no-cache \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    build-base \
+    g++ \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    pixman-dev
 
 # Set environment variables for Playwright
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
@@ -22,9 +29,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install html2pptx and pptxgenjs globally first
+# Install html2pptx and all dependencies globally
 COPY skills/pptx/html2pptx.tgz /tmp/html2pptx.tgz
-RUN npm install -g pptxgenjs /tmp/html2pptx.tgz && rm /tmp/html2pptx.tgz
+RUN npm install -g pptxgenjs sharp playwright /tmp/html2pptx.tgz && \
+    rm /tmp/html2pptx.tgz && \
+    npx playwright install chromium --with-deps
 
 # Install app dependencies
 RUN npm ci --only=production
