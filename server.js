@@ -262,19 +262,48 @@ app.post('/api/preview', async (req, res) => {
     }
     
     try {
+        console.log('📊 Preview request received');
+        console.log('  Content length:', text.length, 'characters');
+        console.log('  Provider:', provider);
+        
         const userPrompt = await getSlideDesignPrompt(text);
+        console.log('  Prompt generated, length:', userPrompt.length);
+        
         const responseText = await callAI(provider, apiKey, userPrompt);
+        console.log('  AI response received, length:', responseText.length);
+        console.log('  AI response preview:', responseText.substring(0, 200));
+        
         const slideData = parseAIResponse(responseText);
+        console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
+        
+        // Log chart slides
+        const chartSlides = slideData.slides?.filter(s => s.layout === 'chart' && s.chart) || [];
+        if (chartSlides.length > 0) {
+            console.log('  📈 Chart slides found:', chartSlides.length);
+            chartSlides.forEach((slide, i) => {
+                console.log(`    Chart ${i + 1}: ${slide.chart.type} - ${slide.chart.title}`);
+            });
+        }
         
         // Validate structure
         validateSlideData(slideData);
+        console.log('✅ Preview validation passed');
+        
+        // Ensure Content-Type is set
+        res.setHeader('Content-Type', 'application/json');
         
         // Return slide structure for preview
         res.json(slideData);
         
     } catch (error) {
-        console.error('Preview error:', error);
-        res.status(500).json({ error: error.message });
+        console.error('❌ Preview error:', error.message);
+        console.error('   Stack:', error.stack);
+        
+        // Ensure we send JSON error response
+        if (!res.headersSent) {
+            res.setHeader('Content-Type', 'application/json');
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 

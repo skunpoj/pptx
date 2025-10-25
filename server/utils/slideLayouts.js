@@ -149,8 +149,9 @@ function generateBulletSlide(slide, theme) {
     
     // More content = less padding and smaller fonts
     // Conservative padding to avoid overflow (html2pptx needs margins)
+    // Bottom padding must be at least 2.5rem to ensure 0.5" minimum from bottom
     let fontSize = contentLength > 6 ? '0.95rem' : contentLength > 4 ? '1rem' : '1.05rem';
-    let padding = contentLength > 6 ? '0.75rem 1rem 1.75rem 1rem' : '1rem 1.25rem 2rem 1.25rem';
+    let padding = contentLength > 6 ? '0.75rem 1rem 2.5rem 1rem' : '1rem 1.25rem 2.5rem 1.25rem';
     let titleSize = contentLength > 6 ? '1.7rem' : '1.85rem';
     
     const bodyContent = `
