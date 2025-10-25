@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Debug - Compare Styles</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        body { background: #f5f5f5; font-family: Arial, sans-serif; }
+        .debug-section {
+            background: white;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .compare {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        h3 { color: #667eea; }
+    </style>
+</head>
+<body>
+    <div class="debug-section">
+        <h1>🔍 CSS Debug Comparison</h1>
+        <p>Comparing test-scroll.html CSS vs actual app CSS</p>
+        <button onclick="runComparison()" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;">Run Comparison</button>
+    </div>
+
+    <div class="debug-section">
+        <h2>📐 Main Grid Test</h2>
+        <div class="main-grid" style="background: #e3f2fd; padding: 20px; border: 2px solid #2196f3;">
+            <div class="card" style="background: #fff3e0;">
+                <h3>Left Card</h3>
+                <p>Height should match right card</p>
+            </div>
+            
+            <div class="card preview-container" style="background: #f3e5f5;">
+                <h2>Right Card (Preview Container)</h2>
+                <div class="preview" id="testPreview" style="overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important; background: white; border: 2px dashed #e91e63;">
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 1</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 2</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 3</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 4</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 5</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 6</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 7</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 8</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 9</div>
+                    <div style="padding: 10px; background: #ffebee; margin: 5px; border-radius: 4px;">Slide 10</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="debug-section">
+        <h2>📊 Comparison Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function runComparison() {
+            const results = document.getElementById('results');
+            const testPreview = document.getElementById('testPreview');
+            
+            if (!testPreview) {
+                results.innerHTML = '<p style="color: red;">❌ Test preview element not found!</p>';
+                return;
+            }
+            
+            const computed = window.getComputedStyle(testPreview);
+            const parent = testPreview.parentElement;
+            const parentComputed = window.getComputedStyle(parent);
+            const grid = document.querySelector('.main-grid');
+            const gridComputed = window.getComputedStyle(grid);
+            
+            let html = '<div class="compare">';
+            
+            // Left column - Expected (from test-scroll.html)
+            html += `
+                <div>
+                    <h3>✅ Expected (test-scroll.html)</h3>
+                    <pre>
+.main-grid {
+  height: 600px ← FIXED HEIGHT
+  align-items: stretch
+}
+
+.preview-container {
+  display: flex
+  flex-direction: column
+  height: 100%
+}
+
+.preview {
+  flex: 1 1 auto
+  min-height: 0
+  max-height: 100%
+  overflow-y: auto !important
+}
+                    </pre>
+                </div>
+            `;
+            
+            // Right column - Actual (from styles.css)
+            html += `
+                <div>
+                    <h3>🔍 Actual (styles.css)</h3>
+                    <pre>
+.main-grid {
+  height: ${gridComputed.height}
+  min-height: ${gridComputed.minHeight}
+  align-items: ${gridComputed.alignItems}
+}
+
+.preview-container {
+  display: ${parentComputed.display}
+  flex-direction: ${parentComputed.flexDirection}
+  height: ${parentComputed.height}
+}
+
+.preview {
+  flex: ${computed.flex}
+  min-height: ${computed.minHeight}
+  max-height: ${computed.maxHeight}
+  overflow-y: ${computed.overflowY}
+  overflow-x: ${computed.overflowX}
+}
+                    </pre>
+                </div>
+            `;
+            
+            html += '</div>';
+            
+            // Analysis
+            html += '<h3>📋 Analysis:</h3>';
+            html += '<ul>';
+            
+            // Check main-grid height
+            if (gridComputed.height === 'auto' || gridComputed.height === '0px') {
+                html += '<li style="color: #f44336;">❌ <strong>.main-grid has no fixed height!</strong> It needs height: 600px or min-height: 600px</li>';
+            } else {
+                html += `<li style="color: #4caf50;">✅ .main-grid height: ${gridComputed.height}</li>`;
+            }
+            
+            // Check preview overflow
+            if (computed.overflowY === 'auto' || computed.overflowY === 'scroll') {
+                html += `<li style="color: #4caf50;">✅ .preview overflow-y: ${computed.overflowY}</li>`;
+            } else {
+                html += `<li style="color: #f44336;">❌ .preview overflow-y: ${computed.overflowY} (expected: auto)</li>`;
+            }
+            
+            // Check flex
+            if (computed.flex.includes('1')) {
+                html += `<li style="color: #4caf50;">✅ .preview flex: ${computed.flex}</li>`;
+            } else {
+                html += `<li style="color: #f44336;">❌ .preview flex: ${computed.flex}</li>`;
+            }
+            
+            // Check scroll info
+            html += `<li>Scroll Height: ${testPreview.scrollHeight}px</li>`;
+            html += `<li>Client Height: ${testPreview.clientHeight}px</li>`;
+            
+            if (testPreview.scrollHeight > testPreview.clientHeight) {
+                html += `<li style="color: #4caf50;">✅ Content overflows (${testPreview.scrollHeight}px > ${testPreview.clientHeight}px) - scroll bar should appear</li>`;
+            } else {
+                html += `<li style="color: #ff9800;">⚠️ Content fits (${testPreview.scrollHeight}px ≤ ${testPreview.clientHeight}px) - no scroll needed yet</li>`;
+            }
+            
+            html += '</ul>';
+            
+            results.innerHTML = html;
+        }
+        
+        // Auto-run on load
+        setTimeout(runComparison, 500);
+    </script>
+</body>
+</html>
+

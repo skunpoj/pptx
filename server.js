@@ -556,17 +556,41 @@ modifyPresentation();`;
 
 // Version check endpoint
 app.get('/api/version', (req, res) => {
-    res.json({
-        version: '2.0.0-adaptive-content',
-        features: [
-            'Adaptive content sizing',
-            'Progressive slide rendering',
-            'Detailed error logging',
-            'Scroll bar fixed',
-            'Browser errors fixed'
-        ],
-        timestamp: new Date().toISOString()
-    });
+    try {
+        res.json({
+            version: '2.0.0-adaptive-content',
+            features: [
+                'Adaptive content sizing',
+                'Progressive slide rendering',
+                'Detailed error logging',
+                'Scroll bar fixed',
+                'Browser errors fixed'
+            ],
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Version endpoint error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('\n' + '🔥'.repeat(40));
+    console.error('UNHANDLED ERROR');
+    console.error('🔥'.repeat(40));
+    console.error('Path:', req.path);
+    console.error('Method:', req.method);
+    console.error('Error:', err.message);
+    console.error('Stack:', err.stack);
+    console.error('🔥'.repeat(40) + '\n');
+    
+    if (!res.headersSent) {
+        res.status(500).json({ 
+            error: err.message || 'Internal server error',
+            path: req.path
+        });
+    }
 });
 
 app.listen(PORT, () => {
@@ -576,6 +600,7 @@ app.listen(PORT, () => {
     console.log(`📍 URL: http://localhost:${PORT}`);
     console.log(`✨ Features: Adaptive sizing, Progressive rendering, Detailed logging`);
     console.log(`🔍 Version check: http://localhost:${PORT}/api/version`);
+    console.log(`🧪 Deployment check: http://localhost:${PORT}/CHECK-DEPLOYMENT.html`);
     console.log(`${'='.repeat(80)}\n`);
 });
 

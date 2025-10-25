@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scroll Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            align-items: stretch;
+            height: 600px;
+        }
+        
+        .card {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 16px;
+            padding: 1.5rem;
+            min-height: 0;
+        }
+        
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .preview-container h2 {
+            flex-shrink: 0;
+            margin: 0 0 1rem 0;
+        }
+        
+        .preview-container .preview {
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: 100%;
+            overflow-y: auto !important;
+            overflow-x: hidden;
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+        
+        .preview::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        .preview::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .preview::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+        
+        .preview::-webkit-scrollbar-thumb:hover {
+            background: #5568d3;
+        }
+        
+        .slide-preview {
+            background: #fff;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Scroll Bar Test</h1>
+    <p>The right panel should have a scroll bar when content overflows.</p>
+    
+    <div class="main-grid">
+        <div class="card">
+            <h2>Left Panel</h2>
+            <p>This is the left panel content.</p>
+        </div>
+        
+        <div class="card preview-container">
+            <h2>Right Panel (Should Scroll)</h2>
+            <div class="preview" id="preview">
+                <div class="slide-preview">Slide 1</div>
+                <div class="slide-preview">Slide 2</div>
+                <div class="slide-preview">Slide 3</div>
+                <div class="slide-preview">Slide 4</div>
+                <div class="slide-preview">Slide 5</div>
+                <div class="slide-preview">Slide 6</div>
+                <div class="slide-preview">Slide 7</div>
+                <div class="slide-preview">Slide 8</div>
+                <div class="slide-preview">Slide 9</div>
+                <div class="slide-preview">Slide 10</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

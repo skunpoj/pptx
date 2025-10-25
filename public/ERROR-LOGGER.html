@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error Logger</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .card {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #3e3e42;
+        }
+        h1 { color: #4ec9b0; margin-top: 0; }
+        h2 { color: #569cd6; font-size: 16px; }
+        .error { color: #f48771; }
+        .success { color: #4ec9b0; }
+        .warning { color: #ce9178; }
+        pre {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #3e3e42;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-family: monospace;
+        }
+        button:hover { background: #1177bb; }
+        .log-entry {
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 3px solid #3e3e42;
+            background: #2d2d30;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🐛 Error Logger & Debugger</h1>
+        <p>This page captures all browser console errors and warnings.</p>
+        
+        <button onclick="testAllEndpoints()">🔍 Test All API Endpoints</button>
+        <button onclick="testPreview()">👁️ Test Preview Function</button>
+        <button onclick="clearLogs()">🗑️ Clear Logs</button>
+    </div>
+
+    <div class="card">
+        <h2>📊 Console Logs:</h2>
+        <div id="logs"></div>
+    </div>
+
+    <div class="card">
+        <h2>🔥 Errors:</h2>
+        <div id="errors"></div>
+    </div>
+
+    <script>
+        const logs = document.getElementById('logs');
+        const errors = document.getElementById('errors');
+        
+        // Capture console.log
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog('LOG', args.join(' '));
+        };
+        
+        // Capture console.error
+        const originalError = console.error;
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addError('ERROR', args.join(' '));
+        };
+        
+        // Capture console.warn
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog('WARN', args.join(' '));
+        };
+        
+        // Capture window errors
+        window.onerror = function(msg, url, line, col, error) {
+            addError('WINDOW ERROR', `${msg} at ${url}:${line}:${col}`);
+            return false;
+        };
+        
+        function addLog(type, message) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<strong class="${type === 'WARN' ? 'warning' : 'success'}">[${type}]</strong> ${escapeHtml(message)}`;
+            logs.appendChild(entry);
+            logs.scrollTop = logs.scrollHeight;
+        }
+        
+        function addError(type, message) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<strong class="error">[${type}]</strong> ${escapeHtml(message)}`;
+            errors.appendChild(entry);
+            errors.scrollTop = errors.scrollHeight;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function clearLogs() {
+            logs.innerHTML = '<div class="log-entry">Logs cleared.</div>';
+            errors.innerHTML = '<div class="log-entry">No errors yet.</div>';
+        }
+        
+        async function testAllEndpoints() {
+            addLog('TEST', 'Testing all API endpoints...');
+            
+            // Test 1: Version
+            try {
+                const res = await fetch('/api/version');
+                if (res.ok) {
+                    const data = await res.json();
+                    addLog('SUCCESS', `/api/version - Version: ${data.version}`);
+                } else {
+                    addError('FAIL', `/api/version - Status: ${res.status}`);
+                }
+            } catch (e) {
+                addError('FAIL', `/api/version - ${e.message}`);
+            }
+            
+            // Test 2: Prompts
+            try {
+                const res = await fetch('/api/prompts');
+                if (res.ok) {
+                    const data = await res.json();
+                    addLog('SUCCESS', `/api/prompts - ${Object.keys(data).length} prompts loaded`);
+                } else {
+                    addError('FAIL', `/api/prompts - Status: ${res.status}`);
+                }
+            } catch (e) {
+                addError('FAIL', `/api/prompts - ${e.message}`);
+            }
+            
+            addLog('TEST', 'All endpoint tests complete.');
+        }
+        
+        async function testPreview() {
+            addLog('TEST', 'Testing preview rendering...');
+            
+            // Check if functions exist
+            const checks = {
+                'window.renderSlidePreviewCard': typeof window.renderSlidePreviewCard,
+                'window.displayPreview': typeof window.displayPreview,
+                'window.colorThemes': typeof window.colorThemes,
+                'window.showStatus': typeof window.showStatus
+            };
+            
+            for (const [name, type] of Object.entries(checks)) {
+                if (type === 'function' || type === 'object') {
+                    addLog('SUCCESS', `${name} is ${type} ✓`);
+                } else {
+                    addError('MISSING', `${name} is ${type} (expected function or object)`);
+                }
+            }
+            
+            addLog('TEST', 'Preview function test complete.');
+        }
+        
+        // Initial message
+        clearLogs();
+        addLog('INFO', 'Error logger initialized. All console messages will appear here.');
+    </script>
+</body>
+</html>
+

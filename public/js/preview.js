@@ -451,4 +451,5 @@ function renderMiniSlidePreview(slide, theme) {
 
 window.displayPreview = displayPreview;
 window.displayGalleryView = displayGalleryView;
+window.switchView = switchView;
 
