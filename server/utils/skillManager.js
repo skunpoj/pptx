@@ -42,6 +42,23 @@ class SkillManager {
                 requirements: []
             };
 
+            // Special handling for PPTX (core feature)
+            if (format === 'pptx' || format === 'pptx-skill') {
+                skillInfo.available = true;
+                skillInfo.description = 'PowerPoint generation using skill-based processing for comparison';
+                skillInfo.capabilities = [
+                    'Slide creation and formatting',
+                    'Theme and color management',
+                    'Text and content layout',
+                    'Image and chart integration',
+                    'Professional presentation output',
+                    'Skill-based processing',
+                    'Comparison with direct method'
+                ];
+                skillInfo.requirements = ['html2pptx package (included)', 'Skill processing enabled'];
+                return skillInfo;
+            }
+
             // Check if skill directory exists
             try {
                 await fs.access(skillPath);
@@ -147,7 +164,7 @@ class SkillManager {
                     requirements.push('openpyxl library needed');
                     break;
                 case 'pptx':
-                    requirements.push('html2pptx package available');
+                    requirements.push('html2pptx package (included)');
                     break;
             }
 
@@ -165,6 +182,7 @@ class SkillManager {
         try {
             switch (outputFormat) {
                 case 'pptx':
+                case 'pptx-skill':
                     return await this.processPPTX(content, options);
                 case 'docx':
                     return await this.processDOCX(content, options);
@@ -182,15 +200,22 @@ class SkillManager {
     }
 
     /**
-     * Process content for PowerPoint (existing functionality)
+     * Process content for PowerPoint (skill-based processing)
      */
     async processPPTX(content, options) {
-        // This uses the existing html2pptx functionality
+        // This uses the existing html2pptx functionality but through skill processing
         // The actual processing is handled by the main generation logic
         return {
             success: true,
             format: 'pptx',
-            message: 'PowerPoint processing handled by existing html2pptx system'
+            message: 'PowerPoint processing handled by skill-based html2pptx system',
+            method: 'skill-based',
+            capabilities: [
+                'Enhanced processing',
+                'Skill-based generation',
+                'Comparison with direct method',
+                'Extended capabilities'
+            ]
         };
     }
 

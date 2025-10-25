@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Syntax Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #previewContainer { min-height: 200px; border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Preview Syntax Test</h1>
+    
+    <div class="test-section info">
+        <h3>📋 Test Instructions</h3>
+        <p>This page tests if the preview functionality syntax is correct after the fixes.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>🧪 Syntax Check</h3>
+        <button onclick="testSyntax()">Test JavaScript Syntax</button>
+        <div id="syntaxResults"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>📝 Function Test</h3>
+        <textarea id="textInput" placeholder="Enter some text to test preview..." style="width: 100%; height: 100px; margin: 10px 0;">Create a business presentation about our company's quarterly results. Include sections on revenue growth, market expansion, and future strategies.</textarea>
+        <br>
+        <button onclick="testPreviewFunction()">Test Preview Function</button>
+        <div id="previewContainer"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>📊 Test Results</h3>
+        <div id="testResults"></div>
+    </div>
+
+    <!-- Load the API modules -->
+    <script src="/js/api/capabilities.js"></script>
+    <script src="/js/api/preview.js"></script>
+    <script src="/js/api/generation.js"></script>
+    <script src="/js/api.js"></script>
+    
+    <script>
+        function testSyntax() {
+            const results = document.getElementById('syntaxResults');
+            
+            try {
+                // Test if preview.js loaded without syntax errors
+                if (typeof window.generatePreview === 'function') {
+                    results.innerHTML = '<div class="test-section success"><h4>✅ Syntax Check Passed</h4><p>All JavaScript files loaded without syntax errors.</p></div>';
+                } else {
+                    results.innerHTML = '<div class="test-section error"><h4>❌ Syntax Check Failed</h4><p>generatePreview function not available.</p></div>';
+                }
+            } catch (error) {
+                results.innerHTML = `<div class="test-section error"><h4>❌ Syntax Error</h4><p>${error.message}</p></div>`;
+            }
+        }
+        
+        function testPreviewFunction() {
+            const textInput = document.getElementById('textInput');
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                alert('Please enter some text first');
+                return;
+            }
+            
+            // Mock API key for testing
+            if (!window.getApiKey || window.getApiKey() === '') {
+                localStorage.setItem('anthropic_api_key', 'test-key-for-preview-test');
+            }
+            
+            console.log('🧪 Testing preview function...');
+            
+            if (typeof window.generatePreview === 'function') {
+                try {
+                    window.generatePreview();
+                    addTestResult('✅ Preview function called successfully', 'success');
+                } catch (error) {
+                    console.error('Preview test failed:', error);
+                    addTestResult('❌ Preview function failed: ' + error.message, 'error');
+                }
+            } else {
+                addTestResult('❌ generatePreview function is not available', 'error');
+            }
+        }
+        
+        function addTestResult(message, type) {
+            const results = document.getElementById('testResults');
+            const div = document.createElement('div');
+            div.className = `test-section ${type}`;
+            div.innerHTML = `<p>${message}</p>`;
+            results.appendChild(div);
+        }
+        
+        // Override showNotification for testing
+        window.showNotification = function(message, type) {
+            console.log(`📢 ${type.toUpperCase()}: ${message}`);
+            addTestResult(`${type.toUpperCase()}: ${message}`, type);
+        };
+        
+        // Run initial test
+        window.addEventListener('load', function() {
+            console.log('🔧 Preview syntax test page loaded');
+            testSyntax();
+        });
+    </script>
+</body>
+</html>

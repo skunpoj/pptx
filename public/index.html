@@ -126,12 +126,20 @@ Our Products
                         <label style="display: block; font-weight: 700; color: #d35400; margin-bottom: 0.5rem;">📄 Output File Type:</label>
                         <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                                <input type="radio" name="outputType" value="pptx" checked onchange="window.selectOutputType('pptx')" style="width: 18px; height: 18px; cursor: pointer;">
-                                <span style="font-weight: 600; color: #333;">📊 PowerPoint (.pptx)</span>
+                                <input type="radio" name="outputType" value="pptx-direct" checked onchange="window.selectOutputType('pptx-direct')" style="width: 18px; height: 18px; cursor: pointer;">
+                                <span style="font-weight: 600; color: #333;">📊 PowerPoint Direct (.pptx)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                                <input type="radio" name="outputType" value="pptx-skill" onchange="window.selectOutputType('pptx-skill')" style="width: 18px; height: 18px; cursor: pointer;">
+                                <span style="font-weight: 600; color: #333;">📊 PowerPoint Skill (.pptx)</span>
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
                                 <input type="radio" name="outputType" value="docx" onchange="window.selectOutputType('docx')" style="width: 18px; height: 18px; cursor: pointer;">
                                 <span style="font-weight: 600; color: #333;">📝 Word (.docx)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                                <input type="radio" name="outputType" value="pdf" onchange="window.selectOutputType('pdf')" style="width: 18px; height: 18px; cursor: pointer;">
+                                <span style="font-weight: 600; color: #333;">📄 PDF (.pdf)</span>
                             </label>
                             <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
                                 <input type="radio" name="outputType" value="xlsx" onchange="window.selectOutputType('xlsx')" style="width: 18px; height: 18px; cursor: pointer;">

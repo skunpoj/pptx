@@ -3,7 +3,7 @@
 // Global state for skills
 window.skillsState = {
     availableSkills: {},
-    currentFormat: 'pptx',
+    currentFormat: 'pptx-direct',
     skillCapabilities: {}
 };
 
@@ -83,7 +83,8 @@ function updateFormatOptions(format) {
     const generateBtn = document.getElementById('generateBtn');
     if (generateBtn) {
         const formatNames = {
-            'pptx': 'PowerPoint',
+            'pptx-direct': 'PowerPoint (Direct)',
+            'pptx-skill': 'PowerPoint (Skill)',
             'docx': 'Word Document',
             'pdf': 'PDF Document',
             'xlsx': 'Excel Spreadsheet'
@@ -103,10 +104,15 @@ function showFormatInfo(format) {
     if (!infoContainer) return;
     
     const formatInfo = {
-        'pptx': {
-            title: '📊 PowerPoint Presentation',
-            description: 'Professional slides with themes, layouts, and animations',
-            features: ['Slide layouts', 'Color themes', 'Animations', 'Charts and graphs']
+        'pptx-direct': {
+            title: '📊 PowerPoint Direct',
+            description: 'Fast PowerPoint generation using integrated html2pptx package',
+            features: ['Direct generation', 'Fast processing', 'Integrated package', 'No external dependencies']
+        },
+        'pptx-skill': {
+            title: '📊 PowerPoint Skill',
+            description: 'PowerPoint generation using skill-based processing for comparison',
+            features: ['Skill-based processing', 'Modular approach', 'Comparison testing', 'Extended capabilities']
         },
         'docx': {
             title: '📝 Word Document',
@@ -173,39 +179,115 @@ async function generateForFormat(content, format, options = {}) {
         // Show loading state
         showGenerationLoading(format);
         
-        const response = await fetch(`/api/generate/${format}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                content: content,
-                apiKey: apiKey,
-                provider: 'anthropic',
-                options: {
-                    generateContent: true,
-                    ...options
-                }
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Generation failed: ${response.status} ${response.statusText}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showGenerationSuccess(format, result);
-            return result;
+        // Handle PPTX options differently
+        if (format === 'pptx-direct') {
+            // Use the existing direct generation (original method)
+            return await generateDirectPPTX(content, apiKey, options);
+        } else if (format === 'pptx-skill') {
+            // Use the skill-based generation for comparison
+            return await generateSkillPPTX(content, apiKey, options);
         } else {
-            throw new Error(result.error || 'Generation failed');
+            // Use skill-based generation for other formats
+            const response = await fetch(`/api/generate/${format}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    content: content,
+                    apiKey: apiKey,
+                    provider: 'anthropic',
+                    options: {
+                        generateContent: true,
+                        ...options
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Generation failed: ${response.status} ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showGenerationSuccess(format, result);
+                return result;
+            } else {
+                throw new Error(result.error || 'Generation failed');
+            }
         }
         
     } catch (error) {
         console.error(`❌ ${format} generation failed:`, error);
         showGenerationError(format, error.message);
         throw error;
+    }
+}
+
+/**
+ * Generate PPTX using direct method (original)
+ */
+async function generateDirectPPTX(content, apiKey, options) {
+    // Use the existing generation endpoint
+    const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            text: content,
+            apiKey: apiKey,
+            slideData: window.currentSlideData // Use cached preview data if available
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`Direct PPTX generation failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success) {
+        showGenerationSuccess('pptx-direct', result);
+        return result;
+    } else {
+        throw new Error(result.error || 'Direct PPTX generation failed');
+    }
+}
+
+/**
+ * Generate PPTX using skill method (for comparison)
+ */
+async function generateSkillPPTX(content, apiKey, options) {
+    // Use the skill-based generation endpoint
+    const response = await fetch('/api/generate/pptx', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            content: content,
+            apiKey: apiKey,
+            provider: 'anthropic',
+            options: {
+                generateContent: true,
+                ...options
+            }
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`Skill PPTX generation failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    if (result.success) {
+        showGenerationSuccess('pptx-skill', result);
+        return result;
+    } else {
+        throw new Error(result.error || 'Skill PPTX generation failed');
     }
 }
 
