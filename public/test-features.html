@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feature Test - AI Text2PPT Pro</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        body {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #ccc;
+        }
+        .pass { background: #e8f5e9; border-left-color: #4caf50; }
+        .fail { background: #ffebee; border-left-color: #f44336; }
+        .info { background: #e3f2fd; border-left-color: #2196f3; }
+        
+        /* Scroll test container */
+        .scroll-test {
+            height: 400px;
+            overflow-y: auto !important;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 10px;
+            background: white;
+        }
+        
+        .scroll-test-content {
+            height: 1000px;
+            background: linear-gradient(to bottom, #f0f4ff 0%, #e0e7ff 100%);
+            padding: 20px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 style="color: #667eea;">🧪 Feature Test Suite</h1>
+        <p>Testing all critical features and functions</p>
+        
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="testScrollBar()">📜 Test Scroll Bar</button>
+        <button onclick="testProgressiveRendering()">⚡ Test Progressive Rendering</button>
+        
+        <div id="results"></div>
+        
+        <!-- Scroll Test Area -->
+        <div class="test-section" id="scrollTestSection" style="display: none;">
+            <h3>Scroll Bar Test</h3>
+            <p>This container should show a scroll bar:</p>
+            <div class="scroll-test" id="scrollTest">
+                <div class="scroll-test-content">
+                    <h4>Scroll down to test ⬇️</h4>
+                    <p>This content is intentionally tall to test scrolling...</p>
+                    <div style="margin-top: 800px;">
+                        <h4 style="color: #4caf50;">✅ If you can see this, scrolling works!</h4>
+                    </div>
+                </div>
+            </div>
+            <div id="scrollResults"></div>
+        </div>
+        
+        <!-- Progressive Rendering Test Area -->
+        <div class="test-section" id="progressiveTestSection" style="display: none;">
+            <h3>Progressive Rendering Test</h3>
+            <div id="progressivePreview" class="preview" style="overflow-y: auto; max-height: 500px; border: 2px solid #667eea; border-radius: 8px; padding: 10px;"></div>
+        </div>
+    </div>
+
+    <!-- Load all app scripts -->
+    <script src="/js/themes.js"></script>
+    <script src="/js/charts.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/preview.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/fileHandler.js"></script>
+    <script src="/js/api.js"></script>
+
+    <script>
+        async function runAllTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="test-result info">Running tests...</div>';
+            
+            let html = '<h2>Test Results:</h2>';
+            let allPassed = true;
+
+            // Test 1: Check if all window functions are loaded
+            const functionsToCheck = [
+                'showStatus',
+                'displayPreview',
+                'renderSlidePreviewCard',
+                'generatePreview',
+                'generatePresentation',
+                'colorThemes',
+                'switchView'
+            ];
+            
+            let missingFunctions = [];
+            functionsToCheck.forEach(func => {
+                if (typeof window[func] === 'undefined') {
+                    missingFunctions.push(func);
+                    allPassed = false;
+                }
+            });
+            
+            if (missingFunctions.length === 0) {
+                html += `<div class="test-result pass">
+                    <strong>✅ All Window Functions Loaded</strong><br>
+                    All ${functionsToCheck.length} required functions are available
+                </div>`;
+            } else {
+                html += `<div class="test-result fail">
+                    <strong>❌ Missing Functions</strong><br>
+                    Missing: ${missingFunctions.join(', ')}
+                </div>`;
+            }
+
+            // Test 2: Check colorThemes object
+            if (window.colorThemes && Object.keys(window.colorThemes).length > 0) {
+                html += `<div class="test-result pass">
+                    <strong>✅ Color Themes Loaded</strong><br>
+                    ${Object.keys(window.colorThemes).length} themes available: ${Object.keys(window.colorThemes).join(', ')}
+                </div>`;
+            } else {
+                html += `<div class="test-result fail">
+                    <strong>❌ Color Themes Not Loaded</strong>
+                </div>`;
+                allPassed = false;
+            }
+
+            // Test 3: Check server connection
+            try {
+                const versionRes = await fetch('/api/version');
+                if (versionRes.ok) {
+                    const data = await versionRes.json();
+                    html += `<div class="test-result pass">
+                        <strong>✅ Server Connection</strong><br>
+                        Version: ${data.version}<br>
+                        Features: ${data.features.join(', ')}
+                    </div>`;
+                } else {
+                    html += `<div class="test-result fail">
+                        <strong>❌ Server Version Check Failed</strong><br>
+                        Status: ${versionRes.status}
+                    </div>`;
+                    allPassed = false;
+                }
+            } catch (e) {
+                html += `<div class="test-result fail">
+                    <strong>❌ Server Connection Failed</strong><br>
+                    Error: ${e.message}
+                </div>`;
+                allPassed = false;
+            }
+
+            // Test 4: Test renderSlidePreviewCard function
+            if (typeof window.renderSlidePreviewCard === 'function') {
+                try {
+                    const testSlide = {
+                        type: 'content',
+                        layout: 'bullet',
+                        title: 'Test Slide',
+                        content: ['Point 1', 'Point 2', 'Point 3']
+                    };
+                    const testTheme = window.colorThemes['vibrant-purple'];
+                    const testHTML = window.renderSlidePreviewCard(testSlide, 0, testTheme);
+                    
+                    if (testHTML && testHTML.includes('Test Slide')) {
+                        html += `<div class="test-result pass">
+                            <strong>✅ Slide Preview Rendering</strong><br>
+                            renderSlidePreviewCard works correctly
+                        </div>`;
+                    } else {
+                        html += `<div class="test-result fail">
+                            <strong>❌ Slide Preview Rendering</strong><br>
+                            Function returned unexpected output
+                        </div>`;
+                        allPassed = false;
+                    }
+                } catch (e) {
+                    html += `<div class="test-result fail">
+                        <strong>❌ Slide Preview Rendering</strong><br>
+                        Error: ${e.message}
+                    </div>`;
+                    allPassed = false;
+                }
+            } else {
+                html += `<div class="test-result fail">
+                    <strong>❌ Slide Preview Rendering</strong><br>
+                    renderSlidePreviewCard function not found
+                </div>`;
+                allPassed = false;
+            }
+
+            // Summary
+            if (allPassed) {
+                html = `<div class="test-result pass" style="font-size: 1.2em; padding: 20px;">
+                    <strong>🎉 ALL TESTS PASSED!</strong><br>
+                    Your application is fully functional.
+                </div>` + html;
+            } else {
+                html = `<div class="test-result fail" style="font-size: 1.2em; padding: 20px;">
+                    <strong>❌ SOME TESTS FAILED</strong><br>
+                    Check the details below and refresh the page.
+                </div>` + html;
+            }
+
+            results.innerHTML = html;
+        }
+
+        function testScrollBar() {
+            const section = document.getElementById('scrollTestSection');
+            section.style.display = 'block';
+            
+            setTimeout(() => {
+                const scrollTest = document.getElementById('scrollTest');
+                const scrollResults = document.getElementById('scrollResults');
+                
+                const hasScroll = scrollTest.scrollHeight > scrollTest.clientHeight;
+                const overflowY = window.getComputedStyle(scrollTest).overflowY;
+                
+                scrollResults.innerHTML = `
+                    <div class="test-result ${hasScroll ? 'pass' : 'fail'}">
+                        <strong>${hasScroll ? '✅' : '❌'} Scroll Bar Test</strong><br>
+                        Container Height: ${scrollTest.clientHeight}px<br>
+                        Content Height: ${scrollTest.scrollHeight}px<br>
+                        Overflow-Y: ${overflowY}<br>
+                        Can Scroll: ${hasScroll ? 'Yes ✓' : 'No ✗'}
+                    </div>
+                `;
+                
+                scrollTest.scrollTop = 100;
+            }, 100);
+        }
+
+        async function testProgressiveRendering() {
+            const section = document.getElementById('progressiveTestSection');
+            const preview = document.getElementById('progressivePreview');
+            section.style.display = 'block';
+            
+            // Create test slide data
+            const testData = {
+                designTheme: window.colorThemes['vibrant-purple'],
+                slides: [
+                    { type: 'title', title: 'Test Presentation', subtitle: 'Progressive Rendering Demo' },
+                    { type: 'content', layout: 'bullet', title: 'Slide 2', content: ['Point A', 'Point B', 'Point C'] },
+                    { type: 'content', layout: 'bullet', title: 'Slide 3', content: ['Point 1', 'Point 2', 'Point 3'] },
+                    { type: 'content', layout: 'bullet', title: 'Slide 4', content: ['Item X', 'Item Y', 'Item Z'] },
+                    { type: 'content', layout: 'bullet', title: 'Slide 5', content: ['Test A', 'Test B', 'Test C'] },
+                    { type: 'content', layout: 'bullet', title: 'Slide 6', content: ['Final 1', 'Final 2', 'Final 3'] }
+                ]
+            };
+            
+            // Test progressive rendering
+            preview.innerHTML = '<p style="text-align: center; color: #666;">Rendering slides...</p>';
+            
+            setTimeout(async () => {
+                const theme = testData.designTheme;
+                preview.innerHTML = '';
+                
+                // Add theme banner
+                const themeBanner = `
+                    <div style="background: #f0f4ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid ${theme.colorPrimary};">
+                        <strong style="color: ${theme.colorPrimary};">🎨 ${theme.name}</strong>
+                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #666;">${theme.description}</p>
+                    </div>
+                `;
+                preview.innerHTML = themeBanner;
+                
+                // Render each slide with delay
+                for (let i = 0; i < testData.slides.length; i++) {
+                    const slide = testData.slides[i];
+                    
+                    const placeholder = document.createElement('div');
+                    placeholder.style.cssText = 'opacity: 0; transform: translateY(20px); transition: all 0.3s ease;';
+                    placeholder.innerHTML = window.renderSlidePreviewCard(slide, i, theme);
+                    preview.appendChild(placeholder);
+                    
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    placeholder.style.opacity = '1';
+                    placeholder.style.transform = 'translateY(0)';
+                }
+                
+                // Check scroll
+                setTimeout(() => {
+                    const hasScroll = preview.scrollHeight > preview.clientHeight;
+                    const scrollInfo = document.createElement('div');
+                    scrollInfo.className = `test-result ${hasScroll ? 'pass' : 'info'}`;
+                    scrollInfo.style.marginTop = '10px';
+                    scrollInfo.innerHTML = `
+                        <strong>${hasScroll ? '✅' : 'ℹ️'} Scroll Test</strong><br>
+                        Container Height: ${preview.clientHeight}px<br>
+                        Content Height: ${preview.scrollHeight}px<br>
+                        ${hasScroll ? 'Scroll bar should be visible ✓' : 'Content fits, no scroll needed'}
+                    `;
+                    section.appendChild(scrollInfo);
+                }, 100);
+            }, 500);
+        }
+
+        // Run tests on load
+        window.addEventListener('load', () => {
+            console.log('Test page loaded. Click "Run All Tests" to begin.');
+        });
+    </script>
+</body>
+</html>
+

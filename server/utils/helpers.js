@@ -131,7 +131,16 @@ function sendErrorResponse(res, error, statusCode = 500) {
     console.error('Error:', error.message);
     console.error('Stack:', error.stack);
     
-    const errorMessage = error.stdout || error.stderr || error.message;
+    // Log stdout/stderr for debugging but don't send to client
+    if (error.stdout) {
+        console.error('stdout:', error.stdout);
+    }
+    if (error.stderr) {
+        console.error('stderr:', error.stderr);
+    }
+    
+    // Send clean error message to client
+    const errorMessage = error.message || 'An unexpected error occurred during generation';
     
     if (!res.headersSent) {
         res.status(statusCode).json({ error: errorMessage });

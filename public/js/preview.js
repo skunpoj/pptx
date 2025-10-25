@@ -450,6 +450,8 @@ function renderMiniSlidePreview(slide, theme) {
 // ========================================
 
 window.displayPreview = displayPreview;
+window.displayListView = displayListView;
 window.displayGalleryView = displayGalleryView;
-window.switchView = switchView;
+// Note: renderSlidePreviewCard is already exported at line 154
+// Note: switchView and scrollToSlide are defined and exported in ui.js
 
