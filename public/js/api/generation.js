@@ -76,28 +76,61 @@ async function generatePresentation() {
         }
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Server error response:', errorText);
-            throw new Error(`Generation failed: ${response.status} ${response.statusText}`);
+            let errorMessage = 'Generation failed';
+            try {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const error = await response.json();
+                    errorMessage = error.error || errorMessage;
+                } else {
+                    const text = await response.text();
+                    errorMessage = text || `Server error: ${response.status}`;
+                }
+            } catch (e) {
+                errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorMessage);
         }
         
-        const result = await response.json();
-        console.log('✅ Generation response received:', result);
+        console.log('✅ Preparing PowerPoint file...');
+        const blob = await response.blob();
+        console.log('  File size:', (blob.size / 1024).toFixed(2), 'KB');
         
-        if (result.success) {
-            // Show download link
-            showDownloadLink(result.downloadUrl, result.fileSize, result.storage);
-            const successMessage = window.templateFile 
-                ? '✅ PowerPoint generated with template successfully!' 
-                : '✅ PowerPoint generated successfully!';
+        // Get storage URLs from response headers
+        const sessionId = response.headers.get('X-Session-Id');
+        const downloadUrl = response.headers.get('X-Download-Url');
+        const pdfUrl = response.headers.get('X-PDF-Url');
+        
+        // Create blob URL for download
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Store for cleanup later
+        if (window.currentDownloadUrl) {
+            window.URL.revokeObjectURL(window.currentDownloadUrl);
+        }
+        window.currentDownloadUrl = blobUrl;
+        window.currentSessionId = sessionId;
+        
+        console.log('✅ PowerPoint generation complete!');
+        console.log('  Session ID:', sessionId);
+        console.log('  Download URL:', downloadUrl);
+        console.log('  PDF URL:', pdfUrl);
+        
+        // Show download link
+        showDownloadLink(blobUrl, blob.size, { sessionId, downloadUrl, pdfUrl });
+        
+        const successMessage = window.templateFile 
+            ? '✅ PowerPoint generated with template successfully!' 
+            : '✅ PowerPoint generated successfully!';
+        if (typeof showNotification === 'function') {
             showNotification(successMessage, 'success');
-        } else {
-            throw new Error(result.error || 'Generation failed');
         }
         
     } catch (error) {
         console.error('Generation failed:', error);
-        showNotification('❌ Generation failed: ' + error.message, 'error');
+        if (typeof showNotification === 'function') {
+            showNotification('❌ Generation failed: ' + error.message, 'error');
+        }
     } finally {
         // Restore button state
         generateBtn.textContent = originalText;
