@@ -237,8 +237,8 @@ Implementation strategies involve setting measurable sustainability goals with c
 function loadExampleByCategory(category) {
     const text = exampleTemplates[category];
     if (text) {
-        document.getElementById('ideaInput').value = text;
-        window.showStatus(`📝 ${category.charAt(0).toUpperCase() + category.slice(1)} example loaded into idea generator. Click "Expand Idea" to create full content.`, 'info');
+        document.getElementById('textInput').value = text;
+        window.showStatus(`📝 ${category.charAt(0).toUpperCase() + category.slice(1)} example loaded. Ready to preview or generate slides!`, 'success');
     }
 }
 
