@@ -152,11 +152,13 @@ window.displayGalleryView = displayGalleryView;
 
 **Usage:**
 ```bash
-# Start server
-node server.js
+# Docker deployment
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
 
 # Open in browser
-http://localhost:3000/test-features.html
+https://your-production-url/test-features.html
 
 # Click "Run All Tests" to verify everything works
 ```
@@ -165,15 +167,24 @@ http://localhost:3000/test-features.html
 
 ## Testing Checklist
 
+### 🐳 Docker Deployment (Production)
+**Note:** Since you're testing via Docker in production, use your production URL instead of localhost.
+
 ### Before Using the App
-- [ ] Open `http://localhost:3000/test-features.html`
+- [ ] Rebuild Docker image with latest changes:
+  ```bash
+  docker-compose down
+  docker-compose build --no-cache
+  docker-compose up -d
+  ```
+- [ ] Open your production URL + `/test-features.html`
 - [ ] Click "🚀 Run All Tests"
 - [ ] Verify all tests pass (green checkmarks)
 - [ ] Click "📜 Test Scroll Bar" to verify scrolling works
 - [ ] Click "⚡ Test Progressive Rendering" to see slides render with animation
 
 ### Normal Usage
-- [ ] Open `http://localhost:3000`
+- [ ] Open your production URL
 - [ ] Enter API key
 - [ ] Generate preview with example content
 - [ ] Verify slides appear with smooth animation
@@ -278,29 +289,31 @@ For scroll bar to appear:
 
 ## Next Steps
 
-1. **Test the Application**
+### 🐳 Docker Deployment
+
+1. **Rebuild with Latest Changes**
    ```bash
-   # Open test page
-   http://localhost:3000/test-features.html
-   
-   # Run all tests
-   Click "Run All Tests" button
+   cd /path/to/pptx-1
+   docker-compose down
+   docker-compose build --no-cache
+   docker-compose up -d
    ```
 
-2. **Verify Fixed Issues**
+2. **Test the Application**
+   - Open your production URL + `/test-features.html`
+   - Click "🚀 Run All Tests" button
+   - Verify all tests pass (green checkmarks)
+
+3. **Verify Fixed Issues**
    - Generate a presentation
-   - Check error messages are clear
+   - Check error messages are clear and user-friendly
    - Verify scroll bar appears with many slides
 
-3. **Normal Usage**
-   ```bash
-   # Main app
-   http://localhost:3000
-   
-   # Generate preview with example
-   # Create presentation
-   # Download and verify PPTX file
-   ```
+4. **Normal Usage**
+   - Open your production URL
+   - Generate preview with example content
+   - Create presentation
+   - Download and verify PPTX file
 
 ---
 
@@ -309,21 +322,32 @@ For scroll bar to appear:
 If you encounter any issues:
 
 1. **Check Test Page First**
-   - `http://localhost:3000/test-features.html`
+   - Open your production URL + `/test-features.html`
    - All tests should pass
 
 2. **Check Browser Console**
    - F12 → Console tab
    - Should not show errors about undefined functions
 
-3. **Check Server Logs**
-   - Server console shows detailed error information
+3. **Check Docker Logs**
+   ```bash
+   docker-compose logs -f
+   ```
+   - Server logs show detailed error information
    - Look for actual error messages, not console output
 
 4. **Common Issues**
-   - Port 3000 already in use → Kill node process and restart
-   - Module not found → Run `npm install`
+   - Changes not reflected → Rebuild without cache: `docker-compose build --no-cache`
+   - Container won't start → Check logs: `docker-compose logs`
+   - Module not found → Rebuild image completely
    - Scroll bar not showing → Content may fit in container (expected)
+
+5. **Force Clean Rebuild**
+   ```bash
+   docker-compose down -v
+   docker-compose build --no-cache
+   docker-compose up -d
+   ```
 
 ---
 

@@ -136,6 +136,8 @@ async function renderSlidesProgressively(slideData) {
     const preview = document.getElementById('preview');
     const theme = slideData.designTheme;
     
+    console.log('🎬 Starting progressive rendering for', slideData.slides.length, 'slides');
+    
     // Clear loading message
     preview.innerHTML = '';
     
@@ -148,21 +150,35 @@ async function renderSlidesProgressively(slideData) {
     `;
     preview.innerHTML = themeBanner;
     
+    // Check if renderSlidePreviewCard is available
+    if (typeof window.renderSlidePreviewCard !== 'function') {
+        console.error('❌ renderSlidePreviewCard function not found!');
+        throw new Error('Slide rendering function not available');
+    }
+    
     // Render each slide with delay for progressive effect
     for (let i = 0; i < slideData.slides.length; i++) {
         const slide = slideData.slides[i];
+        console.log(`  ✓ Rendering slide ${i + 1}/${slideData.slides.length}: ${slide.title}`);
         
-        // Create placeholder
-        const placeholder = document.createElement('div');
-        placeholder.style.cssText = 'opacity: 0; transform: translateY(20px); transition: all 0.3s ease;';
-        placeholder.innerHTML = window.renderSlidePreviewCard(slide, i, theme);
-        preview.appendChild(placeholder);
-        
-        // Animate in
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between slides
-        placeholder.style.opacity = '1';
-        placeholder.style.transform = 'translateY(0)';
+        try {
+            // Create placeholder
+            const placeholder = document.createElement('div');
+            placeholder.style.cssText = 'opacity: 0; transform: translateY(20px); transition: all 0.3s ease;';
+            placeholder.innerHTML = window.renderSlidePreviewCard(slide, i, theme);
+            preview.appendChild(placeholder);
+            
+            // Animate in with slightly longer delay for visibility
+            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay between slides
+            placeholder.style.opacity = '1';
+            placeholder.style.transform = 'translateY(0)';
+        } catch (error) {
+            console.error(`❌ Error rendering slide ${i + 1}:`, error);
+            throw error;
+        }
     }
+    
+    console.log('✅ Progressive rendering complete!');
 }
 
 async function generatePresentation() {
@@ -190,6 +206,11 @@ async function generatePresentation() {
     
     showStatus('📊 Generating your professional PowerPoint...', 'info');
     
+    console.log('🚀 Starting PowerPoint generation...');
+    console.log('  Provider:', window.currentProvider);
+    console.log('  Slides:', window.currentSlideData.slides.length);
+    console.log('  Template:', window.templateFile ? window.templateFile.name : 'None');
+    
     try {
         let response;
         
@@ -201,11 +222,13 @@ async function generatePresentation() {
             formData.append('provider', window.currentProvider);
             formData.append('slideData', JSON.stringify(window.currentSlideData));
             
+            console.log('  Sending to /api/generate-with-template...');
             response = await fetch('/api/generate-with-template', {
                 method: 'POST',
                 body: formData
             });
         } else {
+            console.log('  Sending to /api/generate...');
             response = await fetch('/api/generate', {
                 method: 'POST',
                 headers: {
@@ -215,12 +238,38 @@ async function generatePresentation() {
             });
         }
         
+        console.log('  Response status:', response.status, response.statusText);
+        
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Generation failed');
+            let errorMessage = 'Generation failed';
+            try {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const error = await response.json();
+                    errorMessage = error.error || errorMessage;
+                } else {
+                    const text = await response.text();
+                    errorMessage = text || `Server error: ${response.status}`;
+                }
+            } catch (parseError) {
+                console.error('  Error parsing error response:', parseError);
+                errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            }
+            
+            console.error('  Error message:', errorMessage);
+            
+            // Check for specific error types
+            if (response.status === 401 || errorMessage.toLowerCase().includes('api key') || errorMessage.toLowerCase().includes('authentication')) {
+                throw new Error('AUTHENTICATION_ERROR: ' + errorMessage);
+            } else {
+                throw new Error(errorMessage);
+            }
         }
         
+        console.log('  Downloading PowerPoint file...');
         const blob = await response.blob();
+        console.log('  File size:', (blob.size / 1024).toFixed(2), 'KB');
+        
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -230,13 +279,18 @@ async function generatePresentation() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
+        console.log('✅ PowerPoint generation complete!');
         showStatus('✅ Professional presentation downloaded successfully!', 'success');
     } catch (error) {
-        console.error('Error:', error);
-        if (error.message.includes('401') || error.message.includes('authentication')) {
-            showStatus('❌ Invalid API key. Please check and try again.', 'error');
+        console.error('❌ PowerPoint generation error:', error);
+        
+        if (error.message.startsWith('AUTHENTICATION_ERROR:')) {
+            const cleanMessage = error.message.replace('AUTHENTICATION_ERROR: ', '');
+            showStatus('❌ Authentication Error: ' + cleanMessage, 'error');
+        } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+            showStatus('❌ Connection error. Please check your server is running.', 'error');
         } else {
-            showStatus('❌ Error: ' + error.message, 'error');
+            showStatus('❌ Generation Error: ' + error.message, 'error');
         }
     } finally {
         btn.disabled = false;

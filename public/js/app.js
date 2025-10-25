@@ -111,6 +111,12 @@ function toggleSettingsSection() {
     const container = document.getElementById('settingsSectionContainer');
     const icon = document.getElementById('settingsToggleIcon');
     
+    // Guard against null elements
+    if (!container || !icon) {
+        console.warn('Settings section elements not found');
+        return;
+    }
+    
     if (container.style.display === 'none') {
         container.style.display = 'block';
         icon.textContent = '▼';
