@@ -793,7 +793,7 @@ async function modifySlides() {
         window.currentSlideData.slides = modifiedData.slides;
         
         // Re-render preview
-        displayPreview(window.currentSlideData);
+        window.displayPreview(window.currentSlideData);
         
         // Clear modification prompt
         document.getElementById('modificationPrompt').value = '';

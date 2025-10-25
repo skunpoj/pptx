@@ -605,6 +605,215 @@ Our Products
     <script src="/js/api.js"></script>
     <script src="/js/promptEditor.js"></script>
     
+    <!-- Integration Diagnostics Script -->
+    <script>
+        // Run diagnostics on page load
+        window.addEventListener('load', function() {
+            console.log('═══════════════════════════════════════════════════');
+            console.log('🔍 AI TEXT2PPT PRO - INTEGRATION DIAGNOSTICS');
+            console.log('═══════════════════════════════════════════════════');
+            console.log('');
+            
+            let allPassed = true;
+            
+            // Check all required functions
+            const requiredFunctions = {
+                'window.showStatus': window.showStatus,
+                'window.generatePreview': window.generatePreview,
+                'window.generateFromPrompt': window.generateFromPrompt,
+                'window.generatePresentation': window.generatePresentation,
+                'window.displayPreview': window.displayPreview,
+                'window.getApiKey': window.getApiKey,
+                'window.modifySlides': window.modifySlides,
+                'window.loadExampleByCategory': window.loadExampleByCategory,
+                'window.selectProvider': window.selectProvider,
+                'window.saveApiKey': window.saveApiKey,
+                'window.displayThemeSelector': window.displayThemeSelector,
+                'window.selectTheme': window.selectTheme
+            };
+            
+            console.log('📋 FUNCTION EXPORTS CHECK:');
+            console.log('──────────────────────────');
+            for (const [name, func] of Object.entries(requiredFunctions)) {
+                const exists = typeof func === 'function';
+                const status = exists ? '✅' : '❌';
+                console.log(`${status} ${name}: ${typeof func}`);
+                if (!exists) allPassed = false;
+            }
+            console.log('');
+            
+            // Check colorThemes
+            console.log('🎨 THEMES CHECK:');
+            console.log('──────────────────────────');
+            if (window.colorThemes && typeof window.colorThemes === 'object') {
+                const themeCount = Object.keys(window.colorThemes).length;
+                console.log(`✅ window.colorThemes: ${themeCount} themes loaded`);
+                console.log('   Themes:', Object.keys(window.colorThemes).join(', '));
+            } else {
+                console.log('❌ window.colorThemes: NOT LOADED');
+                allPassed = false;
+            }
+            console.log('');
+            
+            // Check DOM elements
+            console.log('📄 DOM ELEMENTS CHECK:');
+            console.log('──────────────────────────');
+            const requiredElements = [
+                'textInput', 'ideaInput', 'previewBtn', 'promptBtn',
+                'preview', 'status', 'themeSelector', 'numSlides',
+                'generateImages', 'extractColors', 'useAsTemplate', 'fileUpload'
+            ];
+            
+            for (const id of requiredElements) {
+                const element = document.getElementById(id);
+                const status = element ? '✅' : '❌';
+                console.log(`${status} #${id}: ${element ? element.tagName : 'NOT FOUND'}`);
+                if (!element) allPassed = false;
+            }
+            console.log('');
+            
+            // Check current provider
+            console.log('⚙️  CONFIGURATION:');
+            console.log('──────────────────────────');
+            console.log(`   Current Provider: ${window.currentProvider || 'NOT SET'}`);
+            console.log(`   Current View: ${window.currentView || 'NOT SET'}`);
+            console.log('');
+            
+            // Final summary
+            console.log('═══════════════════════════════════════════════════');
+            if (allPassed) {
+                console.log('✅ ALL CHECKS PASSED - Integration OK!');
+                console.log('');
+                console.log('🎯 Next steps:');
+                console.log('   1. Set your API key in Advanced Configuration');
+                console.log('   2. Try clicking "Generate Preview" button');
+                console.log('   3. Try clicking "Expand Idea" button');
+            } else {
+                console.log('❌ SOME CHECKS FAILED - See errors above');
+                console.log('');
+                console.log('🔧 Troubleshooting:');
+                console.log('   1. Hard refresh: Ctrl+Shift+F5');
+                console.log('   2. Clear cache and reload');
+                console.log('   3. Check browser console for errors');
+            }
+            console.log('═══════════════════════════════════════════════════');
+            console.log('');
+            
+            // Add visual indicator to page
+            if (allPassed) {
+                console.log('💡 TIP: All systems operational! You can now use the app.');
+            } else {
+                console.log('⚠️  WARNING: Some systems not loaded properly!');
+            }
+        });
+        
+        // Test function for Generate Preview button
+        window.testGeneratePreview = function() {
+            console.log('🧪 Testing Generate Preview Button...');
+            console.log('──────────────────────────────────────');
+            
+            if (typeof window.generatePreview !== 'function') {
+                console.error('❌ window.generatePreview is NOT a function!');
+                console.error('   Type:', typeof window.generatePreview);
+                return;
+            }
+            console.log('✅ window.generatePreview exists');
+            
+            if (typeof window.showStatus !== 'function') {
+                console.error('❌ window.showStatus is NOT defined!');
+                return;
+            }
+            console.log('✅ window.showStatus exists');
+            
+            if (typeof window.getApiKey !== 'function') {
+                console.error('❌ window.getApiKey is NOT defined!');
+                return;
+            }
+            console.log('✅ window.getApiKey exists');
+            
+            const textInput = document.getElementById('textInput');
+            const previewBtn = document.getElementById('previewBtn');
+            
+            if (!textInput) {
+                console.error('❌ #textInput element NOT found!');
+                return;
+            }
+            console.log('✅ #textInput element exists');
+            
+            if (!previewBtn) {
+                console.error('❌ #previewBtn element NOT found!');
+                return;
+            }
+            console.log('✅ #previewBtn element exists');
+            
+            console.log('');
+            console.log('✅ All checks passed! Generate Preview should work!');
+            console.log('   (Requires API key to actually generate)');
+        };
+        
+        // Test function for Expand Idea button
+        window.testExpandIdea = function() {
+            console.log('🧪 Testing Expand Idea Button...');
+            console.log('──────────────────────────────────────');
+            
+            if (typeof window.generateFromPrompt !== 'function') {
+                console.error('❌ window.generateFromPrompt is NOT a function!');
+                console.error('   Type:', typeof window.generateFromPrompt);
+                return;
+            }
+            console.log('✅ window.generateFromPrompt exists');
+            
+            if (typeof window.showStatus !== 'function') {
+                console.error('❌ window.showStatus is NOT defined!');
+                return;
+            }
+            console.log('✅ window.showStatus exists');
+            
+            if (typeof window.getApiKey !== 'function') {
+                console.error('❌ window.getApiKey is NOT defined!');
+                return;
+            }
+            console.log('✅ window.getApiKey exists');
+            
+            const ideaInput = document.getElementById('ideaInput');
+            const promptBtn = document.getElementById('promptBtn');
+            
+            if (!ideaInput) {
+                console.error('❌ #ideaInput element NOT found!');
+                return;
+            }
+            console.log('✅ #ideaInput element exists');
+            
+            if (!promptBtn) {
+                console.error('❌ #promptBtn element NOT found!');
+                return;
+            }
+            console.log('✅ #promptBtn element exists');
+            
+            console.log('');
+            console.log('✅ All checks passed! Expand Idea should work!');
+            console.log('   (Requires API key to actually generate)');
+        };
+        
+        // Add keyboard shortcut for quick test
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+Shift+D for diagnostics
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+                e.preventDefault();
+                console.clear();
+                window.location.reload();
+            }
+            // Ctrl+Shift+T for test
+            if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+                e.preventDefault();
+                console.log('');
+                testGeneratePreview();
+                console.log('');
+                testExpandIdea();
+            }
+        });
+    </script>
+    
     <!-- Welcome Modal Script -->
     <script>
         function showWelcomeModal() {

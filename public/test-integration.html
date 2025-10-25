@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Test - AI Text2PPT Pro</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #667eea;
+        }
+        .test-section {
+            background: white;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-item {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+        }
+        .test-item.pass {
+            border-left-color: #28a745;
+            background: #e8f5e9;
+        }
+        .test-item.fail {
+            border-left-color: #dc3545;
+            background: #ffebee;
+        }
+        .status {
+            font-weight: bold;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem 0;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        #testResults {
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 AI Text2PPT Pro - Integration Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="testResults"></div>
+    </div>
+
+    <!-- Load all modules -->
+    <script src="/js/themes.js"></script>
+    <script src="/js/charts.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/preview.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/fileHandler.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/promptEditor.js"></script>
+
+    <script>
+        const results = [];
+
+        function addTest(name, passed, details = '') {
+            results.push({ name, passed, details });
+            displayResults();
+        }
+
+        function displayResults() {
+            const container = document.getElementById('testResults');
+            container.innerHTML = results.map(test => `
+                <div class="test-item ${test.passed ? 'pass' : 'fail'}">
+                    <span class="status">${test.passed ? '✅ PASS' : '❌ FAIL'}</span> - ${test.name}
+                    ${test.details ? `<br><small>${test.details}</small>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function clearResults() {
+            results.length = 0;
+            displayResults();
+        }
+
+        function runAllTests() {
+            clearResults();
+            
+            // Test 1: Check if all modules are loaded
+            addTest('themes.js loaded', typeof window.colorThemes !== 'undefined', 
+                `colorThemes: ${typeof window.colorThemes}`);
+            
+            addTest('charts.js loaded', typeof window.generateChartSVG === 'function',
+                `generateChartSVG: ${typeof window.generateChartSVG}`);
+            
+            addTest('ui.js loaded', typeof window.showStatus === 'function',
+                `showStatus: ${typeof window.showStatus}`);
+            
+            addTest('preview.js loaded', typeof window.displayPreview === 'function',
+                `displayPreview: ${typeof window.displayPreview}`);
+            
+            addTest('app.js loaded', typeof window.loadExampleByCategory === 'function',
+                `loadExampleByCategory: ${typeof window.loadExampleByCategory}`);
+            
+            addTest('fileHandler.js loaded', typeof window.generateFromPrompt === 'function',
+                `generateFromPrompt: ${typeof window.generateFromPrompt}`);
+            
+            addTest('api.js loaded', typeof window.generatePreview === 'function',
+                `generatePreview: ${typeof window.generatePreview}`);
+            
+            // Test 2: Check critical functions
+            addTest('window.showStatus exists', typeof window.showStatus === 'function');
+            addTest('window.generatePreview exists', typeof window.generatePreview === 'function');
+            addTest('window.generateFromPrompt exists', typeof window.generateFromPrompt === 'function');
+            addTest('window.generatePresentation exists', typeof window.generatePresentation === 'function');
+            addTest('window.modifySlides exists', typeof window.modifySlides === 'function');
+            addTest('window.displayPreview exists', typeof window.displayPreview === 'function');
+            addTest('window.getApiKey exists', typeof window.getApiKey === 'function');
+            
+            // Test 3: Check theme selector
+            addTest('window.displayThemeSelector exists', typeof window.displayThemeSelector === 'function');
+            addTest('window.selectTheme exists', typeof window.selectTheme === 'function');
+            
+            // Test 4: Check if colorThemes has themes
+            const themeCount = window.colorThemes ? Object.keys(window.colorThemes).length : 0;
+            addTest('Color themes loaded', themeCount > 0, `Found ${themeCount} themes`);
+            
+            // Test 5: Test showStatus function
+            try {
+                window.showStatus('Test message', 'info');
+                addTest('showStatus can be called', true);
+            } catch (e) {
+                addTest('showStatus can be called', false, e.message);
+            }
+            
+            // Test 6: Check DOM elements exist
+            const requiredElements = [
+                'textInput',
+                'ideaInput',
+                'previewBtn',
+                'promptBtn',
+                'preview',
+                'status',
+                'themeSelector'
+            ];
+            
+            requiredElements.forEach(id => {
+                const element = document.getElementById(id);
+                addTest(`Element #${id} exists`, element !== null,
+                    element ? `Found: ${element.tagName}` : 'Not found in DOM');
+            });
+            
+            // Test 7: Check global variables
+            addTest('window.currentProvider defined', window.currentProvider !== undefined,
+                `Value: ${window.currentProvider}`);
+            
+            // Test 8: Test theme initialization
+            try {
+                const hasVibrantPurple = window.colorThemes && window.colorThemes['vibrant-purple'];
+                addTest('Default theme (vibrant-purple) exists', hasVibrantPurple !== undefined);
+            } catch (e) {
+                addTest('Default theme (vibrant-purple) exists', false, e.message);
+            }
+            
+            // Summary
+            const passCount = results.filter(r => r.passed).length;
+            const failCount = results.filter(r => !r.passed).length;
+            
+            const summary = document.createElement('div');
+            summary.className = 'test-section';
+            summary.style.marginTop = '2rem';
+            summary.style.background = passCount === results.length ? '#e8f5e9' : '#fff3cd';
+            summary.innerHTML = `
+                <h3>Summary</h3>
+                <p><strong>Total Tests:</strong> ${results.length}</p>
+                <p><strong>Passed:</strong> ${passCount}</p>
+                <p><strong>Failed:</strong> ${failCount}</p>
+            `;
+            
+            const container = document.getElementById('testResults');
+            container.appendChild(summary);
+        }
+
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                runAllTests();
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+

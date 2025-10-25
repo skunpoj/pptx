@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Tool - AI Text2PPT Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 500px;
+            overflow-y: auto;
+            margin: 1rem 0;
+        }
+        
+        .log-entry {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            border-left: 3px solid #444;
+        }
+        
+        .log-entry.success {
+            border-left-color: #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .log-entry.error {
+            border-left-color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+        }
+        
+        .log-entry.info {
+            border-left-color: #2196f3;
+            background: rgba(33, 150, 243, 0.1);
+        }
+        
+        .log-entry.warning {
+            border-left-color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background: #5a6268;
+        }
+        
+        .test-button {
+            display: inline-block;
+            margin: 0.5rem;
+        }
+        
+        .section {
+            margin: 2rem 0;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .card {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 System Diagnostic Tool</h1>
+        <p style="color: #666; margin-bottom: 1rem;">This tool helps diagnose integration issues with the AI Text2PPT Pro application.</p>
+
+        <div class="section">
+            <h2>Quick Tests</h2>
+            <div class="test-button">
+                <button onclick="testGeneratePreview()">Test Generate Preview Button</button>
+            </div>
+            <div class="test-button">
+                <button onclick="testExpandIdea()">Test Expand Idea Button</button>
+            </div>
+            <div class="test-button">
+                <button onclick="testShowStatus()">Test Status Notification</button>
+            </div>
+            <div class="test-button">
+                <button onclick="clearConsole()" class="secondary">Clear Console</button>
+            </div>
+        </div>
+
+        <div class="console" id="console">
+            <div class="log-entry info">🚀 Diagnostic tool loaded. Click buttons above to run tests.</div>
+        </div>
+
+        <div class="section">
+            <h2>System Information</h2>
+            <div class="grid" id="systemInfo"></div>
+        </div>
+
+        <div class="section">
+            <h2>Required Elements Status</h2>
+            <div class="grid" id="elementsStatus"></div>
+        </div>
+    </div>
+
+    <!-- Hidden test elements -->
+    <textarea id="textInput" style="display: none;">Test content</textarea>
+    <textarea id="ideaInput" style="display: none;">Test idea</textarea>
+    <button id="previewBtn" style="display: none;">Preview</button>
+    <button id="promptBtn" style="display: none;">Prompt</button>
+    <div id="preview" style="display: none;"></div>
+    <div id="status" style="display: none;"></div>
+    <div id="themeSelector" style="display: none;"></div>
+    <input type="number" id="numSlides" value="6" style="display: none;">
+    <input type="checkbox" id="generateImages" style="display: none;">
+    <input type="checkbox" id="extractColors" style="display: none;">
+    <input type="checkbox" id="useAsTemplate" style="display: none;">
+    <input type="file" id="fileUpload" style="display: none;">
+
+    <!-- Load all modules -->
+    <script src="/js/themes.js"></script>
+    <script src="/js/charts.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/preview.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/fileHandler.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/promptEditor.js"></script>
+
+    <script>
+        // Console logging
+        function log(message, type = 'info') {
+            const console = document.getElementById('console');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const icon = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️'
+            }[type] || 'ℹ️';
+            
+            entry.innerHTML = `[${timestamp}] ${icon} ${message}`;
+            console.appendChild(entry);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '';
+            log('Console cleared', 'info');
+        }
+
+        // Test functions
+        function testGeneratePreview() {
+            log('Testing Generate Preview button...', 'info');
+            
+            if (typeof window.generatePreview !== 'function') {
+                log('ERROR: window.generatePreview is not a function!', 'error');
+                log(`Type: ${typeof window.generatePreview}`, 'error');
+                return;
+            }
+            
+            log('✓ window.generatePreview function exists', 'success');
+            
+            // Check dependencies
+            if (typeof window.showStatus !== 'function') {
+                log('ERROR: window.showStatus is not defined!', 'error');
+                return;
+            }
+            log('✓ window.showStatus function exists', 'success');
+            
+            if (typeof window.getApiKey !== 'function') {
+                log('ERROR: window.getApiKey is not defined!', 'error');
+                return;
+            }
+            log('✓ window.getApiKey function exists', 'success');
+            
+            // Check DOM elements
+            const textInput = document.getElementById('textInput');
+            const previewBtn = document.getElementById('previewBtn');
+            
+            if (!textInput) {
+                log('ERROR: #textInput element not found!', 'error');
+                return;
+            }
+            log('✓ #textInput element exists', 'success');
+            
+            if (!previewBtn) {
+                log('ERROR: #previewBtn element not found!', 'error');
+                return;
+            }
+            log('✓ #previewBtn element exists', 'success');
+            
+            log('All checks passed! Generate Preview should work (requires API key)', 'success');
+        }
+
+        function testExpandIdea() {
+            log('Testing Expand Idea button...', 'info');
+            
+            if (typeof window.generateFromPrompt !== 'function') {
+                log('ERROR: window.generateFromPrompt is not a function!', 'error');
+                log(`Type: ${typeof window.generateFromPrompt}`, 'error');
+                return;
+            }
+            
+            log('✓ window.generateFromPrompt function exists', 'success');
+            
+            // Check dependencies
+            if (typeof window.showStatus !== 'function') {
+                log('ERROR: window.showStatus is not defined!', 'error');
+                return;
+            }
+            log('✓ window.showStatus function exists', 'success');
+            
+            if (typeof window.getApiKey !== 'function') {
+                log('ERROR: window.getApiKey is not defined!', 'error');
+                return;
+            }
+            log('✓ window.getApiKey function exists', 'success');
+            
+            // Check DOM elements
+            const ideaInput = document.getElementById('ideaInput');
+            const promptBtn = document.getElementById('promptBtn');
+            const numSlides = document.getElementById('numSlides');
+            
+            if (!ideaInput) {
+                log('ERROR: #ideaInput element not found!', 'error');
+                return;
+            }
+            log('✓ #ideaInput element exists', 'success');
+            
+            if (!promptBtn) {
+                log('ERROR: #promptBtn element not found!', 'error');
+                return;
+            }
+            log('✓ #promptBtn element exists', 'success');
+            
+            if (!numSlides) {
+                log('ERROR: #numSlides element not found!', 'error');
+                return;
+            }
+            log('✓ #numSlides element exists', 'success');
+            
+            log('All checks passed! Expand Idea should work (requires API key)', 'success');
+        }
+
+        function testShowStatus() {
+            log('Testing status notification system...', 'info');
+            
+            if (typeof window.showStatus !== 'function') {
+                log('ERROR: window.showStatus is not a function!', 'error');
+                return;
+            }
+            
+            try {
+                window.showStatus('Test success message', 'success');
+                log('✓ showStatus called with success type', 'success');
+                
+                setTimeout(() => {
+                    window.showStatus('Test error message', 'error');
+                    log('✓ showStatus called with error type', 'success');
+                }, 1000);
+                
+                setTimeout(() => {
+                    window.showStatus('Test info message', 'info');
+                    log('✓ showStatus called with info type', 'success');
+                }, 2000);
+                
+                log('Status notification test complete!', 'success');
+            } catch (e) {
+                log(`ERROR: ${e.message}`, 'error');
+            }
+        }
+
+        // System info
+        function displaySystemInfo() {
+            const info = [
+                { label: 'Browser', value: navigator.userAgent.split(' ').slice(-2).join(' ') },
+                { label: 'Platform', value: navigator.platform },
+                { label: 'Language', value: navigator.language },
+                { label: 'Online', value: navigator.onLine ? 'Yes' : 'No' },
+                { label: 'Color Themes', value: window.colorThemes ? Object.keys(window.colorThemes).length : '0' },
+                { label: 'Current Provider', value: window.currentProvider || 'Not set' }
+            ];
+            
+            const container = document.getElementById('systemInfo');
+            container.innerHTML = info.map(item => `
+                <div class="card">
+                    <h3>${item.label}</h3>
+                    <p>${item.value}</p>
+                </div>
+            `).join('');
+        }
+
+        function checkElements() {
+            const elements = [
+                'textInput',
+                'ideaInput',
+                'previewBtn',
+                'promptBtn',
+                'preview',
+                'status',
+                'themeSelector',
+                'numSlides',
+                'generateImages',
+                'extractColors',
+                'useAsTemplate',
+                'fileUpload'
+            ];
+            
+            const container = document.getElementById('elementsStatus');
+            container.innerHTML = elements.map(id => {
+                const exists = document.getElementById(id) !== null;
+                return `
+                    <div class="card" style="border-left-color: ${exists ? '#4caf50' : '#f44336'}">
+                        <h3>#${id}</h3>
+                        <p>${exists ? '✅ Found' : '❌ Missing'}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                displaySystemInfo();
+                checkElements();
+                log('Diagnostic tool initialized', 'success');
+                log('All modules loaded and ready', 'info');
+            }, 500);
+        });
+    </script>
+</body>
+</html>
+
