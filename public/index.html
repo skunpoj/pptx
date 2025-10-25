@@ -14,8 +14,6 @@
         <!-- Header -->
         <div class="header">
             <h1>🎨 AI Text2PPT Pro</h1>
-            <p>Professional presentations powered by Claude AI</p>
-            <span class="badge">Using html2pptx + PptxGenJS</span>
         </div>
 
         <!-- Main Content Grid -->
@@ -24,7 +22,31 @@
             <div class="card">
                 <h2>📝 Your Content</h2>
                 
-                <!-- AI Idea Generation Section -->
+                <!-- Main Content Editor - MOVED TO TOP -->
+                <div class="content-editor-section">
+                    <label class="content-label">📝 Presentation Content:</label>
+                    <textarea id="textInput" class="content-textarea" placeholder="Type or paste your presentation content here, or use the AI Idea Generator below to expand a simple idea into full content..."></textarea>
+                </div>
+                
+                <!-- Quick Examples - MOVED UP -->
+                <div class="quick-examples">
+                    <p class="examples-label">Quick Start Examples:</p>
+                    <div class="examples-grid">
+                        <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
+                    </div>
+                </div>
+                
+                <!-- Preview Button - MOVED UP -->
+                <button class="btn-primary btn-full btn-large" onclick="generatePreview()" id="previewBtn">
+                    👁️ Generate Preview
+                </button>
+                
+                <!-- AI Idea Generator Section - MOVED TO BOTTOM -->
                 <div class="idea-generator-section">
                     <h3>💡 AI Idea Generator</h3>
                     <p class="section-description">Let AI expand your idea into detailed presentation content. Describe your topic or upload files.</p>
@@ -73,10 +95,10 @@
                     <button class="btn-primary btn-full" onclick="generateFromPrompt()" id="promptBtn">
                         🚀 Expand Idea into Full Content
                     </button>
-                    <p class="helper-text">This creates detailed text content that you can edit below before generating slides</p>
+                    <p class="helper-text">This creates detailed text content that you can edit above before generating slides</p>
                 </div>
                 
-                <!-- Color Theme Selector -->
+                <!-- Color Theme Selector - MOVED TO BOTTOM -->
                 <div id="themeSelector" class="theme-selector">
                     <div class="theme-selector-inner">
                         <div class="theme-header">
@@ -87,32 +109,6 @@
                         <div id="themeGrid" class="theme-grid"></div>
                     </div>
                 </div>
-                
-                <!-- Main Content Editor -->
-                <div class="content-editor-section">
-                    <label class="content-label">📝 Presentation Content (edit as needed):</label>
-                    <textarea id="textInput" class="content-textarea" placeholder="Your expanded content will appear here after clicking 'Expand Idea into Full Content' above, or you can type/paste your presentation content directly here..."></textarea>
-                </div>
-                
-                <!-- Quick Examples -->
-                <div class="quick-examples">
-                    <p class="examples-label">Quick Start Examples:</p>
-                    <div class="examples-grid">
-                        <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
-                    </div>
-                </div>
-                
-                <div id="status"></div>
-                
-                <!-- Preview Button -->
-                <button class="btn-primary btn-full btn-large" onclick="generatePreview()" id="previewBtn">
-                    👁️ Generate Preview
-                </button>
             </div>
 
             <!-- Right Panel: Preview -->
@@ -151,6 +147,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- Status Notification - SHARED BETWEEN BOTH PANELS -->
+        <div id="status"></div>
 
         <!-- Settings Card -->
         <div class="card settings-card">
@@ -275,7 +274,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            <p>Professional presentations • Claude AI content structuring • html2pptx rendering</p>
+            <p>Professional presentations powered by Claude AI • Using html2pptx + PptxGenJS</p>
             <p class="footer-note">All processing happens on your server • Your API key is stored locally</p>
         </div>
     </div>

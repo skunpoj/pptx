@@ -242,9 +242,11 @@ textarea:focus {
 .status {
     padding: 1rem;
     border-radius: 8px;
-    margin-top: 1rem;
+    margin: 1.5rem 0;
     font-weight: 500;
     flex-shrink: 0;
+    width: 100%;
+    text-align: center;
 }
 
 .status.info {
