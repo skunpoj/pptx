@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Cache Cleared - genis.ai</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 100px auto; text-align: center; }
+        h1 { color: #667eea; }
+        .success { color: #28a745; font-size: 48px; }
+        a { display: inline-block; margin-top: 20px; padding: 15px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="success">✅</div>
+    <h1>Cache Cleared!</h1>
+    <p>All cached JavaScript files have been cleared.</p>
+    <p>Click below to return to the app with fresh files.</p>
+    <a href="/?v=3">Return to genis.ai</a>
+    <script>
+        // Clear all caches
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => caches.delete(name));
+            });
+        }
+        // Clear localStorage cache keys
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('preview_cache_')) {
+                localStorage.removeItem(key);
+            }
+        });
+        console.log('✅ All caches cleared');
+    </script>
+</body>
+</html>
