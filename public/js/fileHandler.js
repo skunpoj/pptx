@@ -379,3 +379,6 @@ window.extractColorsFromFiles = extractColorsFromFiles;
 window.generateFromPrompt = generateFromPrompt;
 window.handleFileUpload = handleFileUpload;
 
+// Immediate diagnostic
+console.log('✅ fileHandler.js loaded - window.generateFromPrompt:', typeof window.generateFromPrompt);
+

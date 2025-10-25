@@ -178,3 +178,6 @@ window.switchView = switchView;
 window.scrollToSlide = scrollToSlide;
 window.switchSettingsTab = switchSettingsTab;
 
+// Immediate diagnostic
+console.log('✅ ui.js loaded - window.showStatus:', typeof window.showStatus);
+

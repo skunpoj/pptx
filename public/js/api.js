@@ -1631,3 +1631,6 @@ window.openShareUrl = openShareUrl;
 window.addContentPoint = addContentPoint;
 window.saveSlideModification = saveSlideModification;
 
+// Immediate diagnostic
+console.log('✅ api.js loaded - window.generatePreview:', typeof window.generatePreview);
+

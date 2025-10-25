@@ -455,3 +455,6 @@ window.displayGalleryView = displayGalleryView;
 // Note: renderSlidePreviewCard is already exported at line 154
 // Note: switchView and scrollToSlide are defined and exported in ui.js
 
+// Immediate diagnostic
+console.log('✅ preview.js loaded - window.displayPreview:', typeof window.displayPreview);
+

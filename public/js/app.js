@@ -454,3 +454,6 @@ window.selectProvider = selectProvider;
 window.saveApiKey = saveApiKey;
 window.loadExampleByCategory = loadExampleByCategory;
 
+// Immediate diagnostic
+console.log('✅ app.js loaded - window.loadExampleByCategory:', typeof window.loadExampleByCategory);
+
