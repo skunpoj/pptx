@@ -103,7 +103,8 @@ async function generatePreview() {
             },
             body: JSON.stringify({
                 text: text,
-                apiKey: apiKey
+                apiKey: apiKey,
+                incremental: true  // Enable real-time streaming
             })
         });
         
@@ -111,50 +112,54 @@ async function generatePreview() {
             throw new Error(`Preview failed: ${response.status} ${response.statusText}`);
         }
         
-        const responseText = await response.text();
-        console.log('📋 Raw server response:', responseText.substring(0, 200) + '...');
+        // Check if it's SSE streaming response
+        const contentType = response.headers.get('content-type');
         
-        let slideData;
-        try {
-            // Check if response is SSE format (starts with "data:")
-            if (responseText.trim().startsWith('data:')) {
-                console.log('📡 Parsing streaming SSE response...');
-                slideData = parseSSEResponse(responseText);
-            } else {
-                // Regular JSON response
-                slideData = JSON.parse(responseText);
-            }
-        } catch (parseError) {
-            console.error('❌ JSON parse error:', parseError);
-            console.error('❌ Response text:', responseText.substring(0, 500));
-            throw new Error('Invalid JSON response from server');
-        }
-        
-        if (slideData && slideData.slides) {
-            console.log(`✅ Received ${slideData.slides.length} slides`);
-            savePreviewCache(text, slideData);
-            window.currentSlideData = slideData;
+        if (contentType && contentType.includes('text/event-stream')) {
+            console.log('📡 Receiving real-time SSE stream...');
             
-            // Slides were already rendered incrementally during SSE parsing
-            // Just need to show action buttons and hide initial progress
-            hidePreviewProgress();
+            // Use ReadableStream to process chunks as they arrive (REAL-TIME!)
+            const slideData = await handleIncrementalStream(response);
             
-            // Show view toggle for switching between list/gallery view
-            const viewToggle = document.getElementById('viewToggle');
-            if (viewToggle) viewToggle.style.display = 'flex';
-            
-            // Show action buttons
-            const modificationSection = document.getElementById('modificationSection');
-            const generatePptSection = document.getElementById('generatePptSection');
-            if (modificationSection) modificationSection.style.display = 'block';
-            if (generatePptSection) generatePptSection.style.display = 'block';
-            
-            if (typeof showNotification === 'function') {
-                showNotification('✅ Preview generated successfully!', 'success');
+            // Save and finalize
+            if (slideData && slideData.slides) {
+                console.log(`✅ Stream complete: ${slideData.slides.length} slides received`);
+                savePreviewCache(text, slideData);
+                window.currentSlideData = slideData;
+                
+                // Hide initial progress indicator
+                hidePreviewProgress();
+                
+                // Show view toggle
+                const viewToggle = document.getElementById('viewToggle');
+                if (viewToggle) viewToggle.style.display = 'flex';
+                
+                // Show action buttons
+                const modificationSection = document.getElementById('modificationSection');
+                const generatePptSection = document.getElementById('generatePptSection');
+                if (modificationSection) modificationSection.style.display = 'block';
+                if (generatePptSection) generatePptSection.style.display = 'block';
+                
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ Preview generated successfully!', 'success');
+                }
             }
         } else {
-            console.error('❌ Invalid slide data:', slideData);
-            throw new Error('Invalid preview data received');
+            // Fallback: non-streaming response
+            console.log('📋 Receiving non-streaming response...');
+            const responseText = await response.text();
+            const slideData = JSON.parse(responseText);
+            
+            if (slideData && slideData.slides) {
+                savePreviewCache(text, slideData);
+                window.currentSlideData = slideData;
+                displayPreview(slideData);
+                hidePreviewProgress();
+                
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ Preview generated successfully!', 'success');
+                }
+            }
         }
         
     } catch (error) {
@@ -170,7 +175,172 @@ async function generatePreview() {
 }
 
 /**
+ * Handle incremental stream - render slides as they arrive (REAL-TIME!)
+ */
+async function handleIncrementalStream(response) {
+    const previewContainer = document.getElementById('preview');
+    if (!previewContainer) {
+        throw new Error('Preview container not found');
+    }
+    
+    // Clear container
+    previewContainer.innerHTML = '';
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    
+    const slides = [];
+    let theme = null;
+    let totalSlides = 0;
+    let progressDiv = null;
+    let buffer = '';
+    
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+                console.log('📡 Stream closed');
+                break;
+            }
+            
+            // Decode chunk and add to buffer
+            buffer += decoder.decode(value, { stream: true });
+            
+            // Process complete lines
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+                if (line.startsWith('data:')) {
+                    const jsonStr = line.substring(5).trim();
+                    
+                    if (jsonStr === '[DONE]') {
+                        console.log('✅ Received [DONE] marker');
+                        continue;
+                    }
+                    
+                    try {
+                        const data = JSON.parse(jsonStr);
+                        
+                        // THEME EVENT - Show theme header immediately
+                        if (data.type === 'theme') {
+                            theme = data.theme;
+                            totalSlides = data.totalSlides;
+                            console.log(`🎨 Theme received: ${theme.name} (${totalSlides} slides)`);
+                            
+                            // Remove initial loading, show theme
+                            hidePreviewProgress();
+                            
+                            const themeDiv = document.createElement('div');
+                            themeDiv.className = 'theme-info';
+                            themeDiv.style.cssText = `
+                                background: linear-gradient(135deg, ${theme.colorPrimary}, ${theme.colorSecondary});
+                                color: white;
+                                padding: 1rem;
+                                border-radius: 8px;
+                                margin-bottom: 1rem;
+                                text-align: center;
+                            `;
+                            themeDiv.innerHTML = `
+                                <h3 style="margin: 0 0 0.5rem 0; color: white;">${theme.name}</h3>
+                                <p style="margin: 0; opacity: 0.9;">${theme.description}</p>
+                            `;
+                            previewContainer.appendChild(themeDiv);
+                            
+                            // Add progress counter
+                            progressDiv = document.createElement('div');
+                            progressDiv.id = 'slideProgress';
+                            progressDiv.style.cssText = `
+                                background: rgba(102, 126, 234, 0.1);
+                                padding: 1rem;
+                                border-radius: 8px;
+                                margin-bottom: 1rem;
+                                text-align: center;
+                                font-weight: bold;
+                                color: #667eea;
+                                font-size: 1.1rem;
+                            `;
+                            progressDiv.innerHTML = `⏳ Generating slides... 0/${totalSlides}`;
+                            previewContainer.appendChild(progressDiv);
+                        }
+                        
+                        // SLIDE EVENT - Render slide immediately as it arrives!
+                        else if (data.type === 'slide') {
+                            slides.push(data.slide);
+                            console.log(`📄 Slide ${data.current}/${data.total}: ${data.slide.title}`);
+                            
+                            // Update progress counter in real-time
+                            if (progressDiv) {
+                                progressDiv.innerHTML = `⏳ Generating slides... ${data.current}/${data.total}`;
+                            }
+                            
+                            // Render THIS slide right now (not waiting for others!)
+                            const slideDiv = createSlidePreviewCard(data.slide, data.index, theme);
+                            slideDiv.style.opacity = '0';
+                            slideDiv.style.transform = 'translateY(20px)';
+                            previewContainer.appendChild(slideDiv);
+                            
+                            // Animate in
+                            requestAnimationFrame(() => {
+                                slideDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                                slideDiv.style.opacity = '1';
+                                slideDiv.style.transform = 'translateY(0)';
+                            });
+                        }
+                        
+                        // COMPLETE EVENT - Finalize
+                        else if (data.type === 'complete') {
+                            console.log('✅ Stream complete event received');
+                            
+                            // Show completion message
+                            if (progressDiv) {
+                                progressDiv.innerHTML = `✅ All ${totalSlides} slides generated successfully!`;
+                                progressDiv.style.background = 'rgba(40, 167, 69, 0.1)';
+                                progressDiv.style.color = '#28a745';
+                                
+                                // Fade out after 1.5 seconds
+                                setTimeout(() => {
+                                    progressDiv.style.transition = 'opacity 0.3s ease';
+                                    progressDiv.style.opacity = '0';
+                                    setTimeout(() => {
+                                        if (progressDiv && progressDiv.parentNode) {
+                                            progressDiv.remove();
+                                        }
+                                    }, 300);
+                                }, 1500);
+                            }
+                        }
+                        
+                    } catch (parseError) {
+                        console.warn('⚠️ Failed to parse SSE event:', jsonStr.substring(0, 100));
+                    }
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
+    }
+    
+    // Return complete slideData object
+    return {
+        slides: slides,
+        designTheme: theme || {
+            name: 'Default Theme',
+            description: 'Professional presentation theme',
+            colorPrimary: '#667eea',
+            colorSecondary: '#764ba2',
+            colorAccent: '#F39C12',
+            colorBackground: '#FFFFFF',
+            colorText: '#1d1d1d'
+        },
+        totalSlides: totalSlides || slides.length
+    };
+}
+
+/**
  * Parse Server-Sent Events (SSE) response format with live rendering
+ * (Fallback for non-streaming responses)
  */
 function parseSSEResponse(sseText) {
     console.log('📡 Parsing SSE response with live rendering...');
@@ -501,7 +671,12 @@ function displayPreview(slideData) {
 // Export functions
 window.generatePreview = generatePreview;
 window.displayPreview = displayPreview;
+window.showPreviewProgress = showPreviewProgress;
+window.hidePreviewProgress = hidePreviewProgress;
+window.handleIncrementalStream = handleIncrementalStream;
 
 // Verify loading
-console.log('✅ slidePreview.js loaded - window.generatePreview:', typeof window.generatePreview);
+console.log('✅ slidePreview.js loaded - Real-time incremental rendering enabled');
+console.log('   window.generatePreview:', typeof window.generatePreview);
+console.log('   window.handleIncrementalStream:', typeof window.handleIncrementalStream);
 
