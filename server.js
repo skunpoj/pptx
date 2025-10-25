@@ -59,6 +59,11 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use(express.static('public'));
 
+// Landing page route
+app.get('/landing', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+});
+
 // Initialize storage on startup
 (async () => {
     try {
