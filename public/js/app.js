@@ -39,7 +39,7 @@ window.addEventListener('load', () => {
  * Loads saved API keys from localStorage
  */
 function initializeAPIKeys() {
-    const providers = ['anthropic', 'openai', 'gemini', 'openrouter', 'stability'];
+    const providers = ['huggingface', 'anthropic', 'openai', 'gemini', 'openrouter', 'stability'];
     
     providers.forEach(provider => {
         const savedKey = localStorage.getItem(`${provider}_api_key`);

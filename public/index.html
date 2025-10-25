@@ -282,6 +282,38 @@ Our Products
                         <p style="font-size: 0.75rem; color: #888; margin-top: 0.25rem; font-style: italic;">💡 Get free API key at <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #667eea;">huggingface.co/settings/tokens</a></p>
                     </div>
 
+                    <!-- Hugging Face Section (for image generation) - SHOWN BY DEFAULT & FIRST -->
+                    <div class="api-section provider-section" id="section-huggingface" style="margin-top: 1.5rem; border-top: 3px solid #ff9800; padding-top: 1.5rem;">
+                        <h3>🤗 Hugging Face API (for Image Generation)</h3>
+                        <div class="info-box" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%); border-left: 4px solid #ff9800;">
+                            <strong style="color: #e65100;">🎁 FREE Image Generation!</strong>
+                            <p style="margin-top: 0.5rem; color: #666;">Hugging Face offers <strong>FREE API access</strong> to powerful models like Stable Diffusion XL and FLUX.1</p>
+                            <strong style="margin-top: 1rem; display: block;">To get your FREE API key:</strong>
+                            <ol>
+                                <li>Go to <a href="https://huggingface.co/join" target="_blank">huggingface.co/join</a> (create account)</li>
+                                <li>Navigate to <a href="https://huggingface.co/settings/tokens" target="_blank">Settings → Access Tokens</a></li>
+                                <li>Click "New token" or "Create new token"</li>
+                                <li>Give it a name (e.g., "GENIS.AI") and select "Read" access</li>
+                                <li>Copy your token (starts with <code>hf_...</code>)</li>
+                            </ol>
+                            <p style="margin-top: 0.5rem; color: #666;">💡 <strong>Note:</strong> Hugging Face is the default and recommended option for FREE unlimited image generation!</p>
+                        </div>
+                        <form autocomplete="off" onsubmit="return false;">
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="apiKey-huggingface" 
+                                       placeholder="hf_..."
+                                       autocomplete="off"
+                                       data-form-type="other"
+                                       data-lpignore="true"
+                                       name="not-a-password"
+                                       spellcheck="false"
+                                       style="font-family: monospace; letter-spacing: 0.5px;">
+                                <button class="btn-primary" onclick="window.saveApiKey('huggingface'); return false;" type="button">Save Key</button>
+                            </div>
+                        </form>
+                    </div>
+
                     <!-- Anthropic Section -->
                     <div class="api-section provider-section" id="section-anthropic">
                         <h3>Anthropic Claude API</h3>
@@ -394,38 +426,6 @@ Our Products
                         </form>
                     </div>
                     
-                    <!-- Hugging Face Section (for image generation) -->
-                    <div class="api-section provider-section" id="section-huggingface" style="display: none;">
-                        <h3>🤗 Hugging Face API (for Image Generation)</h3>
-                        <div class="info-box" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%); border-left: 4px solid #ff9800;">
-                            <strong style="color: #e65100;">🎁 FREE Image Generation!</strong>
-                            <p style="margin-top: 0.5rem; color: #666;">Hugging Face offers <strong>FREE API access</strong> to powerful models like Stable Diffusion XL and FLUX.1</p>
-                            <strong style="margin-top: 1rem; display: block;">To get your FREE API key:</strong>
-                            <ol>
-                                <li>Go to <a href="https://huggingface.co/join" target="_blank">huggingface.co/join</a> (create account)</li>
-                                <li>Navigate to <a href="https://huggingface.co/settings/tokens" target="_blank">Settings → Access Tokens</a></li>
-                                <li>Click "New token" or "Create new token"</li>
-                                <li>Give it a name (e.g., "GENIS.AI") and select "Read" access</li>
-                                <li>Copy your token (starts with <code>hf_...</code>)</li>
-                            </ol>
-                            <p style="margin-top: 0.5rem; color: #666;">💡 <strong>Note:</strong> Hugging Face is the default and recommended option for FREE unlimited image generation!</p>
-                        </div>
-                        <form autocomplete="off" onsubmit="return false;">
-                            <div class="input-group">
-                                <input type="text" 
-                                       id="apiKey-huggingface" 
-                                       placeholder="hf_..."
-                                       autocomplete="off"
-                                       data-form-type="other"
-                                       data-lpignore="true"
-                                       name="not-a-password"
-                                       spellcheck="false"
-                                       style="font-family: monospace; letter-spacing: 0.5px;">
-                                <button class="btn-primary" onclick="window.saveApiKey('huggingface'); return false;" type="button">Save Key</button>
-                            </div>
-                        </form>
-                    </div>
-                    
                     <!-- Stability AI Section (for image generation) -->
                     <div class="api-section provider-section" id="section-stability" style="display: none;">
                         <h3>Stability AI API (for Image Generation)</h3>
@@ -488,7 +488,7 @@ Our Products
                     <div class="footer-description">
                         <p>
                             <strong>GENIS.AI</strong> is your ultimate AI-powered presentation creation platform that transforms ideas into stunning, professional presentations in seconds! 
-                            Harness the power of cutting-edge AI models like Claude, GPT-4, Gemini, or our <strong>FREE Amazon Bedrock</strong> to generate beautiful slides with native charts, 
+                            Harness the power of cutting-edge AI models like Claude, GPT-5, Gemini, or our <strong>FREE Amazon Bedrock</strong> to generate beautiful slides with native charts, 
                             professional themes, live previews, and smart designs. Edit online, share instantly with unique links, auto-convert to PDF, and customize every detail—all while 
                             keeping your data secure on your own server. Whether you're crafting business pitches, educational content, or marketing presentations, GENIS.AI makes it effortless. 
                             <a href="https://aboutus.genis.ai" target="_blank" rel="noopener noreferrer" class="footer-link">Learn more about us →</a>
