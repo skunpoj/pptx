@@ -438,10 +438,11 @@ function startAutoCleanup() {
         
         // Log storage stats
         const stats = await getStorageStats();
+        const totalSize = ((stats.generated.totalSize + stats.shared.totalSize) / 1024 / 1024).toFixed(2);
         console.log('📊 Storage Stats:', {
             generated: `${stats.generated.count} files (${(stats.generated.totalSize / 1024 / 1024).toFixed(2)} MB)`,
             shared: `${stats.shared.count} files (${(stats.shared.totalSize / 1024 / 1024).toFixed(2)} MB)`,
-            total: `${(stats.generated.totalSize + stats.shared.totalSize) / 1024 / 1024).toFixed(2)} MB`
+            total: `${totalSize} MB`
         });
     }, 60 * 60 * 1000); // Every hour
     
