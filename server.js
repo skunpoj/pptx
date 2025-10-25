@@ -285,37 +285,59 @@ app.post('/api/preview', async (req, res) => {
 app.post('/api/generate', async (req, res) => {
     const { text, apiKey, provider = 'anthropic', slideData } = req.body;
     
+    console.log('\n' + '='.repeat(80));
+    console.log('POWERPOINT GENERATION REQUEST');
+    console.log('='.repeat(80));
+    
     if (!text || !apiKey) {
+        console.log('❌ Missing required fields:', { hasText: !!text, hasApiKey: !!apiKey });
         return res.status(400).json({ error: 'Text and API key are required' });
     }
 
     const sessionId = createSessionId();
     const workDir = path.join(__dirname, 'workspace', sessionId);
+    console.log('📁 Session ID:', sessionId);
+    console.log('📁 Working directory:', workDir);
     
     try {
         // Get or generate slide data
         let finalSlideData;
         
         if (slideData) {
+            console.log('✓ Using provided slide data');
             finalSlideData = slideData;
         } else {
+            console.log('⏳ Generating slide data from AI...');
             const userPrompt = await getSlideDesignPrompt(text);
             const responseText = await callAI(provider, apiKey, userPrompt);
             finalSlideData = parseAIResponse(responseText);
         }
         
+        console.log('📊 Slide count:', finalSlideData.slides?.length || 0);
+        console.log('🎨 Theme:', finalSlideData.designTheme?.name || 'Unknown');
+        
         // Validate
+        console.log('⏳ Validating slide data...');
         validateSlideData(finalSlideData);
+        console.log('✓ Validation passed');
         
         // Setup workspace
+        console.log('⏳ Setting up workspace...');
         await setupWorkspace(workDir);
+        console.log('✓ Workspace created');
+        
+        console.log('⏳ Installing dependencies...');
         await setupDependencies(workDir);
+        console.log('✓ Dependencies ready');
         
         // Generate CSS file
+        console.log('⏳ Generating CSS...');
         const cssContent = generateCSS(finalSlideData.designTheme);
         await fs.writeFile(path.join(workDir, 'theme.css'), cssContent);
+        console.log('✓ CSS file created');
         
         // Generate HTML slides
+        console.log('⏳ Generating HTML slides...');
         const htmlFiles = [];
         for (let i = 0; i < finalSlideData.slides.length; i++) {
             const slide = finalSlideData.slides[i];
@@ -323,26 +345,70 @@ app.post('/api/generate', async (req, res) => {
             const filename = `slide${i}.html`;
             await fs.writeFile(path.join(workDir, filename), htmlContent);
             htmlFiles.push(filename);
+            console.log(`  ✓ Created ${filename} (${slide.type}): ${slide.title}`);
         }
+        console.log(`✓ Generated ${htmlFiles.length} HTML files`);
         
         // Generate and run conversion script
+        console.log('⏳ Generating conversion script...');
         const scriptContent = generateConversionScript(htmlFiles, finalSlideData.slides);
         await fs.writeFile(path.join(workDir, 'convert.js'), scriptContent);
+        console.log('✓ Conversion script created');
         
-        await runScript(workDir, 'convert.js');
+        console.log('⏳ Running conversion script (this may take 30-60 seconds)...');
+        console.log('   Launching Playwright/Chromium for HTML rendering...');
+        const { stdout, stderr } = await runScript(workDir, 'convert.js');
+        console.log('✓ Conversion completed');
+        
+        if (stdout) {
+            console.log('--- Conversion Script Output ---');
+            console.log(stdout);
+            console.log('--- End Output ---');
+        }
+        
+        if (stderr) {
+            console.log('--- Conversion Script Warnings ---');
+            console.log(stderr);
+            console.log('--- End Warnings ---');
+        }
         
         // Read and send PowerPoint file
+        console.log('⏳ Reading PowerPoint file...');
         const pptxPath = path.join(workDir, 'presentation.pptx');
         await fs.access(pptxPath); // Check if file exists
+        console.log('✓ PowerPoint file found:', pptxPath);
         
         const pptxBuffer = await fs.readFile(pptxPath);
+        console.log('✓ PowerPoint file size:', (pptxBuffer.length / 1024).toFixed(2), 'KB');
+        
         sendFileDownload(res, pptxBuffer, 'AI-Presentation.pptx');
+        console.log('✓ PowerPoint file sent to client');
+        console.log('✅ GENERATION SUCCESSFUL');
+        console.log('='.repeat(80) + '\n');
         
         // Cleanup
         scheduleCleanup(workDir);
         
     } catch (error) {
-        console.error('Generation error:', error);
+        console.error('\n' + '❌'.repeat(40));
+        console.error('GENERATION ERROR');
+        console.error('❌'.repeat(40));
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        if (error.stdout) {
+            console.error('\n--- Script STDOUT ---');
+            console.error(error.stdout);
+        }
+        
+        if (error.stderr) {
+            console.error('\n--- Script STDERR ---');
+            console.error(error.stderr);
+        }
+        
+        console.error('❌'.repeat(40) + '\n');
+        
         sendErrorResponse(res, error);
         
         // Cleanup on error

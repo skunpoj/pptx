@@ -12,7 +12,20 @@
  * @param {Object} slideData - Complete slide data with theme and slides
  */
 function displayPreview(slideData) {
+    console.log('=== PREVIEW DEBUG START ===');
     const preview = document.getElementById('preview');
+    console.log('Preview element:', preview);
+    
+    if (preview) {
+        const computedStyles = window.getComputedStyle(preview);
+        console.log('Preview computed styles:', {
+            overflowY: computedStyles.overflowY,
+            flex: computedStyles.flex,
+            minHeight: computedStyles.minHeight,
+            maxHeight: computedStyles.maxHeight,
+            height: computedStyles.height
+        });
+    }
     
     // Ensure theme exists - use default if not
     if (!slideData.designTheme) {
@@ -29,16 +42,33 @@ function displayPreview(slideData) {
     }
     
     const theme = slideData.designTheme;
+    console.log('Theme selected:', theme.name);
+    console.log('Number of slides:', slideData.slides?.length || 0);
     
     // Show view toggle buttons
     document.getElementById('viewToggle').style.display = 'flex';
     
     // Route to appropriate view renderer
     if (window.currentView === 'gallery') {
+        console.log('Rendering gallery view');
         displayGalleryView(slideData);
     } else {
+        console.log('Rendering list view');
         displayListView(slideData);
     }
+    
+    // Check scroll after rendering
+    setTimeout(() => {
+        if (preview) {
+            console.log('After render - Preview scroll info:', {
+                scrollHeight: preview.scrollHeight,
+                clientHeight: preview.clientHeight,
+                hasScroll: preview.scrollHeight > preview.clientHeight,
+                overflowY: window.getComputedStyle(preview).overflowY
+            });
+        }
+        console.log('=== PREVIEW DEBUG END ===');
+    }, 100);
 }
 
 // ========================================
@@ -121,7 +151,7 @@ function displayGalleryView(slideData) {
  * @param {Object} theme - Theme configuration
  * @returns {string} - HTML for slide card
  */
-function renderSlidePreviewCard(slide, index, theme) {
+window.renderSlidePreviewCard = function renderSlidePreviewCard(slide, index, theme) {
     const isTitle = slide.type === 'title';
     const bgColor = isTitle ? theme.colorPrimary : '#ffffff';
     const textColor = isTitle ? '#ffffff' : '#333';

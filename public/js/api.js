@@ -23,15 +23,22 @@ async function generatePreview() {
     previewBtn.disabled = true;
     previewBtn.innerHTML = '<span class="spinner"></span> Generating preview...';
     
-    window.showProgress();
-    window.updateProgress(10, 'step1');
+    // Show initial loading state in preview
+    const preview = document.getElementById('preview');
+    showStatus('🤖 AI is analyzing your content and designing slides...', 'info');
+    preview.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+            <span class="spinner" style="width: 2rem; height: 2rem; border-width: 3px;"></span>
+            <p style="margin-top: 1rem; color: #666; font-size: 1.1rem; font-weight: 600;">AI is designing your slides...</p>
+            <p style="margin-top: 0.5rem; color: #999; font-size: 0.9rem;">Slides will appear below as they're generated</p>
+        </div>
+        <div id="progressiveSlides"></div>
+    `;
     
-    showStatus('🤖 AI is analyzing your content...', 'info');
-    document.getElementById('preview').innerHTML = '<div style="text-align: center; padding: 2rem;"><span class="spinner" style="width: 2rem; height: 2rem; border-width: 3px;"></span><p style="margin-top: 1rem; color: #666;">AI is designing your slides...</p></div>';
+    // Show view toggle
+    document.getElementById('viewToggle').style.display = 'flex';
     
     try {
-        window.updateProgress(25, 'step1');
-        
         const response = await fetch('/api/preview', {
             method: 'POST',
             headers: {
@@ -39,8 +46,6 @@ async function generatePreview() {
             },
             body: JSON.stringify({ text, apiKey, provider: window.currentProvider })
         });
-        
-        window.updateProgress(60, 'step2');
         
         if (!response.ok) {
             let errorMessage = 'Preview generation failed';
@@ -53,7 +58,6 @@ async function generatePreview() {
             throw new Error(errorMessage);
         }
         
-        window.updateProgress(80, 'step3');
         const slideData = await response.json();
         window.currentSlideData = slideData;
         
@@ -96,22 +100,20 @@ async function generatePreview() {
         if (window.displayThemeSelector) {
             window.displayThemeSelector(suggestedTheme);
         }
-        window.displayPreview(window.currentSlideData);
-        window.updateProgress(100, 'step4');
         
-        setTimeout(() => {
-            if (window.templateFile) {
-                showStatus(`✅ Preview ready! Using ${window.templateFile.name} as template. Click "Generate PowerPoint" to create.`, 'success');
-            } else {
-                showStatus('✅ Preview ready! Choose a color theme above or click "Generate PowerPoint".', 'success');
-            }
-            window.hideProgress();
-        }, 500);
+        // Render slides progressively with animation
+        await renderSlidesProgressively(window.currentSlideData);
+        
+        if (window.templateFile) {
+            showStatus(`✅ Preview ready! Using ${window.templateFile.name} as template. Click "Generate PowerPoint" to create.`, 'success');
+        } else {
+            showStatus('✅ Preview ready! Choose a color theme above or click "Generate PowerPoint".', 'success');
+        }
         
     } catch (error) {
         console.error('Preview Error:', error);
         document.getElementById('preview').innerHTML = '';
-        window.hideProgress();
+        document.getElementById('viewToggle').style.display = 'none';
         
         if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
             showStatus('❌ Connection error. Make sure the server is running on http://localhost:3000', 'error');
@@ -123,6 +125,43 @@ async function generatePreview() {
     } finally {
         previewBtn.disabled = false;
         previewBtn.innerHTML = '👁️ Preview Slides';
+    }
+}
+
+/**
+ * Renders slides progressively with animation
+ * @param {Object} slideData - Complete slide data
+ */
+async function renderSlidesProgressively(slideData) {
+    const preview = document.getElementById('preview');
+    const theme = slideData.designTheme;
+    
+    // Clear loading message
+    preview.innerHTML = '';
+    
+    // Add theme banner
+    const themeBanner = `
+        <div style="background: #f0f4ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid ${theme.colorPrimary};">
+            <strong style="color: ${theme.colorPrimary};">🎨 ${theme.name}</strong>
+            <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #666;">${theme.description}</p>
+        </div>
+    `;
+    preview.innerHTML = themeBanner;
+    
+    // Render each slide with delay for progressive effect
+    for (let i = 0; i < slideData.slides.length; i++) {
+        const slide = slideData.slides[i];
+        
+        // Create placeholder
+        const placeholder = document.createElement('div');
+        placeholder.style.cssText = 'opacity: 0; transform: translateY(20px); transition: all 0.3s ease;';
+        placeholder.innerHTML = window.renderSlidePreviewCard(slide, i, theme);
+        preview.appendChild(placeholder);
+        
+        // Animate in
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between slides
+        placeholder.style.opacity = '1';
+        placeholder.style.transform = 'translateY(0)';
     }
 }
 
@@ -149,13 +188,9 @@ async function generatePresentation() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Creating PowerPoint...';
     
-    window.showProgress();
-    window.updateProgress(10, 'step1');
     showStatus('📊 Generating your professional PowerPoint...', 'info');
     
     try {
-        window.updateProgress(30, 'step2');
-        
         let response;
         
         if (window.templateFile) {
@@ -180,14 +215,10 @@ async function generatePresentation() {
             });
         }
         
-        window.updateProgress(70, 'step3');
-        
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Generation failed');
         }
-        
-        window.updateProgress(90, 'step4');
         
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -199,15 +230,9 @@ async function generatePresentation() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        window.updateProgress(100, 'step4');
-        
-        setTimeout(() => {
-            showStatus('✅ Professional presentation downloaded successfully!', 'success');
-            window.hideProgress();
-        }, 500);
+        showStatus('✅ Professional presentation downloaded successfully!', 'success');
     } catch (error) {
         console.error('Error:', error);
-        window.hideProgress();
         if (error.message.includes('401') || error.message.includes('authentication')) {
             showStatus('❌ Invalid API key. Please check and try again.', 'error');
         } else {
