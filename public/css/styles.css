@@ -300,13 +300,17 @@ textarea:focus {
    ========================================================================== */
 
 .preview-container {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 800px;
+    position: sticky;
+    top: 1rem;
 }
 
 .preview-container h2 {
+    flex-shrink: 0;
+}
+
+.preview-container .view-toggle {
     flex-shrink: 0;
 }
 
@@ -318,7 +322,7 @@ textarea:focus {
 .preview {
     overflow-y: auto;
     padding: 0.5rem;
-    min-height: 700px;
+    max-height: calc(100vh - 180px);
 }
 
 .preview::-webkit-scrollbar {

@@ -25,6 +25,7 @@ window.addEventListener('load', () => {
     initializeAPIKeys();
     initializeProviderSelection();
     initializeAPISectionState();
+    initializeThemeSelector();
 });
 
 /**
@@ -60,6 +61,25 @@ function initializeAPISectionState() {
     const isCollapsed = localStorage.getItem('api_section_collapsed') === 'true';
     if (isCollapsed) {
         toggleApiSection();
+    }
+}
+
+/**
+ * Initializes theme selector on page load
+ */
+function initializeThemeSelector() {
+    // Display all available themes for user to choose from
+    if (window.displayThemeSelector) {
+        window.displayThemeSelector(null); // null = no AI suggestion yet
+    }
+    
+    // Restore previously selected theme if any
+    const savedTheme = localStorage.getItem('selected_theme');
+    if (savedTheme && window.colorThemes && window.colorThemes[savedTheme]) {
+        window.selectedTheme = savedTheme;
+        if (window.selectTheme) {
+            window.selectTheme(savedTheme);
+        }
     }
 }
 

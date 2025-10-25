@@ -57,32 +57,32 @@ async function generatePreview() {
         const slideData = await response.json();
         window.currentSlideData = slideData;
         
-        // Handle theme selection
+        // Handle theme selection - prioritize user's pre-selected theme
         let suggestedTheme = slideData.suggestedThemeKey || 'vibrant-purple';
+        let themeToUse = null;
         
-        if (window.selectedTheme === 'extracted-custom' && window.colorThemes['extracted-custom']) {
-            suggestedTheme = 'extracted-custom';
-            window.currentSlideData.designTheme = {
-                ...window.colorThemes['extracted-custom'],
-                name: window.colorThemes['extracted-custom'].name,
-                description: window.colorThemes['extracted-custom'].description
-            };
-        } else if (window.selectedTheme && window.colorThemes[window.selectedTheme]) {
-            // Use user's selected theme
+        if (window.selectedTheme && window.colorThemes[window.selectedTheme]) {
+            // User has already selected a theme - use it
+            themeToUse = window.selectedTheme;
             window.currentSlideData.designTheme = {
                 ...window.colorThemes[window.selectedTheme],
                 name: window.colorThemes[window.selectedTheme].name,
                 description: window.colorThemes[window.selectedTheme].description
             };
-        } else if (!window.selectedTheme && suggestedTheme && window.colorThemes[suggestedTheme]) {
-            // Use AI suggested theme
+        } else if (suggestedTheme && window.colorThemes[suggestedTheme]) {
+            // No pre-selection, use AI suggested theme
+            themeToUse = suggestedTheme;
             window.currentSlideData.designTheme = {
                 ...window.colorThemes[suggestedTheme],
                 name: window.colorThemes[suggestedTheme].name,
                 description: window.colorThemes[suggestedTheme].description
             };
+            // Auto-select the suggested theme
+            window.selectedTheme = suggestedTheme;
+            localStorage.setItem('selected_theme', suggestedTheme);
         } else {
             // Fallback to default theme
+            themeToUse = 'vibrant-purple';
             window.currentSlideData.designTheme = {
                 ...window.colorThemes['vibrant-purple'],
                 name: window.colorThemes['vibrant-purple'].name,
@@ -92,7 +92,10 @@ async function generatePreview() {
         
         window.currentSlideData.suggestedTheme = suggestedTheme;
         
-        window.displayThemeSelector(suggestedTheme);
+        // Update theme selector to show AI suggestion (if different from user's choice)
+        if (window.displayThemeSelector) {
+            window.displayThemeSelector(suggestedTheme);
+        }
         window.displayPreview(window.currentSlideData);
         window.updateProgress(100, 'step4');
         

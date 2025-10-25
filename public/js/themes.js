@@ -90,9 +90,12 @@ function displayThemeSelector(suggestedThemeKey) {
     const themeSelector = document.getElementById('themeSelector');
     const suggestedBadge = document.getElementById('suggestedBadge');
     
+    if (!themeGrid) return; // Guard clause
+    
     themeGrid.innerHTML = '';
     themeSelector.style.display = 'block';
     
+    // Show AI suggestion badge only if AI has made a suggestion
     if (suggestedThemeKey && colorThemes[suggestedThemeKey]) {
         suggestedBadge.textContent = `✨ ${colorThemes[suggestedThemeKey].name} Suggested`;
         suggestedBadge.style.display = 'inline-block';
@@ -103,7 +106,8 @@ function displayThemeSelector(suggestedThemeKey) {
     Object.keys(colorThemes).forEach(themeKey => {
         const theme = colorThemes[themeKey];
         const isSuggested = themeKey === suggestedThemeKey;
-        const isSelected = selectedTheme === themeKey || (!selectedTheme && isSuggested);
+        const currentSelectedTheme = window.selectedTheme || selectedTheme;
+        const isSelected = currentSelectedTheme === themeKey || (!currentSelectedTheme && isSuggested);
         const isExtracted = theme.isExtracted || false;
         
         const card = document.createElement('div');
@@ -137,6 +141,10 @@ function displayThemeSelector(suggestedThemeKey) {
 
 function selectTheme(themeKey) {
     selectedTheme = themeKey;
+    window.selectedTheme = themeKey;
+    
+    // Save to localStorage
+    localStorage.setItem('selected_theme', themeKey);
     
     if (window.currentSlideData) {
         window.currentSlideData.designTheme = {
@@ -154,6 +162,14 @@ function selectTheme(themeKey) {
         
         if (window.showStatus) {
             window.showStatus(`✨ Theme changed to ${colorThemes[themeKey].name}. Click "Generate PowerPoint" to create with new colors.`, 'success');
+        }
+    } else {
+        // No slide data yet, just update the visual selection
+        const suggestedTheme = null;
+        displayThemeSelector(suggestedTheme);
+        
+        if (window.showStatus) {
+            window.showStatus(`✨ ${colorThemes[themeKey].name} selected. This will be used when you generate your slides.`, 'success');
         }
     }
 }
