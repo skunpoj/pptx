@@ -48,14 +48,14 @@ async function generateImagesForSlides() {
         return;
     }
     
-    console.log(`Found ${descriptions.length} image descriptions`);
+    console.log(`📋 Found ${descriptions.length} image descriptions`);
     
     // Get the selected image generation provider
     const imageProvider = (typeof window.getImageProvider === 'function') 
         ? window.getImageProvider() 
         : 'dalle';
     
-    console.log(`Using image provider: ${imageProvider}`);
+    console.log(`🎨 Using image provider: ${imageProvider}`);
     
     // Get the appropriate API key based on the image provider
     let apiKey = null;
@@ -63,22 +63,34 @@ async function generateImagesForSlides() {
         // DALL-E uses OpenAI key
         apiKey = localStorage.getItem('openai_api_key');
         if (!apiKey) {
-            alert('Please enter your OpenAI API key in Advanced Configuration section to use DALL-E 3');
+            alert('❌ Please enter your OpenAI API key in Advanced Configuration section to use DALL-E 3\n\nSteps:\n1. Click "Advanced Configuration"\n2. Select "OpenAI" provider\n3. Enter your API key\n4. Click "Save Key"');
             return;
         }
+        console.log(`✅ OpenAI API key found (length: ${apiKey.length})`);
     } else if (imageProvider === 'stability') {
         // Stability AI uses its own key (check if we have a separate field, otherwise use openai)
         apiKey = localStorage.getItem('stability_api_key') || localStorage.getItem('openai_api_key');
         if (!apiKey) {
-            alert('Please enter your Stability AI API key in Advanced Configuration section');
+            alert('❌ Please enter your Stability AI API key in Advanced Configuration section\n\nSteps:\n1. Click "Advanced Configuration"\n2. Scroll down to "Stability AI API" section\n3. Enter your API key\n4. Click "Save Key"');
             return;
         }
+        console.log(`✅ Stability AI API key found (length: ${apiKey.length})`);
     } else if (imageProvider === 'gemini') {
         // Gemini uses Google API key
         apiKey = localStorage.getItem('gemini_api_key');
         if (!apiKey) {
-            alert('Please enter your Google Gemini API key in Advanced Configuration section to use Imagen');
+            alert('❌ Please enter your Google Gemini API key in Advanced Configuration section to use Imagen\n\nSteps:\n1. Click "Advanced Configuration"\n2. Select "Gemini" provider\n3. Enter your API key\n4. Click "Save Key"');
             return;
+        }
+        console.log(`✅ Gemini API key found (length: ${apiKey.length})`);
+    }
+    
+    // Validate API key format
+    if (apiKey) {
+        if (imageProvider === 'dalle' && !apiKey.startsWith('sk-')) {
+            console.warn('⚠️  OpenAI API key should start with "sk-"');
+        } else if (imageProvider === 'gemini' && !apiKey.startsWith('AIza')) {
+            console.warn('⚠️  Gemini API key should start with "AIza"');
         }
     }
     
@@ -105,15 +117,44 @@ async function generateImagesForSlides() {
         const result = await response.json();
         console.log(`✅ Generated ${result.success} images, ${result.failed} failed`);
         
-        // Store generated images
+        // Log detailed errors for debugging
+        if (result.failed > 0) {
+            console.group('❌ Image Generation Errors:');
+            result.images.filter(img => img.error).forEach(img => {
+                console.error(`  Slide "${img.description.substring(0, 50)}...": ${img.error}`);
+            });
+            console.groupEnd();
+        }
+        
+        // Store generated images (including errors for display)
         window.imageGallery.images = result.images.filter(img => !img.error);
+        const failedImages = result.images.filter(img => img.error);
         
         // Display in gallery
         displayImageGallery(window.imageGallery.images);
         
-        // Show success notification
+        // Show notification with details
         if (typeof showNotification === 'function') {
-            showNotification(`✅ Generated ${result.success} images!`, 'success');
+            if (result.success > 0) {
+                showNotification(`✅ Generated ${result.success} images! ${result.failed > 0 ? `(${result.failed} failed)` : ''}`, 'success');
+            } else {
+                // All failed - show detailed error
+                const firstError = failedImages[0]?.error || 'Unknown error';
+                showNotification(`❌ All images failed: ${firstError}`, 'error');
+            }
+        }
+        
+        // Show detailed error summary if some/all failed
+        if (result.failed > 0) {
+            const errorSummary = failedImages.map(img => `• ${img.error}`).join('\n');
+            console.error('Image generation errors:\n', errorSummary);
+            
+            // If all failed, show alert with first error
+            if (result.success === 0) {
+                setTimeout(() => {
+                    alert(`Image generation failed for all ${result.failed} images.\n\nFirst error: ${failedImages[0]?.error}\n\nCheck console for full details.`);
+                }, 500);
+            }
         }
         
     } catch (error) {

@@ -86,84 +86,128 @@ router.post('/generate', async (req, res) => {
  * Generate image using DALL-E 3
  */
 async function generateWithDALLE(description, apiKey) {
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey.trim()}`
-        },
-        body: JSON.stringify({
-            model: 'dall-e-3',
-            prompt: description,
-            n: 1,
-            size: '1024x1024',
-            quality: 'standard',
-            style: 'natural'
-        })
-    });
-    
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `DALL-E API Error: ${response.status}`);
+    try {
+        const response = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey.trim()}`
+            },
+            body: JSON.stringify({
+                model: 'dall-e-3',
+                prompt: description,
+                n: 1,
+                size: '1024x1024',
+                quality: 'standard',
+                style: 'natural'
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error?.message || `DALL-E API Error: ${response.status}`;
+            
+            // Provide helpful error messages
+            if (response.status === 401) {
+                throw new Error('Invalid OpenAI API key. Please check your API key in Advanced Configuration.');
+            } else if (response.status === 429) {
+                throw new Error('OpenAI API rate limit exceeded. Please wait a moment and try again.');
+            } else if (response.status === 402) {
+                throw new Error('OpenAI API quota exceeded. Please check your billing at platform.openai.com.');
+            }
+            
+            throw new Error(errorMessage);
+        }
+        
+        const data = await response.json();
+        return {
+            url: data.data[0].url,
+            revised_prompt: data.data[0].revised_prompt
+        };
+    } catch (error) {
+        // Re-throw with more context
+        if (error.message.includes('fetch')) {
+            throw new Error('Network error: Unable to connect to OpenAI API. Check your internet connection.');
+        }
+        throw error;
     }
-    
-    const data = await response.json();
-    return {
-        url: data.data[0].url,
-        revised_prompt: data.data[0].revised_prompt
-    };
 }
 
 /**
  * Generate image using Stability AI
  */
 async function generateWithStability(description, apiKey) {
-    const response = await fetch('https://api.stability.ai/v2beta/stable-image/generate/core', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey.trim()}`,
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            prompt: description,
-            output_format: 'png',
-            aspect_ratio: '16:9'
-        })
-    });
-    
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Stability API Error: ${response.status}`);
+    try {
+        const response = await fetch('https://api.stability.ai/v2beta/stable-image/generate/core', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey.trim()}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                prompt: description,
+                output_format: 'png',
+                aspect_ratio: '16:9'
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.message || `Stability API Error: ${response.status}`;
+            
+            // Provide helpful error messages
+            if (response.status === 401) {
+                throw new Error('Invalid Stability AI API key. Please check your API key in Advanced Configuration.');
+            } else if (response.status === 429) {
+                throw new Error('Stability AI rate limit exceeded. Please wait and try again.');
+            } else if (response.status === 402 || response.status === 403) {
+                throw new Error('Stability AI quota exceeded or insufficient credits. Check your account at platform.stability.ai.');
+            }
+            
+            throw new Error(errorMessage);
+        }
+        
+        const data = await response.json();
+        // Stability returns base64 image
+        if (data.image) {
+            return {
+                url: `data:image/png;base64,${data.image}`,
+                seed: data.seed
+            };
+        }
+        
+        throw new Error('No image data returned from Stability AI');
+    } catch (error) {
+        if (error.message.includes('fetch')) {
+            throw new Error('Network error: Unable to connect to Stability AI API. Check your internet connection.');
+        }
+        throw error;
     }
-    
-    const data = await response.json();
-    // Stability returns base64 image
-    return {
-        url: `data:image/png;base64,${data.image}`,
-        seed: data.seed
-    };
 }
 
 /**
  * Generate image using Google Gemini (Imagen 3)
+ * Note: As of 2024, Gemini doesn't have a public image generation API yet
+ * This is a placeholder for future implementation
  */
 async function generateWithGemini(description, apiKey) {
-    // Gemini uses Imagen 3 for image generation
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey.trim()}`, {
+    // Note: Gemini image generation (Imagen) is not publicly available yet
+    // This function is prepared for when Google releases the API
+    
+    throw new Error('Gemini image generation is not yet available. Google has not released a public API for Imagen. Please use DALL-E 3 or Stability AI instead.');
+    
+    // Future implementation when API is available:
+    /*
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/imagen:generate?key=${apiKey.trim()}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            instances: [{
-                prompt: description
-            }],
-            parameters: {
-                sampleCount: 1,
-                aspectRatio: '16:9',
-                negativePrompt: 'blurry, low quality',
-                personGeneration: 'allow_adult'
-            }
+            prompt: description,
+            numberOfImages: 1,
+            aspectRatio: '16:9'
         })
     });
     
@@ -173,15 +217,11 @@ async function generateWithGemini(description, apiKey) {
     }
     
     const data = await response.json();
-    // Gemini returns base64 image in predictions
-    if (data.predictions && data.predictions[0] && data.predictions[0].bytesBase64Encoded) {
-        return {
-            url: `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`,
-            mimeType: data.predictions[0].mimeType || 'image/png'
-        };
-    }
-    
-    throw new Error('No image data returned from Gemini');
+    return {
+        url: data.images[0].url || `data:image/png;base64,${data.images[0].base64}`,
+        mimeType: 'image/png'
+    };
+    */
 }
 
 module.exports = router;

@@ -506,13 +506,23 @@ function loadExampleByCategory(category) {
         const modificationSection = document.getElementById('modificationSection');
         const generatePptSection = document.getElementById('generatePptSection');
         if (modificationSection) modificationSection.style.display = 'none';
-        if (generatePptSection) generatePptSection.style.display = 'none';
         
-        // Clear preview area
+        // Keep generatePptSection visible if it has download buttons
+        if (generatePptSection) {
+            const hasDownloadButtons = generatePptSection.querySelector('.download-link, .presentation-options');
+            if (!hasDownloadButtons) {
+                generatePptSection.style.display = 'none';
+            }
+        }
+        
+        // Clear preview area (but keep download buttons in generatePptSection)
         const preview = document.getElementById('preview');
         if (preview) {
             preview.innerHTML = '';
         }
+        
+        // Keep download buttons and options in generatePptSection
+        // They will be replaced when new PowerPoint is generated
         
         window.showStatus(`📝 ${category.charAt(0).toUpperCase() + category.slice(1)} example loaded. Click "Generate Preview" for fresh slides!`, 'success');
     }

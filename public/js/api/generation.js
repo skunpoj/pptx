@@ -176,14 +176,14 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
     downloadLink.style.fontWeight = 'bold';
     downloadLink.textContent = `📥 Download PowerPoint (${formatFileSize(fileSize)})`;
     
-    // Add to preview container
-    const container = document.getElementById('preview');
+    // Add to generatePptSection instead of preview container
+    const container = document.getElementById('generatePptSection');
     if (container) {
-        // Remove existing download link
+        // Remove existing download link and options
         const existingLink = container.querySelector('.download-link');
-        if (existingLink) {
-            existingLink.remove();
-        }
+        const existingOptions = container.querySelector('.presentation-options');
+        if (existingLink) existingLink.remove();
+        if (existingOptions) existingOptions.remove();
         
         container.appendChild(downloadLink);
     }
@@ -199,7 +199,7 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
  * Show presentation viewing options
  */
 function showPresentationOptions(downloadUrl, storage) {
-    const container = document.getElementById('preview');
+    const container = document.getElementById('generatePptSection');
     if (!container) return;
     
     const optionsDiv = document.createElement('div');
