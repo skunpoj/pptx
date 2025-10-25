@@ -82,25 +82,14 @@ function updateProgress(percent, stepId) {
 // ========================================
 
 /**
- * Switches between list and gallery view modes
- * @param {string} view - View mode: 'list' or 'gallery'
+ * Switches to list view (legacy function kept for compatibility)
+ * @param {string} view - View mode (always 'list' now)
  */
 function switchView(view) {
-    window.currentView = view;
+    // Only list view is supported now
+    window.currentView = 'list';
     
-    // Update button states
-    const listBtn = document.getElementById('listViewBtn');
-    const galleryBtn = document.getElementById('galleryViewBtn');
-    
-    if (view === 'list') {
-        listBtn.classList.add('active');
-        galleryBtn.classList.remove('active');
-    } else {
-        listBtn.classList.remove('active');
-        galleryBtn.classList.add('active');
-    }
-    
-    // Re-render preview with current slide data
+    // Re-render preview with current slide data if available
     if (window.currentSlideData && window.displayPreview) {
         window.displayPreview(window.currentSlideData);
     }
@@ -111,9 +100,8 @@ function switchView(view) {
  * @param {number} index - Slide index to scroll to
  */
 function scrollToSlide(index) {
-    // Switch to list view
+    // Always use list view
     window.currentView = 'list';
-    switchView('list');
     
     // Wait for render, then scroll
     setTimeout(() => {

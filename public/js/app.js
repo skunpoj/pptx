@@ -492,7 +492,29 @@ function loadExampleByCategory(category) {
     const text = exampleTemplates[category];
     if (text) {
         document.getElementById('textInput').value = text;
-        window.showStatus(`📝 ${category.charAt(0).toUpperCase() + category.slice(1)} example loaded. Ready to preview or generate slides!`, 'success');
+        
+        // Clear preview cache for this content to force fresh generation
+        if (typeof clearPreviewCacheForText === 'function') {
+            clearPreviewCacheForText(text);
+            console.log('🗑️ Cleared cache for new example to ensure fresh preview');
+        }
+        
+        // Clear current slide data to force new generation
+        window.currentSlideData = null;
+        
+        // Hide preview sections until new preview is generated
+        const modificationSection = document.getElementById('modificationSection');
+        const generatePptSection = document.getElementById('generatePptSection');
+        if (modificationSection) modificationSection.style.display = 'none';
+        if (generatePptSection) generatePptSection.style.display = 'none';
+        
+        // Clear preview area
+        const preview = document.getElementById('preview');
+        if (preview) {
+            preview.innerHTML = '';
+        }
+        
+        window.showStatus(`📝 ${category.charAt(0).toUpperCase() + category.slice(1)} example loaded. Click "Generate Preview" for fresh slides!`, 'success');
     }
 }
 

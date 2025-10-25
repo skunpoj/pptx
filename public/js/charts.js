@@ -44,7 +44,15 @@ function generateChartSVG(chart, theme, width = 400, height = 250) {
  * @returns {string} - SVG markup
  */
 function generateBarChart(labels, datasets, width, height, isColumn = true) {
-    const maxValue = Math.max(...datasets.flatMap(d => d.values));
+    // Handle negative values and find min/max
+    const allValues = datasets.flatMap(d => d.values);
+    const maxValue = Math.max(...allValues, 0);
+    const minValue = Math.min(...allValues, 0);
+    const valueRange = maxValue - minValue;
+    
+    // Prevent division by zero
+    const normalizedRange = valueRange === 0 ? 1 : valueRange;
+    
     const barWidth = (width - 100) / (labels.length * datasets.length + labels.length);
     const groupWidth = barWidth * datasets.length;
     const colors = ['#667eea', '#764ba2', '#f39c12', '#2ecc71', '#e74c3c'];
@@ -56,11 +64,13 @@ function generateBarChart(labels, datasets, width, height, isColumn = true) {
         const color = colors[datasetIdx % colors.length];
         
         dataset.values.forEach((value, i) => {
-            const barHeight = (value / maxValue) * (height - 60);
+            // Normalize value to positive range
+            const normalizedValue = value - minValue;
+            const barHeight = Math.max(0, (normalizedValue / normalizedRange) * (height - 60));
             const x = 50 + i * (groupWidth + barWidth) + datasetIdx * barWidth;
             const y = height - 40 - barHeight;
             
-            svg += `<rect x="${x}" y="${y}" width="${barWidth - 2}" height="${barHeight}" fill="${color}" opacity="0.8"/>`;
+            svg += `<rect x="${x}" y="${y}" width="${Math.max(barWidth - 2, 1)}" height="${barHeight}" fill="${color}" opacity="0.8"/>`;
             svg += `<text x="${x + barWidth/2}" y="${y - 5}" text-anchor="middle" font-size="10" fill="#333">${value}</text>`;
         });
     });
@@ -85,8 +95,16 @@ function generateBarChart(labels, datasets, width, height, isColumn = true) {
  * @returns {string} - SVG markup
  */
 function generateLineChart(labels, datasets, width, height, isArea = false) {
-    const maxValue = Math.max(...datasets.flatMap(d => d.values));
-    const stepX = (width - 100) / (labels.length - 1);
+    // Handle negative values and find min/max
+    const allValues = datasets.flatMap(d => d.values);
+    const maxValue = Math.max(...allValues, 0);
+    const minValue = Math.min(...allValues, 0);
+    const valueRange = maxValue - minValue;
+    
+    // Prevent division by zero
+    const normalizedRange = valueRange === 0 ? 1 : valueRange;
+    
+    const stepX = (width - 100) / Math.max(labels.length - 1, 1);
     const colors = ['#667eea', '#764ba2', '#f39c12'];
     
     let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
@@ -99,7 +117,9 @@ function generateLineChart(labels, datasets, width, height, isArea = false) {
         // Build path
         dataset.values.forEach((value, i) => {
             const x = 50 + i * stepX;
-            const y = height - 40 - (value / maxValue) * (height - 60);
+            // Normalize value to positive range
+            const normalizedValue = value - minValue;
+            const y = height - 40 - (normalizedValue / normalizedRange) * (height - 60);
             
             if (i === 0) {
                 path = `M ${x} ${y}`;

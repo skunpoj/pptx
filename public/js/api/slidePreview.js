@@ -210,10 +210,6 @@ async function generatePreview() {
                 // Hide initial progress indicator
                 hidePreviewProgress();
                 
-                // Show view toggle
-                const viewToggle = document.getElementById('viewToggle');
-                if (viewToggle) viewToggle.style.display = 'flex';
-                
                 // Show action buttons
                 const modificationSection = document.getElementById('modificationSection');
                 const generatePptSection = document.getElementById('generatePptSection');
@@ -754,6 +750,36 @@ function clearOldCaches() {
 }
 
 /**
+ * Clear preview cache for specific text
+ */
+function clearPreviewCacheForText(text) {
+    try {
+        const cacheKey = 'preview_cache_' + simpleHash(text);
+        localStorage.removeItem(cacheKey);
+        console.log('🗑️ Cache cleared for this content');
+    } catch (error) {
+        console.warn('Cache clear failed:', error);
+    }
+}
+
+/**
+ * Clear all preview caches
+ */
+function clearAllPreviewCaches() {
+    try {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+            if (key.startsWith('preview_cache_')) {
+                localStorage.removeItem(key);
+            }
+        });
+        console.log('🗑️ All preview caches cleared');
+    } catch (error) {
+        console.warn('Cache clear all failed:', error);
+    }
+}
+
+/**
  * Display preview of slides
  */
 function displayPreview(slideData) {
@@ -891,6 +917,8 @@ window.displayPreview = displayPreview;
 window.showPreviewProgress = showPreviewProgress;
 window.hidePreviewProgress = hidePreviewProgress;
 window.handleIncrementalStream = handleIncrementalStream;
+window.clearPreviewCacheForText = clearPreviewCacheForText;
+window.clearAllPreviewCaches = clearAllPreviewCaches;
 
 // Add spinner animation CSS if not exists
 if (!document.querySelector('#spinnerAnimationStyle')) {

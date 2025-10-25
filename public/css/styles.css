@@ -262,6 +262,8 @@ body {
     gap: 0.75rem;
     position: relative;
     z-index: 1;
+    align-items: flex-end;
+    text-align: right;
 }
 
 .brand-name {
@@ -1413,10 +1415,49 @@ textarea:focus {
 .footer-section-title {
     font-size: 2rem;
     color: white;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     font-weight: 800;
     text-align: center;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.footer-description {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.footer-description p {
+    color: white;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    margin: 0;
+    font-weight: 500;
+}
+
+.footer-description strong {
+    color: #ffd700;
+    font-weight: 700;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.footer-link {
+    color: #ffd700;
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 2px solid rgba(255, 215, 0, 0.5);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.footer-link:hover {
+    color: #ffed4e;
+    border-bottom-color: #ffed4e;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .footer-features-grid {
@@ -1585,6 +1626,14 @@ textarea:focus {
         font-size: 1.6rem;
     }
     
+    .footer-description {
+        padding: 1.5rem;
+    }
+    
+    .footer-description p {
+        font-size: 1rem;
+    }
+    
     .footer-features-grid {
         grid-template-columns: 1fr;
     }
@@ -1615,6 +1664,15 @@ textarea:focus {
     
     .footer-section-title {
         font-size: 1.4rem;
+    }
+    
+    .footer-description {
+        padding: 1rem;
+    }
+    
+    .footer-description p {
+        font-size: 0.9rem;
+        line-height: 1.6;
     }
     
     .footer-steps-grid {

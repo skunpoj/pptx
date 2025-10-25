@@ -45,17 +45,9 @@ function displayPreview(slideData) {
     console.log('Theme selected:', theme.name);
     console.log('Number of slides:', slideData.slides?.length || 0);
     
-    // Show view toggle buttons
-    document.getElementById('viewToggle').style.display = 'flex';
-    
-    // Route to appropriate view renderer
-    if (window.currentView === 'gallery') {
-        console.log('Rendering gallery view');
-        displayGalleryView(slideData);
-    } else {
-        console.log('Rendering list view');
-        displayListView(slideData);
-    }
+    // Always render list view (gallery view has been removed)
+    console.log('Rendering list view');
+    displayListView(slideData);
     
     // Check scroll after rendering
     setTimeout(() => {
