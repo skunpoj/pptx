@@ -121,9 +121,9 @@ async function callAI(provider, apiKey, userPrompt) {
     throw new Error('Unsupported AI provider');
 }
 
-// Content generation endpoint - generates presentation content from a prompt
+// Content generation endpoint with streaming support
 app.post('/api/generate-content', async (req, res) => {
-    const { prompt, apiKey, provider = 'anthropic', numSlides = 6, generateImages = false } = req.body;
+    const { prompt, apiKey, provider = 'anthropic', numSlides = 6, generateImages = false, stream = false } = req.body;
     
     if (!prompt || !apiKey) {
         return res.status(400).json({ error: 'Prompt and API key are required' });
@@ -155,12 +155,77 @@ Write the content as ${numSlides - 1} well-structured paragraphs separated by bl
 
 Generate the content now:`;
 
-        const content = await callAI(provider, apiKey, userPrompt);
-        res.json({ content });
+        // For streaming, use Anthropic's streaming API
+        if (stream && provider === 'anthropic') {
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey.trim(),
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 4000,
+                    stream: true,
+                    messages: [{
+                        role: "user",
+                        content: userPrompt
+                    }]
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                    res.write(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`);
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON
+                            }
+                        }
+                    }
+                }
+            } finally {
+                res.write('data: [DONE]\n\n');
+                res.end();
+            }
+        } else {
+            // Non-streaming fallback
+            const content = await callAI(provider, apiKey, userPrompt);
+            res.json({ content });
+        }
         
     } catch (error) {
         console.error('Content generation error:', error);
-        res.status(500).json({ error: error.message });
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 
@@ -794,7 +859,7 @@ function generateSlideHTML(slide, theme) {
         ${escapeHtml(slide.title)}
     </h2>
     ${slide.header ? `<p style="color: ${theme.colorSecondary}; font-size: 1.1rem; margin-bottom: 1rem;">${escapeHtml(slide.header)}</p>` : ''}
-    ${slide.imageDescription ? `<div style="background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; text-align: center; color: ${theme.colorSecondary}; font-style: italic;">📸 Image: ${escapeHtml(slide.imageDescription)}</div>` : ''}
+    ${slide.imageDescription ? `<div style="background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; text-align: center; color: ${theme.colorSecondary}; font-style: italic;"><p style="margin: 0;">📸 Image: ${escapeHtml(slide.imageDescription)}</p></div>` : ''}
     <div class="fill-height" style="display: flex; flex-direction: column; justify-content: center;">
         <ul style="margin: 0; padding-left: 1.5rem; font-size: 1.25rem; line-height: 1.8;">
             ${slide.content.map(item => `<li style="margin-bottom: 0.75rem;">${escapeHtml(item)}</li>`).join('')}

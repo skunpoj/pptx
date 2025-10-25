@@ -227,13 +227,34 @@
         }
         
         .preview {
-            height: 400px;
             overflow-y: auto;
             padding: 0.5rem;
         }
         
         .content-textarea {
             height: 400px;
+        }
+        
+        .card-with-flex {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        .preview-container h2 {
+            flex-shrink: 0;
+        }
+        
+        .preview-container .preview {
+            flex: 1;
+            min-height: 0;
         }
         
         .preview:empty::before {
@@ -393,7 +414,7 @@
                     </div>
                     
                     <!-- Idea Input -->
-                    <textarea id="ideaInput" style="width: 100%; height: 100px; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 0.9rem; resize: vertical; line-height: 1.5; margin-bottom: 0.75rem;">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
+                    <textarea id="ideaInput" placeholder="Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team." style="width: 100%; height: 100px; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; font-size: 0.9rem; resize: vertical; line-height: 1.5; margin-bottom: 0.75rem;"></textarea>
                     
                     <!-- File Upload -->
                     <div style="margin-bottom: 0.75rem;">
@@ -447,7 +468,7 @@ Success metrics include improved operational efficiency, enhanced customer satis
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card preview-container">
                 <h2>👁️ Slide Preview</h2>
                 <div class="preview" id="preview"></div>
             </div>
@@ -986,8 +1007,11 @@ Implementation strategies involve setting measurable sustainability goals with c
             
             showStatus('🤖 AI is expanding your idea into detailed content...', 'info');
             
+            const textInput = document.getElementById('textInput');
+            textInput.value = ''; // Clear existing content
+            
             try {
-                let content = '';
+                let finalPrompt = prompt;
                 
                 // If files are attached, process them with the prompt
                 if (files.length > 0) {
@@ -1009,69 +1033,101 @@ Implementation strategies involve setting measurable sustainability goals with c
                     });
                     
                     // If there's a prompt, use it to guide the processing; otherwise use default
-                    const finalPrompt = prompt 
+                    finalPrompt = prompt 
                         ? `${prompt}\n\nUse the following file content as the base:\n${combinedFiles}`
                         : `Analyze and convert the following files into a well-structured presentation with ${numSlides} slides:\n${combinedFiles}`;
-                    
-                const response = await fetch('/api/generate-content', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                            prompt: finalPrompt, 
-                        apiKey, 
-                        provider: currentProvider,
-                        numSlides,
-                        generateImages
-                    })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Content generation failed');
                 }
                 
-                const result = await response.json();
-                    content = result.content;
-                
-                } else {
-                    // No files, just use the prompt
+                // Use streaming for Anthropic, non-streaming for others
+                if (currentProvider === 'anthropic' && files.length === 0) {
+                    // Streaming mode
                     const response = await fetch('/api/generate-content', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                            prompt, 
-                        apiKey, 
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            prompt: finalPrompt, 
+                            apiKey, 
                             provider: currentProvider,
                             numSlides,
-                            generateImages
-                    })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.json();
+                            generateImages,
+                            stream: true
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
                         throw new Error(error.error || 'Content generation failed');
+                    }
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let content = '';
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.text) {
+                                        content += parsed.text;
+                                        textInput.value = content;
+                                        // Auto-scroll to show new content
+                                        textInput.scrollTop = textInput.scrollHeight;
+                                    }
+                                } catch (e) {
+                                    // Skip invalid JSON
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Non-streaming mode for files or non-Anthropic providers
+                    const response = await fetch('/api/generate-content', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            prompt: finalPrompt, 
+                            apiKey, 
+                            provider: currentProvider,
+                            numSlides,
+                            generateImages,
+                            stream: false
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Content generation failed');
+                    }
+                    
+                    const result = await response.json();
+                    textInput.value = result.content;
                 }
                 
-                const result = await response.json();
-                    content = result.content;
-                }
-                
-                document.getElementById('textInput').value = content;
                 showStatus('✅ Content expanded successfully! Review it below, then click "Preview Slides" to see the design.', 'success');
                 
                 // Scroll to the text input area
-                document.getElementById('textInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 
             } catch (error) {
                 console.error('Error:', error);
                 if (error.message.includes('401') || error.message.includes('authentication')) {
                     showStatus('❌ Invalid API key. Please check and try again.', 'error');
                 } else {
-                showStatus('❌ Error: ' + error.message, 'error');
+                    showStatus('❌ Error: ' + error.message, 'error');
                 }
             } finally {
                 promptBtn.disabled = false;
