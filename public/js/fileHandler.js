@@ -48,7 +48,19 @@ async function extractColorsFromFiles(files) {
             return null;
         }
         
-        const result = await response.json();
+        let result;
+        try {
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Expected JSON from color extraction but got:', text.substring(0, 500));
+                return null;
+            }
+            result = await response.json();
+        } catch (e) {
+            console.error('Failed to parse color extraction response:', e);
+            return null;
+        }
         
         if (result.theme) {
             // Add extracted theme to global colorThemes
@@ -212,8 +224,21 @@ async function streamContentGeneration(prompt, apiKey, numSlides, generateImages
     });
     
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Content generation failed');
+        let errorMessage = 'Content generation failed';
+        try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                errorMessage = error.error || errorMessage;
+            } else {
+                const text = await response.text();
+                console.error('Non-JSON streaming error response:', text.substring(0, 500));
+                errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            }
+        } catch (e) {
+            errorMessage = `Server error: ${response.status}`;
+        }
+        throw new Error(errorMessage);
     }
     
     const reader = response.body.getReader();
@@ -270,11 +295,36 @@ async function nonStreamingContentGeneration(prompt, apiKey, numSlides, generate
     });
     
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Content generation failed');
+        let errorMessage = 'Content generation failed';
+        try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                errorMessage = error.error || errorMessage;
+            } else {
+                const text = await response.text();
+                console.error('Non-JSON error response:', text.substring(0, 500));
+                errorMessage = `Server error: ${response.status} ${response.statusText}`;
+            }
+        } catch (e) {
+            errorMessage = `Server error: ${response.status}`;
+        }
+        throw new Error(errorMessage);
     }
     
-    const result = await response.json();
+    let result;
+    try {
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Expected JSON but got:', text.substring(0, 500));
+            throw new Error('Server returned invalid response (not JSON)');
+        }
+        result = await response.json();
+    } catch (e) {
+        if (e.message.includes('not JSON')) throw e;
+        throw new Error('Failed to parse response: ' + e.message);
+    }
     textInput.value = result.content;
 }
 

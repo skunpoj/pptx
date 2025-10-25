@@ -15,8 +15,24 @@ async function loadAllPrompts() {
     try {
         const response = await fetch('/api/prompts');
         if (!response.ok) {
-            throw new Error('Failed to load prompts');
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to load prompts');
+            } else {
+                const text = await response.text();
+                console.error('Non-JSON response when loading prompts:', text.substring(0, 500));
+                throw new Error(`Server error: ${response.status} ${response.statusText}`);
+            }
         }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Expected JSON but got:', text.substring(0, 500));
+            throw new Error('Server returned invalid response (not JSON). Check browser console.');
+        }
+        
         return await response.json();
     } catch (error) {
         console.error('Error loading prompts:', error);

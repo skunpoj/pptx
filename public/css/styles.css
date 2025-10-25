@@ -36,6 +36,8 @@ body {
     margin-bottom: 1.5rem;
     align-items: stretch;
     min-height: 600px;
+    max-height: 800px;
+    height: 800px;
 }
 
 .card {
@@ -44,12 +46,16 @@ body {
     padding: 1.5rem;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
     min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .card h2 {
     font-size: 1.5rem;
     color: #333;
     margin-bottom: 1rem;
+    flex-shrink: 0;
 }
 
 /* ==========================================================================
@@ -220,6 +226,7 @@ textarea:focus {
     border-radius: 8px;
     margin-top: 1rem;
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 .status.info {
@@ -329,6 +336,8 @@ textarea:focus {
 
 .preview {
     padding: 0.5rem;
+    overflow-y: auto !important;
+    overflow-x: hidden;
 }
 
 .preview::-webkit-scrollbar {
@@ -532,6 +541,7 @@ textarea:focus {
 
 .theme-selector {
     margin-bottom: 1rem;
+    flex-shrink: 0;
 }
 
 .theme-selector-inner {
@@ -715,6 +725,7 @@ textarea:focus {
     border-radius: 12px;
     padding: 1rem;
     margin-bottom: 1rem;
+    flex-shrink: 0;
 }
 
 .idea-generator-section h3 {
@@ -735,6 +746,7 @@ textarea:focus {
     border-radius: 8px;
     padding: 0.75rem;
     margin-bottom: 0.75rem;
+    flex-shrink: 0;
 }
 
 .examples-label {
@@ -857,6 +869,7 @@ textarea:focus {
 
 .content-editor-section {
     margin-bottom: 1rem;
+    flex-shrink: 0;
 }
 
 .content-label {
@@ -872,6 +885,7 @@ textarea:focus {
     grid-template-columns: 1fr 1fr;
     gap: 0.75rem;
     margin-top: 1rem;
+    flex-shrink: 0;
 }
 
 .action-buttons .btn-secondary {

@@ -50,15 +50,34 @@ async function generatePreview() {
         if (!response.ok) {
             let errorMessage = 'Preview generation failed';
             try {
-                const error = await response.json();
-                errorMessage = error.error || errorMessage;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const error = await response.json();
+                    errorMessage = error.error || errorMessage;
+                } else {
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text.substring(0, 500));
+                    errorMessage = `Server error: ${response.status} ${response.statusText}`;
+                }
             } catch (e) {
                 errorMessage = `Server error: ${response.status} ${response.statusText}`;
             }
             throw new Error(errorMessage);
         }
         
-        const slideData = await response.json();
+        let slideData;
+        try {
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Expected JSON but got:', text.substring(0, 500));
+                throw new Error('Server returned invalid response (not JSON). Check console for details.');
+            }
+            slideData = await response.json();
+        } catch (e) {
+            if (e.message.includes('not JSON')) throw e;
+            throw new Error('Failed to parse server response: ' + e.message);
+        }
         window.currentSlideData = slideData;
         
         // Handle theme selection - prioritize user's pre-selected theme
