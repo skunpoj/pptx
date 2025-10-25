@@ -23,6 +23,7 @@ COPY package.json package-lock.json ./
 COPY server.js ./
 COPY server/ ./server/
 COPY public/ ./public/
+COPY config/ ./config/
 
 # Copy skills folder structure (needed for skill manager)
 COPY skills/ ./skills/
