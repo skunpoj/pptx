@@ -533,7 +533,7 @@ async function handleNonStreamingPreview(text, apiKey) {
     if (window.templateFile) {
         window.showStatus(`✅ Preview ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
     } else {
-        window.showStatus('✅ Preview ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
+        window.showStatus(`✅ Preview ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
     }
 }
 
