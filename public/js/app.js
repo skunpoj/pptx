@@ -260,22 +260,3 @@ window.selectProvider = selectProvider;
 window.saveApiKey = saveApiKey;
 window.loadExampleByCategory = loadExampleByCategory;
 
-module.exports = {
-    SERVER_CONFIG,
-    AI_PROVIDERS,
-    PPTX_CONFIG,
-    CHART_TYPES,
-    CHART_COLORS,
-    ACCEPTED_FILE_TYPES,
-    ALL_ACCEPTED_TYPES,
-    LAYOUT_TYPES: {
-        BULLETS: 'bullets',
-        TWO_COLUMN: 'two-column',
-        THREE_COLUMN: 'three-column',
-        FRAMEWORK: 'framework',
-        PROCESS_FLOW: 'process-flow',
-        CHART: 'chart'
-    },
-    exampleTemplates
-};
-

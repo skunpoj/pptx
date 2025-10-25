@@ -60,7 +60,7 @@ function getDecorativeElements(theme, type = 'content') {
 function getIconBadge(slide, theme) {
     const emoji = slide.graphics?.icons?.[0]?.emoji || '📋';
     return `
-    <div style="width: 50px; height: 50px; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 50%); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+    <div style="width: 42px; height: 42px; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 50%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
         ${emoji}
     </div>`;
 }
@@ -75,8 +75,8 @@ function getHeaderCallout(headerText, theme) {
     if (!headerText) return '';
     
     return `
-    <div style="background: linear-gradient(90deg, ${theme.colorAccent}20 0%, transparent 100%); border-left: 4px solid ${theme.colorAccent}; padding: 0.75rem 1.25rem; margin-bottom: 1.5rem; border-radius: 0 8px 8px 0;">
-        <p style="color: ${theme.colorSecondary}; font-size: 1.1rem; margin: 0; font-style: italic;">${escapeHtml(headerText)}</p>
+    <div style="background: linear-gradient(90deg, ${theme.colorAccent}20 0%, transparent 100%); border-left: 3px solid ${theme.colorAccent}; padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 0 6px 6px 0;">
+        <p style="color: ${theme.colorSecondary}; font-size: 1rem; margin: 0; font-style: italic;">${escapeHtml(headerText)}</p>
     </div>`;
 }
 
@@ -87,12 +87,28 @@ function getHeaderCallout(headerText, theme) {
  * @returns {string} - Bullet list HTML
  */
 function getNumberedBullets(items, theme) {
+    return getNumberedBulletsAdaptive(items, theme, '1.1rem');
+}
+
+/**
+ * Generates numbered bullet list HTML with adaptive sizing
+ * @param {Array<string>} items - Bullet point items
+ * @param {Object} theme - Theme configuration
+ * @param {string} fontSize - Font size for bullets
+ * @returns {string} - Bullet list HTML
+ */
+function getNumberedBulletsAdaptive(items, theme, fontSize = '1.1rem') {
+    const itemCount = items.length;
+    const marginBottom = itemCount > 6 ? '0.5rem' : '0.75rem';
+    const badgeSize = itemCount > 6 ? '24px' : '28px';
+    const badgeFontSize = itemCount > 6 ? '0.75rem' : '0.85rem';
+    
     return `
-    <ul style="margin: 0; padding-left: 0; list-style: none; font-size: 1.25rem; line-height: 1.8;">
+    <ul style="margin: 0; padding-left: 0; list-style: none; font-size: ${fontSize}; line-height: 1.5;">
         ${items.map((item, idx) => `
-        <li style="margin-bottom: 1rem; display: flex; align-items: start; gap: 1rem;">
-            <span style="flex-shrink: 0; width: 32px; height: 32px; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: bold;">${idx + 1}</span>
-            <span style="flex: 1; padding-top: 4px;">${escapeHtml(item)}</span>
+        <li style="margin-bottom: ${marginBottom}; display: flex; align-items: start; gap: 0.6rem;">
+            <span style="flex-shrink: 0; width: ${badgeSize}; height: ${badgeSize}; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${badgeFontSize}; font-weight: bold;">${idx + 1}</span>
+            <span style="flex: 1; padding-top: 1px;">${escapeHtml(item)}</span>
         </li>
         `).join('')}
     </ul>`;
@@ -110,16 +126,16 @@ ${getDecorativeElements(theme, 'title')}
     
     <!-- Content -->
     <div style="z-index: 10; position: relative;">
-        <h1 style="color: ${theme.colorBackground}; font-size: 3.5rem; font-weight: bold; text-align: center; margin: 0; padding: 0 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+        <h1 style="color: ${theme.colorBackground}; font-size: 3rem; font-weight: bold; text-align: center; margin: 0; padding: 0 1.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); line-height: 1.2;">
             ${escapeHtml(slide.title)}
         </h1>
-        ${slide.subtitle ? `<h2 style="color: ${theme.colorBackground}; font-size: 1.5rem; opacity: 0.95; text-align: center; margin-top: 1.5rem;">
+        ${slide.subtitle ? `<h2 style="color: ${theme.colorBackground}; font-size: 1.3rem; opacity: 0.95; text-align: center; margin-top: 1.25rem; line-height: 1.3;">
             ${escapeHtml(slide.subtitle)}
         </h2>` : ''}
-        <div style="width: 120px; height: 4px; background: ${theme.colorAccent}; margin: 2rem auto;"></div>
+        <div style="width: 100px; height: 3px; background: ${theme.colorAccent}; margin: 1.5rem auto;"></div>
     </div>`;
     
-    const bodyStyles = `class="col center" style="width: 960px; height: 540px; background: linear-gradient(135deg, ${theme.colorPrimary} 0%, ${theme.colorSecondary} 100%); position: relative;"`;
+    const bodyStyles = `class="col center" style="width: 960px; height: 540px; background: linear-gradient(135deg, ${theme.colorPrimary} 0%, ${theme.colorSecondary} 100%); position: relative; padding: 1.5rem;"`;
     
     return wrapHTML(theme, bodyContent, bodyStyles);
 }
@@ -131,25 +147,35 @@ ${getDecorativeElements(theme, 'title')}
  * @returns {string} - Complete HTML for bullet slide
  */
 function generateBulletSlide(slide, theme) {
+    // Adapt padding and font size based on content length
+    const contentLength = slide.content.length;
+    const hasHeader = !!slide.header;
+    const hasImage = !!slide.imageDescription;
+    
+    // More content = less padding and smaller fonts
+    let fontSize = contentLength > 6 ? '1rem' : contentLength > 4 ? '1.05rem' : '1.1rem';
+    let padding = contentLength > 6 ? '1rem 1.25rem 2rem 1.25rem' : '1.25rem 1.5rem 2.5rem 1.5rem';
+    let titleSize = contentLength > 6 ? '1.8rem' : '2rem';
+    
     const bodyContent = `
 ${getDecorativeElements(theme, 'content')}
     
     <!-- Content -->
     <div style="position: relative; z-index: 10;">
-        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
             ${getIconBadge(slide, theme)}
-            <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: 2.25rem; font-weight: bold; margin: 0; flex: 1;">
+            <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: ${titleSize}; font-weight: bold; margin: 0; flex: 1; line-height: 1.2;">
                 ${escapeHtml(slide.title)}
             </h2>
         </div>
         ${getHeaderCallout(slide.header, theme)}
-        ${slide.imageDescription ? `<div style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border: 2px dashed ${theme.colorAccent}; padding: 1rem; margin-bottom: 1rem; border-radius: 12px; text-align: center; color: ${theme.colorSecondary}; font-style: italic; box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><p style="margin: 0;">📸 Image: ${escapeHtml(slide.imageDescription)}</p></div>` : ''}
-        <div class="fill-height" style="display: flex; flex-direction: column; justify-content: center; padding-bottom: 1rem;">
-            ${getNumberedBullets(slide.content, theme)}
+        ${slide.imageDescription ? `<div style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border: 2px dashed ${theme.colorAccent}; padding: 0.6rem; margin-bottom: 0.6rem; border-radius: 6px; text-align: center; color: ${theme.colorSecondary}; font-style: italic; font-size: 0.85rem;"><p style="margin: 0;">📸 ${escapeHtml(slide.imageDescription)}</p></div>` : ''}
+        <div class="fill-height" style="display: flex; flex-direction: column; justify-content: center;">
+            ${getNumberedBulletsAdaptive(slide.content, theme, fontSize)}
         </div>
     </div>`;
     
-    const bodyStyles = `class="col" style="width: 960px; height: 540px; padding: 2rem 2rem 3rem 2rem; position: relative;"`;
+    const bodyStyles = `class="col" style="width: 960px; height: 540px; padding: ${padding}; position: relative;"`;
     
     return wrapHTML(theme, bodyContent, bodyStyles);
 }
@@ -190,7 +216,7 @@ ${getDecorativeElements(theme, 'content')}
         </div>
     </div>`;
     
-    const bodyStyles = `class="col" style="width: 960px; height: 540px; padding: 2rem 2rem 3rem 2rem; position: relative;"`;
+    const bodyStyles = `class="col" style="width: 960px; height: 540px; padding: 1.25rem 1.5rem 2.5rem 1.5rem; position: relative;"`;
     
     return wrapHTML(theme, bodyContent, bodyStyles);
 }
@@ -202,6 +228,7 @@ module.exports = {
     getDecorativeElements,
     getIconBadge,
     getHeaderCallout,
-    getNumberedBullets
+    getNumberedBullets,
+    getNumberedBulletsAdaptive
 };
 

@@ -194,9 +194,5 @@ function generatePieChart(labels, values, width, height) {
 // EXPORTS
 // ========================================
 
-window.showStatus = showStatus;
-window.showProgress = showProgress;
-window.hideProgress = hideProgress;
-window.updateProgress = updateProgress;
 window.generateChartSVG = generateChartSVG;
 
