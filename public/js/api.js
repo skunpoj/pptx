@@ -482,19 +482,28 @@ async function generatePresentation() {
         const blob = await response.blob();
         console.log('  File size:', (blob.size / 1024).toFixed(2), 'KB');
         
-        // Create download URL that persists
-        const downloadUrl = window.URL.createObjectURL(blob);
+        // Get storage URLs from response headers
+        const sessionId = response.headers.get('X-Session-Id');
+        const downloadUrl = response.headers.get('X-Download-Url');
+        const pdfUrl = response.headers.get('X-PDF-Url');
+        
+        // Create blob URL as fallback
+        const blobUrl = window.URL.createObjectURL(blob);
         
         // Store for cleanup later
         if (window.currentDownloadUrl) {
             window.URL.revokeObjectURL(window.currentDownloadUrl);
         }
-        window.currentDownloadUrl = downloadUrl;
+        window.currentDownloadUrl = blobUrl;
+        window.currentSessionId = sessionId;
         
         console.log('✅ PowerPoint generation complete!');
+        console.log('  Session ID:', sessionId);
+        console.log('  Download URL:', downloadUrl);
+        console.log('  PDF URL:', pdfUrl);
         
-        // Show download link with auto-download option
-        showDownloadLink(downloadUrl, blob.size);
+        // Show download link with PDF viewing option
+        showDownloadLink(blobUrl, blob.size, { sessionId, downloadUrl, pdfUrl });
     } catch (error) {
         clearInterval(statusInterval);
         console.error('❌ PowerPoint generation error:', error);
@@ -587,8 +596,9 @@ async function modifySlides() {
  * Shows download link for generated PowerPoint
  * @param {string} downloadUrl - Blob URL for download
  * @param {number} fileSize - File size in bytes
+ * @param {Object} storage - Storage URLs (optional)
  */
-function showDownloadLink(downloadUrl, fileSize) {
+function showDownloadLink(downloadUrl, fileSize, storage = {}) {
     const fileSizeKB = (fileSize / 1024).toFixed(2);
     const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
     const sizeText = fileSize > 1024 * 1024 ? `${fileSizeMB} MB` : `${fileSizeKB} KB`;
@@ -685,14 +695,22 @@ function showDownloadLink(downloadUrl, fileSize) {
         </div>
         <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
             <a href="${downloadUrl}" download="AI-Presentation-Pro.pptx" class="download-btn">
-                ⬇️ Download PowerPoint
+                ⬇️ Download PPTX
             </a>
             <button onclick="window.viewPresentation('${downloadUrl}')" class="download-btn" style="border: none; cursor: pointer;">
-                👁️ View Online
+                👁️ View Slides
             </button>
+            ${storage.sessionId ? `
+            <button onclick="window.viewPDF('${storage.sessionId}')" class="download-btn" style="border: none; cursor: pointer; background: #dc3545;">
+                📄 View PDF
+            </button>
+            <a href="/download/${storage.sessionId}/presentation.pdf" download="AI-Presentation-Pro.pdf" class="download-btn" style="background: #28a745; text-decoration: none;">
+                ⬇️ Download PDF
+            </a>
+            ` : ''}
         </div>
         <p style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.8;">
-            Download to save locally or view online in your browser
+            Download files to save locally, view slides online, or open PDF in browser
         </p>
     `;
     
@@ -1043,6 +1061,74 @@ function closePresentationViewer() {
 }
 
 /**
+ * View PDF in browser using standard HTML embed tag
+ * @param {string} sessionId - Session identifier
+ */
+function viewPDF(sessionId) {
+    // Create full-screen PDF viewer modal
+    const modal = document.createElement('div');
+    modal.id = 'pdfViewerModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 style="margin: 0; font-size: 1.5rem;">📄 PDF Viewer</h2>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">AI-Presentation-Pro.pdf</p>
+            </div>
+            <button onclick="document.getElementById('pdfViewerModal').remove(); document.body.style.overflow = '';" 
+                style="background: rgba(255,255,255,0.2); border: 2px solid white; color: white; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s ease;">
+                ✕ Close
+            </button>
+        </div>
+        
+        <div style="flex: 1; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
+            <!-- PDF Viewer using standard HTML embed tag -->
+            <embed 
+                src="/view-pdf/${sessionId}" 
+                type="application/pdf" 
+                width="100%" 
+                height="100%" 
+                style="border: none; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            
+            <!-- Fallback for browsers that don't support embed -->
+            <noscript>
+                <p style="color: white; text-align: center;">Your browser doesn't support PDF viewing. 
+                <a href="/download/${sessionId}/presentation.pdf" style="color: #ffc107;">Download PDF</a></p>
+            </noscript>
+        </div>
+        
+        <div style="background: #1a1a1a; padding: 1rem 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="/download/${sessionId}/presentation.pdf" download="AI-Presentation-Pro.pdf" class="viewer-btn" style="background: #28a745; text-decoration: none;">
+                ⬇️ Download PDF
+            </a>
+            <a href="/download/${sessionId}/presentation.pptx" download="AI-Presentation-Pro.pptx" class="viewer-btn">
+                ⬇️ Download PowerPoint
+            </a>
+            <button onclick="window.print()" class="viewer-btn" style="background: #6c757d;">
+                🖨️ Print PDF
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+    
+    showStatus('📄 PDF viewer opened', 'success');
+}
+
+/**
  * Opens file in Office 365
  * @param {string} blobUrl - Blob URL (will need to be uploaded)
  */
@@ -1325,6 +1411,7 @@ window.generatePresentation = generatePresentation;
 window.modifySlides = modifySlides;
 window.showDownloadLink = showDownloadLink;
 window.viewPresentation = viewPresentation;
+window.viewPDF = viewPDF;
 window.closePresentationViewer = closePresentationViewer;
 window.previousSlide = previousSlide;
 window.nextSlide = nextSlide;

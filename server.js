@@ -35,6 +35,17 @@ const {
     generateSlideHTML, 
     generateConversionScript 
 } = require('./server/utils/generators');
+const {
+    initializeStorage,
+    savePresentation,
+    saveSharedPresentation,
+    convertToPDF,
+    getFile,
+    getSharedSlideData,
+    updateSharedPresentation,
+    startAutoCleanup,
+    checkLibreOffice
+} = require('./server/utils/fileStorage');
 
 // Import routes
 const promptRoutes = require('./server/routes/prompts');
@@ -47,6 +58,21 @@ const PORT = 3000;
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use(express.static('public'));
+
+// Initialize storage on startup
+(async () => {
+    try {
+        await initializeStorage();
+        const libreOfficeAvailable = await checkLibreOffice();
+        console.log(`📁 File storage initialized`);
+        console.log(`📄 PDF conversion: ${libreOfficeAvailable ? '✅ Available (LibreOffice)' : '⚠️ Unavailable (install LibreOffice)'}`);
+        
+        // Start auto-cleanup scheduler
+        startAutoCleanup();
+    } catch (error) {
+        console.error('⚠️ Storage initialization error:', error);
+    }
+})();
 
 const upload = multer({ 
     storage: multer.memoryStorage(), 
@@ -559,17 +585,45 @@ app.post('/api/generate', async (req, res) => {
         const pptxBuffer = await fs.readFile(pptxPath);
         console.log('✓ PowerPoint file size:', (pptxBuffer.length / 1024).toFixed(2), 'KB');
         
+        // Save to persistent storage
+        console.log('⏳ Saving to persistent storage...');
+        const storageResult = await savePresentation(sessionId, pptxBuffer, {
+            title: finalSlideData.slides[0]?.title || 'AI Presentation',
+            slideCount: finalSlideData.slides.length,
+            theme: finalSlideData.designTheme?.name
+        });
+        console.log('✓ Saved to storage');
+        
+        // Auto-convert to PDF (async, don't wait)
+        const libreOfficeAvailable = await checkLibreOffice();
+        if (libreOfficeAvailable) {
+            console.log('⏳ Auto-converting to PDF...');
+            convertToPDF(storageResult.pptxPath)
+                .then(() => console.log('✅ PDF conversion complete'))
+                .catch(err => console.log('⚠️ PDF conversion failed:', err.message));
+        }
+        
         // Clear progress before sending file
         if (streamProgress) {
             delete global[`progress_${sessionId}`];
         }
         
-        sendFileDownload(res, pptxBuffer, 'AI-Presentation.pptx');
+        // Send file with storage URLs in headers
+        res.set({
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'Content-Disposition': 'attachment; filename="AI-Presentation-Pro.pptx"',
+            'Content-Length': pptxBuffer.length,
+            'X-Session-Id': sessionId,
+            'X-Download-Url': storageResult.downloadUrl,
+            'X-PDF-Url': storageResult.viewerUrl
+        });
+        
+        res.send(pptxBuffer);
         console.log('✓ PowerPoint file sent to client');
         console.log('✅ GENERATION SUCCESSFUL');
         console.log('='.repeat(80) + '\n');
         
-        // Cleanup
+        // Cleanup workspace (files now in storage)
         scheduleCleanup(workDir);
         
     } catch (error) {
@@ -915,5 +969,113 @@ function generateShareId() {
  */
 app.get('/view/:shareId', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'viewer.html'));
+});
+
+// ========================================
+// FILE DOWNLOAD & PDF ENDPOINTS
+// ========================================
+
+/**
+ * Download presentation file (PPTX or PDF)
+ */
+app.get('/download/:sessionId/:filename', async (req, res) => {
+    try {
+        const { sessionId, filename } = req.params;
+        
+        // Validate filename
+        if (!['presentation.pptx', 'presentation.pdf'].includes(filename)) {
+            return res.status(400).json({ error: 'Invalid filename' });
+        }
+        
+        // Get file from storage
+        const { fileBuffer, metadata } = await getFile(sessionId, filename);
+        
+        // Set appropriate headers
+        const contentType = filename.endsWith('.pdf') 
+            ? 'application/pdf' 
+            : 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+        
+        res.set({
+            'Content-Type': contentType,
+            'Content-Disposition': `attachment; filename="${filename}"`,
+            'Content-Length': fileBuffer.length
+        });
+        
+        res.send(fileBuffer);
+        console.log(`✅ Downloaded: ${sessionId}/${filename} (${metadata.downloads} total downloads)`);
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        res.status(404).json({ error: error.message });
+    }
+});
+
+/**
+ * View PDF inline (for browser viewing)
+ */
+app.get('/view-pdf/:sessionId', async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        
+        // Get PDF from storage
+        const { fileBuffer } = await getFile(sessionId, 'presentation.pdf');
+        
+        // Set headers for inline viewing
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'inline; filename="presentation.pdf"',
+            'Content-Length': fileBuffer.length
+        });
+        
+        res.send(fileBuffer);
+        
+    } catch (error) {
+        console.error('PDF view error:', error);
+        res.status(404).json({ error: 'PDF not found or not yet generated' });
+    }
+});
+
+/**
+ * Convert presentation to PDF
+ */
+app.post('/api/convert-to-pdf/:sessionId', async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        
+        // Check if LibreOffice is available
+        const libreOfficeAvailable = await checkLibreOffice();
+        if (!libreOfficeAvailable) {
+            return res.status(503).json({ 
+                error: 'PDF conversion unavailable',
+                message: 'LibreOffice is not installed on the server'
+            });
+        }
+        
+        // Get PPTX file path
+        const { GENERATED_DIR } = require('./server/utils/fileStorage');
+        const { getMetadata } = require('./server/utils/fileStorage');
+        const metadata = await getMetadata(sessionId, 'generated');
+        if (!metadata.sessionId) {
+            return res.status(404).json({ error: 'Presentation not found' });
+        }
+        
+        const pptxPath = path.join(GENERATED_DIR, sessionId, 'presentation.pptx');
+        
+        // Convert to PDF
+        console.log(`🔄 Converting ${sessionId} to PDF...`);
+        const pdfPath = await convertToPDF(pptxPath);
+        
+        // Return PDF URL
+        res.json({
+            success: true,
+            pdfUrl: `/download/${sessionId}/presentation.pdf`,
+            viewUrl: `/view-pdf/${sessionId}`,
+            message: 'PDF generated successfully'
+        });
+        
+    } catch (error) {
+        console.error('PDF conversion error:', error);
+        res.status(500).json({ error: error.message });
+    }
 });
 

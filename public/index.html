@@ -22,34 +22,50 @@
             <div class="card">
                 <h2>📝 Your Content</h2>
                 
-                <!-- Main Content Editor - MOVED TO TOP -->
-                <div class="content-editor-section">
-                    <label class="content-label">📝 Presentation Content:</label>
-                    <textarea id="textInput" class="content-textarea" placeholder="Type or paste your presentation content here, or use the AI Idea Generator below to expand a simple idea into full content..."></textarea>
-                </div>
-                
-                <!-- Quick Examples - MOVED UP -->
-                <div class="quick-examples">
-                    <p class="examples-label">Quick Start Examples:</p>
-                    <div class="examples-grid">
-                        <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
-                        <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
+                <!-- SECTION 1: PRESENTATION CONTENT -->
+                <div class="content-input-section" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 3px solid #667eea;">
+                    <h3 style="margin: 0 0 1rem 0; color: #667eea; font-size: 1.3rem;">📝 Step 1: Presentation Content</h3>
+                    <p style="margin: 0 0 1rem 0; color: #555; font-size: 0.95rem;">Enter or paste your detailed presentation content here, then generate preview</p>
+                    
+                    <!-- Main Content Editor -->
+                    <div class="content-editor-section">
+                        <textarea id="textInput" class="content-textarea" placeholder="Type or paste your detailed presentation content here...
+
+Example:
+Company Overview
+- Founded in 2020 with mission to innovate
+- Serving 500+ clients globally  
+- Revenue growth of 150% year-over-year
+
+Our Products
+- AI-powered analytics platform
+- Real-time dashboard
+- Custom reporting tools"></textarea>
                     </div>
+                    
+                    <!-- Quick Examples -->
+                    <div class="quick-examples" style="margin-top: 1rem;">
+                        <p class="examples-label">📚 Quick Start Examples:</p>
+                        <div class="examples-grid">
+                            <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
+                            <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
+                            <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
+                            <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
+                            <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
+                            <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Button -->
+                    <button class="btn-primary btn-full btn-large" onclick="generatePreview()" id="previewBtn" style="margin-top: 1rem;">
+                        👁️ Generate Preview
+                    </button>
                 </div>
                 
-                <!-- Preview Button - MOVED UP -->
-                <button class="btn-primary btn-full btn-large" onclick="generatePreview()" id="previewBtn">
-                    👁️ Generate Preview
-                </button>
-                
-                <!-- AI Idea Generator Section - MOVED TO BOTTOM -->
-                <div class="idea-generator-section">
-                    <h3>💡 AI Idea Generator</h3>
-                    <p class="section-description">Let AI expand your idea into detailed presentation content. Describe your topic or upload files.</p>
+                <!-- SECTION 2: AI IDEA GENERATOR (OPTIONAL) -->
+                <div class="idea-generator-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #ff9a56;">
+                    <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 Step 0: AI Idea Generator (Optional)</h3>
+                    <p class="section-description" style="color: #555; margin-bottom: 1rem;">Don't have content yet? Let AI expand your simple idea into detailed presentation content</p>
                     
                     <!-- Idea Input -->
                     <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
@@ -121,11 +137,9 @@
                     <button onclick="switchView('gallery')" id="galleryViewBtn">🖼️ Gallery View</button>
                 </div>
                 
-                <div class="preview" id="preview" style="overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important;"></div>
-                
-                <!-- Slide Modification Section (appears after preview) -->
-                <div id="modificationSection" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e0e7ff; flex-shrink: 0;">
-                    <div style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                <!-- Slide Modification Section (appears after preview) - MOVED ABOVE PREVIEW -->
+                <div id="modificationSection" style="display: none; margin-bottom: 1rem; flex-shrink: 0;">
+                    <div style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 0.75rem;">
                         <strong style="color: #f57c00; display: block; margin-bottom: 0.5rem;">✏️ Modify Slides</strong>
                         <textarea id="modificationPrompt" 
                                   placeholder="Example: 'Change slide 3 title to...' or 'Add a bullet point to slide 2 about...' or 'Remove slide 5'"
@@ -136,19 +150,21 @@
                     </div>
                 </div>
                 
-                <!-- Generate PowerPoint Button (appears after preview) -->
-                <div id="generatePptSection" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e0e7ff; flex-shrink: 0;">
+                <!-- Generate PowerPoint Button (appears after preview) - MOVED ABOVE PREVIEW -->
+                <div id="generatePptSection" style="display: none; margin-bottom: 1rem; flex-shrink: 0;">
                     <button class="btn-generate btn-full" onclick="generatePresentation()" id="generateBtn">
                         ✨ Generate PowerPoint
                     </button>
                     <p style="text-align: center; font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
-                        Click to download your presentation
+                        Click to download or view online
                     </p>
                 </div>
+                
+                <div class="preview" id="preview" style="overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important;"></div>
             </div>
         </div>
 
-        <!-- Status Notification - SHARED BETWEEN BOTH PANELS -->
+        <!-- Status Notification - SHARED BETWEEN BOTH PANELS - MOVED BELOW BUTTONS -->
         <div id="status"></div>
 
         <!-- Settings Card -->
