@@ -20,7 +20,9 @@ COPY package.json package-lock.json ./
 COPY server.js ./
 COPY server/ ./server/
 COPY public/ ./public/
-COPY skills/pptx/html2pptx.tgz ./skills/pptx/
+
+# Copy skills folder structure (needed for skill manager)
+COPY skills/ ./skills/
 
 # Install Node.js dependencies (production only)
 # Try npm ci first, fallback to npm install if it fails

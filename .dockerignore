@@ -62,22 +62,22 @@ temp/
 !package.json
 !package-lock.json
 
-# Skills documentation (keep only the tgz file)
-skills/*/SKILL.md
-skills/*/LICENSE.txt
-skills/*/scripts/
+# Skills documentation (exclude heavy files but keep essential structure)
 skills/*/ooxml/
-skills/*/recalc.py
-skills/*/FORMS.md
-skills/*/REFERENCE.md
+skills/*/scripts/
 skills/*/check_*.py
 skills/*/convert_*.py
 skills/*/create_*.py
 skills/*/extract_*.py
 skills/*/fill_*.py
 
-# Keep only essential skills files
+# Keep essential skills files for skill manager
 !skills/pptx/html2pptx.tgz
+!skills/*/SKILL.md
+!skills/*/LICENSE.txt
+!skills/*/FORMS.md
+!skills/*/REFERENCE.md
+!skills/*/recalc.py
 
 # Docker files
 Dockerfile.optimized
