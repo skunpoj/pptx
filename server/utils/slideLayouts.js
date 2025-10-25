@@ -35,19 +35,16 @@ function wrapHTML(theme, bodyContent, bodyStyles = '') {
  */
 function getDecorativeElements(theme, type = 'content') {
     if (type === 'title') {
+        // Minimal decorative elements to avoid overflow
         return `
-    <!-- Decorative shapes for title slide -->
-    <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: ${theme.colorAccent}; opacity: 0.2; border-radius: 50%;"></div>
-    <div style="position: absolute; bottom: -30px; left: -30px; width: 150px; height: 150px; background: ${theme.colorBackground}; opacity: 0.1; border-radius: 50%;"></div>
-    <div style="position: absolute; top: 50%; left: 0; width: 100%; height: 4px; background: ${theme.colorAccent}; opacity: 0.3; transform: translateY(-50%);"></div>
+    <!-- Simple decorative accent -->
+    <div style="position: absolute; top: 20px; right: 20px; width: 80px; height: 80px; background: ${theme.colorAccent}; opacity: 0.15; border-radius: 50%;"></div>
         `;
     }
     
     return `
-    <!-- Decorative elements for content slide -->
-    <div style="position: absolute; top: 0; left: 0; width: 6px; height: 100%; background: linear-gradient(180deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 100%);"></div>
-    <div style="position: absolute; top: 20px; right: 30px; width: 80px; height: 80px; background: ${theme.colorAccent}; opacity: 0.08; border-radius: 50%;"></div>
-    <div style="position: absolute; bottom: 30px; right: 50px; width: 120px; height: 120px; background: ${theme.colorPrimary}; opacity: 0.05; border-radius: 50%;"></div>
+    <!-- Decorative accent bar for content slide -->
+    <div style="position: absolute; top: 0; left: 0; width: 5px; height: 100%; background: linear-gradient(180deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 100%);"></div>
     `;
 }
 
@@ -60,7 +57,7 @@ function getDecorativeElements(theme, type = 'content') {
 function getIconBadge(slide, theme) {
     const emoji = slide.graphics?.icons?.[0]?.emoji || '📋';
     return `
-    <div style="width: 42px; height: 42px; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 50%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+    <div style="width: 38px; height: 38px; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 50%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
         ${emoji}
     </div>`;
 }
@@ -75,8 +72,8 @@ function getHeaderCallout(headerText, theme) {
     if (!headerText) return '';
     
     return `
-    <div style="background: linear-gradient(90deg, ${theme.colorAccent}20 0%, transparent 100%); border-left: 3px solid ${theme.colorAccent}; padding: 0.6rem 1rem; margin-bottom: 1rem; border-radius: 0 6px 6px 0;">
-        <p style="color: ${theme.colorSecondary}; font-size: 1rem; margin: 0; font-style: italic;">${escapeHtml(headerText)}</p>
+    <div style="background: linear-gradient(90deg, ${theme.colorAccent}20 0%, transparent 100%); border-left: 3px solid ${theme.colorAccent}; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; border-radius: 0 6px 6px 0;">
+        <p style="color: ${theme.colorSecondary}; font-size: 0.95rem; margin: 0; font-style: italic; line-height: 1.3;">${escapeHtml(headerText)}</p>
     </div>`;
 }
 
@@ -99,14 +96,14 @@ function getNumberedBullets(items, theme) {
  */
 function getNumberedBulletsAdaptive(items, theme, fontSize = '1.1rem') {
     const itemCount = items.length;
-    const marginBottom = itemCount > 6 ? '0.5rem' : '0.75rem';
-    const badgeSize = itemCount > 6 ? '24px' : '28px';
-    const badgeFontSize = itemCount > 6 ? '0.75rem' : '0.85rem';
+    const marginBottom = itemCount > 6 ? '0.4rem' : '0.6rem';
+    const badgeSize = itemCount > 6 ? '22px' : '26px';
+    const badgeFontSize = itemCount > 6 ? '0.7rem' : '0.8rem';
     
     return `
-    <ul style="margin: 0; padding-left: 0; list-style: none; font-size: ${fontSize}; line-height: 1.5;">
+    <ul style="margin: 0; padding-left: 0; list-style: none; font-size: ${fontSize}; line-height: 1.4;">
         ${items.map((item, idx) => `
-        <li style="margin-bottom: ${marginBottom}; display: flex; align-items: start; gap: 0.6rem;">
+        <li style="margin-bottom: ${marginBottom}; display: flex; align-items: start; gap: 0.5rem;">
             <span style="flex-shrink: 0; width: ${badgeSize}; height: ${badgeSize}; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${badgeFontSize}; font-weight: bold;">${idx + 1}</span>
             <span style="flex: 1; padding-top: 1px;">${escapeHtml(item)}</span>
         </li>
@@ -122,20 +119,18 @@ function getNumberedBulletsAdaptive(items, theme, fontSize = '1.1rem') {
  */
 function generateTitleSlide(slide, theme) {
     const bodyContent = `
-${getDecorativeElements(theme, 'title')}
-    
     <!-- Content -->
-    <div style="z-index: 10; position: relative;">
-        <h1 style="color: ${theme.colorBackground}; font-size: 3rem; font-weight: bold; text-align: center; margin: 0; padding: 0 1.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); line-height: 1.2;">
+    <div style="z-index: 10; position: relative; text-align: center; max-width: 800px; margin: 0 auto;">
+        <h1 style="color: #FFFFFF; font-size: 2.75rem; font-weight: bold; margin: 0; line-height: 1.2;">
             ${escapeHtml(slide.title)}
         </h1>
-        ${slide.subtitle ? `<h2 style="color: ${theme.colorBackground}; font-size: 1.3rem; opacity: 0.95; text-align: center; margin-top: 1.25rem; line-height: 1.3;">
+        ${slide.subtitle ? `<h2 style="color: #FFFFFF; font-size: 1.2rem; opacity: 0.95; margin-top: 1rem; line-height: 1.3; font-weight: normal;">
             ${escapeHtml(slide.subtitle)}
         </h2>` : ''}
-        <div style="width: 100px; height: 3px; background: ${theme.colorAccent}; margin: 1.5rem auto;"></div>
+        <div style="width: 80px; height: 3px; background: ${theme.colorAccent}; margin: 1.25rem auto;"></div>
     </div>`;
     
-    const bodyStyles = `class="col center" style="width: 960px; height: 540px; background: linear-gradient(135deg, ${theme.colorPrimary} 0%, ${theme.colorSecondary} 100%); position: relative; padding: 1.5rem;"`;
+    const bodyStyles = `class="col center" style="width: 960px; height: 540px; background: linear-gradient(135deg, ${theme.colorPrimary} 0%, ${theme.colorSecondary} 100%); padding: 2rem;"`;
     
     return wrapHTML(theme, bodyContent, bodyStyles);
 }
@@ -153,23 +148,24 @@ function generateBulletSlide(slide, theme) {
     const hasImage = !!slide.imageDescription;
     
     // More content = less padding and smaller fonts
-    let fontSize = contentLength > 6 ? '1rem' : contentLength > 4 ? '1.05rem' : '1.1rem';
-    let padding = contentLength > 6 ? '1rem 1.25rem 2rem 1.25rem' : '1.25rem 1.5rem 2.5rem 1.5rem';
-    let titleSize = contentLength > 6 ? '1.8rem' : '2rem';
+    // Conservative padding to avoid overflow (html2pptx needs margins)
+    let fontSize = contentLength > 6 ? '0.95rem' : contentLength > 4 ? '1rem' : '1.05rem';
+    let padding = contentLength > 6 ? '0.75rem 1rem 1.75rem 1rem' : '1rem 1.25rem 2rem 1.25rem';
+    let titleSize = contentLength > 6 ? '1.7rem' : '1.85rem';
     
     const bodyContent = `
 ${getDecorativeElements(theme, 'content')}
     
     <!-- Content -->
     <div style="position: relative; z-index: 10;">
-        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem;">
             ${getIconBadge(slide, theme)}
-            <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: ${titleSize}; font-weight: bold; margin: 0; flex: 1; line-height: 1.2;">
+            <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: ${titleSize}; font-weight: bold; margin: 0; flex: 1; line-height: 1.15;">
                 ${escapeHtml(slide.title)}
             </h2>
         </div>
         ${getHeaderCallout(slide.header, theme)}
-        ${slide.imageDescription ? `<div style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border: 2px dashed ${theme.colorAccent}; padding: 0.6rem; margin-bottom: 0.6rem; border-radius: 6px; text-align: center; color: ${theme.colorSecondary}; font-style: italic; font-size: 0.85rem;"><p style="margin: 0;">📸 ${escapeHtml(slide.imageDescription)}</p></div>` : ''}
+        ${slide.imageDescription ? `<div style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border: 2px dashed ${theme.colorAccent}; padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 6px; text-align: center; color: ${theme.colorSecondary}; font-style: italic; font-size: 0.8rem;"><p style="margin: 0;">📸 ${escapeHtml(slide.imageDescription)}</p></div>` : ''}
         <div class="fill-height" style="display: flex; flex-direction: column; justify-content: center;">
             ${getNumberedBulletsAdaptive(slide.content, theme, fontSize)}
         </div>
