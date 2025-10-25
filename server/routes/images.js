@@ -35,7 +35,10 @@ router.post('/generate', async (req, res) => {
                 let imageData = null;
                 
                 // Route to different image generation providers
-                if (provider === 'dalle' || provider === 'openai') {
+                if (provider === 'huggingface') {
+                    // Hugging Face (FREE - Default)
+                    imageData = await generateWithHuggingFace(desc.description, apiKey);
+                } else if (provider === 'dalle' || provider === 'openai') {
                     // OpenAI DALL-E 3
                     imageData = await generateWithDALLE(desc.description, apiKey);
                 } else if (provider === 'stability') {
@@ -81,6 +84,74 @@ router.post('/generate', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+/**
+ * Generate image using Hugging Face Inference API
+ * FREE API - Uses Stable Diffusion XL or FLUX.1
+ */
+async function generateWithHuggingFace(description, apiKey) {
+    try {
+        // Using FLUX.1-schnell (fast, free model) or Stable Diffusion XL
+        const model = 'black-forest-labs/FLUX.1-schnell'; // Fast, high-quality, free
+        // Alternative: 'stabilityai/stable-diffusion-xl-base-1.0'
+        
+        const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey.trim()}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs: description,
+                parameters: {
+                    num_inference_steps: 4, // Fast generation
+                    guidance_scale: 0, // For FLUX.1-schnell
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = `Hugging Face API Error: ${response.status}`;
+            
+            try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.error || errorMessage;
+            } catch (e) {
+                // If response is not JSON, use status text
+                errorMessage = errorText.substring(0, 200) || errorMessage;
+            }
+            
+            // Provide helpful error messages
+            if (response.status === 401) {
+                throw new Error('Invalid Hugging Face API token. Please check your token at huggingface.co/settings/tokens');
+            } else if (response.status === 503) {
+                throw new Error('Model is loading. Please wait 20 seconds and try again.');
+            } else if (response.status === 429) {
+                throw new Error('Hugging Face rate limit reached. Please wait a moment and try again.');
+            }
+            
+            throw new Error(errorMessage);
+        }
+        
+        // Hugging Face returns image as binary blob
+        const imageBlob = await response.blob();
+        
+        // Convert blob to base64
+        const arrayBuffer = await imageBlob.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        
+        return {
+            url: `data:image/png;base64,${base64}`,
+            model: model
+        };
+    } catch (error) {
+        if (error.message.includes('fetch')) {
+            throw new Error('Network error: Unable to connect to Hugging Face API. Check your internet connection.');
+        }
+        throw error;
+    }
+}
 
 /**
  * Generate image using DALL-E 3

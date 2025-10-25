@@ -267,11 +267,19 @@ Our Products
                         <h3>🎨 Image Generation Provider</h3>
                         <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Select which AI to use for creating actual images from descriptions (optional)</p>
                         <div class="provider-buttons">
-                            <button class="provider-btn-img active" onclick="window.selectImageProvider('dalle')" id="img-provider-dalle">DALL-E 3</button>
+                            <button class="provider-btn-img active" onclick="window.selectImageProvider('huggingface')" id="img-provider-huggingface">
+                                🤗 Hugging Face
+                                <span style="display: block; font-size: 0.7rem; opacity: 0.8;">Free API • Default</span>
+                            </button>
+                            <button class="provider-btn-img" onclick="window.selectImageProvider('dalle')" id="img-provider-dalle">DALL-E 3</button>
                             <button class="provider-btn-img" onclick="window.selectImageProvider('stability')" id="img-provider-stability">Stability AI</button>
-                            <button class="provider-btn-img" onclick="window.selectImageProvider('gemini')" id="img-provider-gemini">Gemini Imagen</button>
+                            <button class="provider-btn-img" onclick="window.selectImageProvider('gemini')" id="img-provider-gemini" disabled style="opacity: 0.5; cursor: not-allowed; position: relative;">
+                                Gemini Imagen
+                                <span style="display: block; font-size: 0.65rem; color: #e74c3c; font-weight: 700;">⚠️ Not Available</span>
+                            </button>
                         </div>
-                        <p style="font-size: 0.75rem; color: #888; margin-top: 0.5rem; font-style: italic;">💡 Note: Image generation requires a separate API key from the provider you select above</p>
+                        <p style="font-size: 0.75rem; color: #2ecc71; margin-top: 0.5rem; font-weight: 600;">🎁 Hugging Face: FREE API access to Stable Diffusion & FLUX models!</p>
+                        <p style="font-size: 0.75rem; color: #888; margin-top: 0.25rem; font-style: italic;">💡 Get free API key at <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #667eea;">huggingface.co/settings/tokens</a></p>
                     </div>
 
                     <!-- Anthropic Section -->
@@ -382,6 +390,38 @@ Our Products
                                        spellcheck="false"
                                        style="font-family: monospace; letter-spacing: 0.5px;">
                                 <button class="btn-primary" onclick="window.saveApiKey('openrouter'); return false;" type="button">Save Key</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Hugging Face Section (for image generation) -->
+                    <div class="api-section provider-section" id="section-huggingface" style="display: none;">
+                        <h3>🤗 Hugging Face API (for Image Generation)</h3>
+                        <div class="info-box" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%); border-left: 4px solid #ff9800;">
+                            <strong style="color: #e65100;">🎁 FREE Image Generation!</strong>
+                            <p style="margin-top: 0.5rem; color: #666;">Hugging Face offers <strong>FREE API access</strong> to powerful models like Stable Diffusion XL and FLUX.1</p>
+                            <strong style="margin-top: 1rem; display: block;">To get your FREE API key:</strong>
+                            <ol>
+                                <li>Go to <a href="https://huggingface.co/join" target="_blank">huggingface.co/join</a> (create account)</li>
+                                <li>Navigate to <a href="https://huggingface.co/settings/tokens" target="_blank">Settings → Access Tokens</a></li>
+                                <li>Click "New token" or "Create new token"</li>
+                                <li>Give it a name (e.g., "GENIS.AI") and select "Read" access</li>
+                                <li>Copy your token (starts with <code>hf_...</code>)</li>
+                            </ol>
+                            <p style="margin-top: 0.5rem; color: #666;">💡 <strong>Note:</strong> Hugging Face is the default and recommended option for FREE unlimited image generation!</p>
+                        </div>
+                        <form autocomplete="off" onsubmit="return false;">
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="apiKey-huggingface" 
+                                       placeholder="hf_..."
+                                       autocomplete="off"
+                                       data-form-type="other"
+                                       data-lpignore="true"
+                                       name="not-a-password"
+                                       spellcheck="false"
+                                       style="font-family: monospace; letter-spacing: 0.5px;">
+                                <button class="btn-primary" onclick="window.saveApiKey('huggingface'); return false;" type="button">Save Key</button>
                             </div>
                         </form>
                     </div>

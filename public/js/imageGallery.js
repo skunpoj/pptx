@@ -53,13 +53,21 @@ async function generateImagesForSlides() {
     // Get the selected image generation provider
     const imageProvider = (typeof window.getImageProvider === 'function') 
         ? window.getImageProvider() 
-        : 'dalle';
+        : 'huggingface';
     
     console.log(`🎨 Using image provider: ${imageProvider}`);
     
     // Get the appropriate API key based on the image provider
     let apiKey = null;
-    if (imageProvider === 'dalle' || imageProvider === 'openai') {
+    if (imageProvider === 'huggingface') {
+        // Hugging Face uses its own token
+        apiKey = localStorage.getItem('huggingface_api_key');
+        if (!apiKey) {
+            alert('❌ Please enter your Hugging Face API token in Advanced Configuration section\n\n🎁 FREE API - Get yours now!\n\nSteps:\n1. Go to huggingface.co/join (create free account)\n2. Navigate to Settings → Access Tokens\n3. Create a new token with "Read" access\n4. Click "Advanced Configuration" here\n5. Scroll to "🤗 Hugging Face API" section\n6. Paste your token and click "Save Key"\n\nHugging Face offers FREE unlimited image generation!');
+            return;
+        }
+        console.log(`✅ Hugging Face API token found (length: ${apiKey.length})`);
+    } else if (imageProvider === 'dalle' || imageProvider === 'openai') {
         // DALL-E uses OpenAI key
         apiKey = localStorage.getItem('openai_api_key');
         if (!apiKey) {
@@ -68,8 +76,8 @@ async function generateImagesForSlides() {
         }
         console.log(`✅ OpenAI API key found (length: ${apiKey.length})`);
     } else if (imageProvider === 'stability') {
-        // Stability AI uses its own key (check if we have a separate field, otherwise use openai)
-        apiKey = localStorage.getItem('stability_api_key') || localStorage.getItem('openai_api_key');
+        // Stability AI uses its own key
+        apiKey = localStorage.getItem('stability_api_key');
         if (!apiKey) {
             alert('❌ Please enter your Stability AI API key in Advanced Configuration section\n\nSteps:\n1. Click "Advanced Configuration"\n2. Scroll down to "Stability AI API" section\n3. Enter your API key\n4. Click "Save Key"');
             return;
@@ -87,7 +95,9 @@ async function generateImagesForSlides() {
     
     // Validate API key format
     if (apiKey) {
-        if (imageProvider === 'dalle' && !apiKey.startsWith('sk-')) {
+        if (imageProvider === 'huggingface' && !apiKey.startsWith('hf_')) {
+            console.warn('⚠️  Hugging Face API token should start with "hf_"');
+        } else if (imageProvider === 'dalle' && !apiKey.startsWith('sk-')) {
             console.warn('⚠️  OpenAI API key should start with "sk-"');
         } else if (imageProvider === 'gemini' && !apiKey.startsWith('AIza')) {
             console.warn('⚠️  Gemini API key should start with "AIza"');

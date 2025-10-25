@@ -29,6 +29,7 @@ window.timeTrackingSteps = [];
 window.addEventListener('load', () => {
     initializeAPIKeys();
     initializeProviderSelection();
+    initializeImageProviderSelection();
     initializeAPISectionState();
     initializeThemeSelector();
     initializeOutputType();
@@ -58,11 +59,34 @@ function initializeProviderSelection() {
     const savedProvider = localStorage.getItem('ai_provider') || 'anthropic';
     window.currentProvider = savedProvider;
     selectProvider(savedProvider);
+}
+
+/**
+ * Initializes image provider selection on page load
+ */
+function initializeImageProviderSelection() {
+    let savedImageProvider = localStorage.getItem('image_provider') || 'huggingface';
     
-    // Also initialize image provider
-    const savedImageProvider = localStorage.getItem('image_provider') || 'dalle';
+    // Auto-switch away from Gemini if it was previously selected
+    if (savedImageProvider === 'gemini') {
+        console.warn('⚠️  Gemini image provider was selected but is not available. Switching to Hugging Face.');
+        savedImageProvider = 'huggingface';
+        localStorage.setItem('image_provider', 'huggingface');
+    }
+    
     window.currentImageProvider = savedImageProvider;
-    selectImageProvider(savedImageProvider);
+    
+    // Update UI buttons
+    document.querySelectorAll('.provider-btn-img').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const activeBtn = document.getElementById(`img-provider-${savedImageProvider}`);
+    if (activeBtn && !activeBtn.disabled) {
+        activeBtn.classList.add('active');
+    }
+    
+    console.log(`🎨 Image provider initialized: ${savedImageProvider}`);
 }
 
 /**
@@ -193,6 +217,12 @@ function selectProvider(provider) {
  * @param {string} provider - Provider name ('dalle', 'stability', 'gemini')
  */
 function selectImageProvider(provider) {
+    // Prevent selecting Gemini (not available yet)
+    if (provider === 'gemini') {
+        alert('⚠️ Gemini Image Generation Not Available\n\nGoogle has not released a public API for Imagen yet.\n\nPlease use Hugging Face (FREE), DALL-E 3, or Stability AI instead.');
+        return;
+    }
+    
     window.currentImageProvider = provider;
     localStorage.setItem('image_provider', provider);
     
@@ -214,7 +244,25 @@ function selectImageProvider(provider) {
  * @returns {string} Provider name
  */
 function getImageProvider() {
-    return window.currentImageProvider || localStorage.getItem('image_provider') || 'dalle';
+    let provider = window.currentImageProvider || localStorage.getItem('image_provider') || 'huggingface';
+    
+    // Auto-switch away from Gemini if selected (not available yet)
+    if (provider === 'gemini') {
+        console.warn('⚠️  Gemini image generation not available, switching to Hugging Face');
+        provider = 'huggingface';
+        window.currentImageProvider = 'huggingface';
+        localStorage.setItem('image_provider', 'huggingface');
+        
+        // Update UI if buttons exist
+        setTimeout(() => {
+            const geminiBtn = document.getElementById('img-provider-gemini');
+            const hfBtn = document.getElementById('img-provider-huggingface');
+            if (geminiBtn) geminiBtn.classList.remove('active');
+            if (hfBtn) hfBtn.classList.add('active');
+        }, 100);
+    }
+    
+    return provider;
 }
 
 /**
