@@ -68,15 +68,25 @@ async function generatePreview() {
 }
 
 /**
- * Handles streaming preview generation (incremental slides)
+ * Handles incremental preview generation (render slides one by one)
  */
 async function handleStreamingPreview(text, apiKey) {
+    // Get user's slide preference
+    const numSlidesInput = document.getElementById('numSlides');
+    const numSlides = numSlidesInput ? parseInt(numSlidesInput.value) || 0 : 0;
+    
     const response = await fetch('/api/preview', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ text, apiKey, provider: window.currentProvider, stream: true })
+        body: JSON.stringify({ 
+            text, 
+            apiKey, 
+            provider: window.currentProvider, 
+            incremental: true,
+            numSlides: numSlides
+        })
     });
     
     if (!response.ok) {
@@ -90,6 +100,8 @@ async function handleStreamingPreview(text, apiKey) {
     let receivedSlides = [];
     let themeData = null;
     let suggestedThemeKey = null;
+    let totalSlides = 0;
+    let buffer = ''; // Buffer for incomplete SSE messages
     
     preview.innerHTML = ''; // Clear loading message
     
@@ -97,35 +109,46 @@ async function handleStreamingPreview(text, apiKey) {
         const { done, value } = await reader.read();
         if (done) break;
         
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        // Decode chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Split by newlines to get complete lines
+        const lines = buffer.split('\n');
+        
+        // Keep the last incomplete line in buffer
+        buffer = lines.pop() || '';
         
         for (const line of lines) {
             if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') continue;
+                const data = line.slice(6).trim();
+                if (!data || data === '[DONE]') continue;
                 
                 try {
                     const message = JSON.parse(data);
                     
-                    if (message.type === 'slide') {
-                        // New slide received!
+                    if (message.type === 'theme') {
+                        // Theme info received
+                        themeData = message.theme;
+                        suggestedThemeKey = message.suggestedThemeKey;
+                        totalSlides = message.totalSlides;
+                        
+                        const theme = window.colorThemes[suggestedThemeKey] || themeData;
+                        preview.innerHTML = `
+                            <div style="background: #f0f4ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid ${theme.colorPrimary};">
+                                <strong style="color: ${theme.colorPrimary};">🎨 ${theme.name}</strong>
+                                <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #666;">${theme.description}</p>
+                            </div>
+                            <div style="background: #e3f2fd; padding: 0.5rem; border-radius: 6px; margin-bottom: 1rem; text-align: center; font-size: 0.9rem; color: #1976d2;">
+                                ⏳ Generating ${totalSlides} slides... <span id="slideProgress">0/${totalSlides}</span>
+                            </div>
+                        `;
+                        
+                        console.log(`✓ Theme received: ${theme.name}, will generate ${totalSlides} slides`);
+                        
+                    } else if (message.type === 'slide') {
+                        // New slide received - render it immediately!
                         receivedSlides.push(message.slide);
-                        if (message.theme) themeData = message.theme;
-                        if (message.suggestedThemeKey) suggestedThemeKey = message.suggestedThemeKey;
                         
-                        // Update theme if first slide
-                        if (receivedSlides.length === 1 && themeData) {
-                            const theme = window.colorThemes[suggestedThemeKey] || themeData;
-                            preview.innerHTML = `
-                                <div style="background: #f0f4ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid ${theme.colorPrimary};">
-                                    <strong style="color: ${theme.colorPrimary};">🎨 ${theme.name}</strong>
-                                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #666;">${theme.description}</p>
-                                </div>
-                            `;
-                        }
-                        
-                        // Render the new slide
                         const theme = window.colorThemes[suggestedThemeKey] || themeData || window.colorThemes['vibrant-purple'];
                         const slideHtml = window.renderSlidePreviewCard(message.slide, message.index, theme);
                         
@@ -134,17 +157,29 @@ async function handleStreamingPreview(text, apiKey) {
                         slideDiv.innerHTML = slideHtml;
                         preview.appendChild(slideDiv);
                         
+                        // Update progress
+                        const progressEl = document.getElementById('slideProgress');
+                        if (progressEl) {
+                            progressEl.textContent = `${message.current}/${message.total}`;
+                        }
+                        
                         // Animate in
                         setTimeout(() => {
                             slideDiv.style.opacity = '1';
                             slideDiv.style.transform = 'translateY(0)';
                         }, 50);
                         
-                        console.log(`✓ Received and rendered slide ${receivedSlides.length}: ${message.slide.title}`);
+                        console.log(`✓ Slide ${message.current}/${message.total} rendered: ${message.slide.title}`);
                         
                     } else if (message.type === 'complete') {
                         // All slides received
                         window.currentSlideData = message.data;
+                        
+                        // Remove progress indicator
+                        const progressDiv = preview.querySelector('[id*="slideProgress"]');
+                        if (progressDiv && progressDiv.parentElement) {
+                            progressDiv.parentElement.remove();
+                        }
                         
                         // Handle theme selection
                         const suggestedTheme = message.data.suggestedThemeKey || suggestedThemeKey || 'vibrant-purple';
@@ -168,10 +203,11 @@ async function handleStreamingPreview(text, apiKey) {
                             showStatus(`✅ ${receivedSlides.length} slides ready! You can modify slides or generate PowerPoint.`, 'success');
                         }
                         
-                        console.log('✅ Streaming complete:', receivedSlides.length, 'slides');
+                        console.log('✅ Incremental generation complete:', receivedSlides.length, 'slides');
                     }
                 } catch (e) {
-                    // Skip invalid JSON
+                    // Skip invalid JSON - log for debugging
+                    console.warn('Failed to parse SSE message:', data.substring(0, 100), e.message);
                 }
             }
         }
@@ -182,12 +218,22 @@ async function handleStreamingPreview(text, apiKey) {
  * Handles non-streaming preview generation (all-at-once)
  */
 async function handleNonStreamingPreview(text, apiKey) {
+    // Get user's slide preference
+    const numSlidesInput = document.getElementById('numSlides');
+    const numSlides = numSlidesInput ? parseInt(numSlidesInput.value) || 0 : 0;
+    
     const response = await fetch('/api/preview', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ text, apiKey, provider: window.currentProvider, stream: false })
+        body: JSON.stringify({ 
+            text, 
+            apiKey, 
+            provider: window.currentProvider, 
+            incremental: false,
+            numSlides: numSlides
+        })
     });
     
     if (!response.ok) {
@@ -474,40 +520,17 @@ async function modifySlides() {
     showStatus('🔄 AI is modifying your slides...', 'info');
     
     try {
-        // Create modification prompt
-        const currentSlidesJSON = JSON.stringify(window.currentSlideData.slides, null, 2);
-        
-        const systemPrompt = `You are a presentation editor AI. You will receive:
-1. Current slide data in JSON format
-2. User's modification request
-
-Your task: Modify the slides according to the user's request and return the COMPLETE updated slides array in the SAME JSON format.
-
-RULES:
-- Maintain the same JSON structure
-- If modifying a specific slide, keep all other slides unchanged
-- If adding/removing slides, update accordingly
-- Always return valid JSON
-- Keep all fields (title, subtitle, content, layout, type, etc.)
-- Preserve chart data if present
-
-Current slides (${window.currentSlideData.slides.length} total):
-${currentSlidesJSON}
-
-User's modification request: "${modificationPrompt}"
-
-Return ONLY the updated slides array in JSON format (same structure as above).`;
-
-        const response = await fetch('/api/preview', {
+        // Call backend to get modification prompt from config/prompts.json
+        const response = await fetch('/api/modify-slides', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ 
-                text: systemPrompt, 
+                currentSlides: window.currentSlideData.slides,
+                modificationRequest: modificationPrompt,
                 apiKey, 
-                provider: window.currentProvider,
-                stream: false 
+                provider: window.currentProvider
             })
         });
         

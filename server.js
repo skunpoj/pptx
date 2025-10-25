@@ -27,7 +27,8 @@ const {
 const {
     getContentGenerationPrompt,
     getSlideDesignPrompt,
-    getFileProcessingPrompt
+    getFileProcessingPrompt,
+    getSlideModificationPrompt
 } = require('./server/utils/promptManager');
 const { 
     generateCSS, 
@@ -255,7 +256,7 @@ app.post('/api/extract-colors', upload.array('files'), async (req, res) => {
 // ========================================
 
 app.post('/api/preview', async (req, res) => {
-    const { text, apiKey, provider = 'anthropic', stream = true } = req.body;
+    const { text, apiKey, provider = 'anthropic', incremental = true, numSlides = 0 } = req.body;
     
     if (!text || !apiKey) {
         return res.status(400).json({ error: 'Text and API key are required' });
@@ -265,114 +266,77 @@ app.post('/api/preview', async (req, res) => {
         console.log('📊 Preview request received');
         console.log('  Content length:', text.length, 'characters');
         console.log('  Provider:', provider);
-        console.log('  Streaming:', stream);
+        console.log('  Incremental:', incremental);
+        console.log('  Requested slides:', numSlides || 'AI decides');
         
-        const userPrompt = await getSlideDesignPrompt(text);
-        console.log('  Prompt generated, length:', userPrompt.length);
-        
-        // STREAMING MODE: Generate slides incrementally
-        if (stream && provider === 'anthropic') {
-            console.log('🔄 Starting streaming preview generation...');
+        // INCREMENTAL MODE: Generate slides ONE BY ONE
+        if (incremental && provider === 'anthropic') {
+            console.log('🔄 Starting incremental slide generation...');
             
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
             
-            let accumulatedText = '';
-            let slidesSent = new Set();
+            // Get theme suggestion first - pass numSlides
+            const themePrompt = await getSlideDesignPrompt(text, numSlides);
+            const themeResponse = await callAI(provider, apiKey, themePrompt);
+            const fullData = parseAIResponse(themeResponse);
             
-            const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": apiKey.trim(),
-                    "anthropic-version": "2023-06-01"
-                },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 4000,
-                    stream: true,
-                    messages: [{ role: "user", content: userPrompt }]
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
-            try {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data === '[DONE]') continue;
-                            
-                            try {
-                                const parsed = JSON.parse(data);
-                                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                                    accumulatedText += parsed.delta.text;
-                                    
-                                    // Try to parse incrementally
-                                    try {
-                                        const partialData = parseAIResponse(accumulatedText);
-                                        if (partialData && partialData.slides) {
-                                            // Send only new slides
-                                            for (let i = 0; i < partialData.slides.length; i++) {
-                                                if (!slidesSent.has(i)) {
-                                                    const slide = partialData.slides[i];
-                                                    try {
-                                                        validateSlideData({ slides: [slide], designTheme: partialData.designTheme });
-                                                        console.log(`  ✓ Streaming slide ${i + 1}: ${slide.title}`);
-                                                        res.write(`data: ${JSON.stringify({ 
-                                                            type: 'slide', 
-                                                            slide: slide,
-                                                            index: i,
-                                                            theme: partialData.designTheme,
-                                                            suggestedThemeKey: partialData.suggestedThemeKey
-                                                        })}\n\n`);
-                                                        slidesSent.add(i);
-                                                    } catch (validateError) {
-                                                        // Slide not complete yet, skip
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } catch (parseError) {
-                                        // Not enough data to parse yet, continue accumulating
-                                    }
-                                }
-                            } catch (e) {
-                                // Skip invalid JSON
-                            }
-                        }
-                    }
+            const totalSlides = fullData.slides.length;
+            const theme = fullData.designTheme;
+            const suggestedThemeKey = fullData.suggestedThemeKey;
+            
+            console.log(`  📝 Will generate ${totalSlides} slides incrementally`);
+            console.log(`  🎨 Theme: ${theme.name}`);
+            
+            // Send theme info first
+            res.write(`data: ${JSON.stringify({ 
+                type: 'theme',
+                theme: theme,
+                suggestedThemeKey: suggestedThemeKey,
+                totalSlides: totalSlides
+            })}\n\n`);
+            
+            // Generate and send each slide one by one
+            for (let i = 0; i < totalSlides; i++) {
+                const slide = fullData.slides[i];
+                
+                // Validate slide
+                try {
+                    validateSlideData({ slides: [slide], designTheme: theme });
+                    
+                    console.log(`  ✓ Sending slide ${i + 1}/${totalSlides}: ${slide.title}`);
+                    
+                    res.write(`data: ${JSON.stringify({ 
+                        type: 'slide', 
+                        slide: slide,
+                        index: i,
+                        current: i + 1,
+                        total: totalSlides
+                    })}\n\n`);
+                    
+                    // Small delay between slides for visual effect
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                } catch (validateError) {
+                    console.error(`  ❌ Slide ${i + 1} validation failed:`, validateError.message);
                 }
-                
-                // Final parse and send complete data
-                const finalData = parseAIResponse(accumulatedText);
-                validateSlideData(finalData);
-                console.log('✅ Streaming complete, total slides:', finalData.slides.length);
-                res.write(`data: ${JSON.stringify({ type: 'complete', data: finalData })}\n\n`);
-                
-            } finally {
-                res.write('data: [DONE]\n\n');
-                res.end();
             }
+            
+            // Send completion message with full data
+            console.log('✅ Incremental generation complete, total slides:', totalSlides);
+            res.write(`data: ${JSON.stringify({ 
+                type: 'complete', 
+                data: fullData 
+            })}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
             
         } else {
-            // NON-STREAMING MODE (fallback)
+            // NON-INCREMENTAL MODE (all at once)
             res.setHeader('Content-Type', 'application/json');
             
+            const userPrompt = await getSlideDesignPrompt(text, numSlides);
             const responseText = await callAI(provider, apiKey, userPrompt);
             console.log('  AI response received, length:', responseText.length);
             
@@ -405,6 +369,51 @@ app.post('/api/preview', async (req, res) => {
                 details: process.env.NODE_ENV === 'development' ? error.stack : undefined
             });
         }
+    }
+});
+
+// ========================================
+// SLIDE MODIFICATION ENDPOINT
+// ========================================
+
+app.post('/api/modify-slides', async (req, res) => {
+    const { currentSlides, modificationRequest, apiKey, provider = 'anthropic' } = req.body;
+    
+    if (!currentSlides || !modificationRequest || !apiKey) {
+        return res.status(400).json({ error: 'Current slides, modification request, and API key are required' });
+    }
+    
+    try {
+        console.log('✏️ Slide modification request received');
+        console.log('  Current slides:', currentSlides.length);
+        console.log('  Modification:', modificationRequest.substring(0, 100));
+        console.log('  Provider:', provider);
+        
+        // Get modification prompt from config/prompts.json
+        const userPrompt = await getSlideModificationPrompt(currentSlides, modificationRequest);
+        console.log('  Modification prompt generated');
+        
+        // Call AI to modify slides
+        const responseText = await callAI(provider, apiKey, userPrompt);
+        console.log('  AI response received, length:', responseText.length);
+        
+        // Parse the modified slide data
+        const modifiedData = parseAIResponse(responseText);
+        console.log('  Parsed successfully, new slide count:', modifiedData.slides?.length || 0);
+        
+        // Validate the modified slides
+        validateSlideData(modifiedData);
+        console.log('✅ Modification validation passed');
+        
+        // Return modified slides
+        res.json(modifiedData);
+        
+    } catch (error) {
+        console.error('❌ Modification error:', error.message);
+        res.status(500).json({ 
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 

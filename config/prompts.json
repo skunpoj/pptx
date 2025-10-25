@@ -31,11 +31,17 @@
       "description": "Additional instructions when user enables image generation",
       "template": "\n7. For slides that would benefit from visuals, include image placeholders like: [IMAGE: description of what image should show]\n8. Suggest relevant images for data visualization, concepts, or key points",
       "variables": []
+    },
+    "slideModification": {
+      "name": "Slide Modification Prompt",
+      "description": "Used when user wants to modify specific slides after generation",
+      "template": "You are a presentation editor AI. You will receive:\n1. Current slide data in JSON format\n2. User's modification request\n\nYour task: Modify the slides according to the user's request and return the COMPLETE updated slides array in the SAME JSON format.\n\nRULES:\n- Maintain the same JSON structure\n- If modifying a specific slide, keep all other slides unchanged\n- If adding/removing slides, update accordingly\n- Always return valid JSON\n- Keep all fields (title, subtitle, content, layout, type, etc.)\n- Preserve chart data if present\n\nCurrent slides ({{slideCount}} total):\n{{currentSlides}}\n\nUser's modification request: \"{{modificationRequest}}\"\n\nReturn ONLY the updated slides array in JSON format (same structure as above).",
+      "variables": ["slideCount", "currentSlides", "modificationRequest"]
     }
   },
   "metadata": {
     "lastModified": "2025-10-25",
-    "customized": false,
+    "customized": true,
     "backupAvailable": true
   }
 }

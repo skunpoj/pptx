@@ -164,16 +164,30 @@ async function getContentGenerationPrompt(userPrompt, numSlides, generateImages 
  * @param {string} userContent - User's content to convert
  * @returns {Promise<string>} - Complete AI prompt
  */
-async function getSlideDesignPrompt(userContent) {
+async function getSlideDesignPrompt(userContent, numSlides = 0) {
     const promptConfig = await getPrompt('slideDesign');
     const schemaConfig = await getPrompt('jsonSchema');
+    
+    // Build slide guidance based on user preference
+    let slideGuidance = '2. Create 4-15 slides total (including title slide) - use MORE slides if needed to avoid overcrowding any single slide';
+    
+    if (numSlides > 0) {
+        slideGuidance = `2. Create approximately ${numSlides} slides total (including title slide). You may use ${numSlides-1} to ${numSlides+2} slides if needed to properly organize the content and avoid overcrowding`;
+    }
+    
+    // Replace the hardcoded slide count instruction
+    let template = promptConfig.template;
+    template = template.replace(
+        /2\. Create 4-15 slides total \(including title slide\).*?any single slide/,
+        slideGuidance
+    );
     
     const variables = {
         userContent: userContent,
         jsonSchema: schemaConfig.template
     };
     
-    return applyVariables(promptConfig.template, variables);
+    return applyVariables(template, variables);
 }
 
 /**
@@ -198,6 +212,24 @@ async function getFileProcessingPrompt(files) {
 }
 
 /**
+ * Generates slide modification prompt
+ * @param {Array} currentSlides - Current slides array
+ * @param {string} modificationRequest - User's modification request
+ * @returns {Promise<string>} - Complete AI prompt
+ */
+async function getSlideModificationPrompt(currentSlides, modificationRequest) {
+    const promptConfig = await getPrompt('slideModification');
+    
+    const variables = {
+        slideCount: currentSlides.length,
+        currentSlides: JSON.stringify(currentSlides, null, 2),
+        modificationRequest: modificationRequest
+    };
+    
+    return applyVariables(promptConfig.template, variables);
+}
+
+/**
  * Returns default prompts structure
  * @returns {Object} - Default prompts configuration
  */
@@ -216,6 +248,7 @@ module.exports = {
     applyVariables,
     getContentGenerationPrompt,
     getSlideDesignPrompt,
-    getFileProcessingPrompt
+    getFileProcessingPrompt,
+    getSlideModificationPrompt
 };
 

@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { callAI } = require('../utils/ai');
+const { getContentGenerationPrompt } = require('../utils/promptManager');
 
 // Content generation endpoint with streaming support
 router.post('/generate-content', async (req, res) => {
@@ -12,30 +13,8 @@ router.post('/generate-content', async (req, res) => {
     }
     
     try {
-        const imageInstructions = generateImages 
-            ? `\n7. For slides that would benefit from visuals, include image placeholders like: [IMAGE: description of what image should show]\n8. Suggest relevant images for data visualization, concepts, or key points`
-            : '';
-        
-        const userPrompt = `You are a professional content writer for presentations. Based on the following idea/prompt, generate comprehensive content that can be used to create a presentation with EXACTLY ${numSlides} slides (including the title slide).
-
-USER PROMPT:
-${prompt}
-
-INSTRUCTIONS:
-1. Generate content for EXACTLY ${numSlides} slides (including title slide)
-2. Create ${numSlides - 1} distinct topic sections/paragraphs for content slides
-3. Each paragraph should cover a key aspect or topic that will become a slide
-4. Write in a clear, professional, consultant-style presentation format
-5. Include specific details, examples, data points, and actionable insights
-6. Make the content strategic, analytical, and business-focused
-${imageInstructions}
-7. Structure content with clear frameworks, models, or methodologies where appropriate
-8. Include comparative analysis, pros/cons, or before/after scenarios when relevant
-
-OUTPUT FORMAT:
-Write the content as ${numSlides - 1} well-structured paragraphs separated by blank lines. Each paragraph should be substantial enough to create a full slide. Do NOT include any JSON, markdown formatting, or structural elements. Just write the presentation content directly.
-
-Generate the content now:`;
+        // Get prompt from config/prompts.json (no hardcoding!)
+        const userPrompt = await getContentGenerationPrompt(prompt, numSlides, generateImages);
 
         // For streaming, use Anthropic's streaming API
         if (stream && provider === 'anthropic') {
