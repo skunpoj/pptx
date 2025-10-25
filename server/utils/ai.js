@@ -11,7 +11,7 @@ async function callAI(provider, apiKey, userPrompt) {
             },
             body: JSON.stringify({
                 model: "claude-sonnet-4-20250514",
-                max_tokens: 4000,
+                max_tokens: 8192,
                 messages: [{
                     role: "user",
                     content: userPrompt
@@ -40,7 +40,7 @@ async function callAI(provider, apiKey, userPrompt) {
                     role: "user",
                     content: userPrompt
                 }],
-                max_tokens: 4000
+                max_tokens: 16384
             })
         });
 
@@ -65,7 +65,7 @@ async function callAI(provider, apiKey, userPrompt) {
                     }]
                 }],
                 generationConfig: {
-                    maxOutputTokens: 4000
+                    maxOutputTokens: 8192
                 }
             })
         });
@@ -89,6 +89,7 @@ async function callAI(provider, apiKey, userPrompt) {
             },
             body: JSON.stringify({
                 model: "anthropic/claude-3.5-sonnet",
+                max_tokens: 8192,
                 messages: [{
                     role: "user",
                     content: userPrompt

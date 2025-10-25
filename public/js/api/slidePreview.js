@@ -131,12 +131,23 @@ async function generatePreview() {
         }
         
         if (slideData && slideData.slides) {
-            showPreviewProgress('📊 Processing slide data...');
+            console.log(`✅ Received ${slideData.slides.length} slides`);
             savePreviewCache(text, slideData);
             window.currentSlideData = slideData;
-            showPreviewProgress('🎨 Rendering slide previews...');
-            displayPreview(slideData);
+            
+            // Slides were already rendered incrementally during SSE parsing
+            // Just need to show action buttons and hide initial progress
             hidePreviewProgress();
+            
+            // Show view toggle for switching between list/gallery view
+            const viewToggle = document.getElementById('viewToggle');
+            if (viewToggle) viewToggle.style.display = 'flex';
+            
+            // Show action buttons
+            const modificationSection = document.getElementById('modificationSection');
+            const generatePptSection = document.getElementById('generatePptSection');
+            if (modificationSection) modificationSection.style.display = 'block';
+            if (generatePptSection) generatePptSection.style.display = 'block';
             
             if (typeof showNotification === 'function') {
                 showNotification('✅ Preview generated successfully!', 'success');
@@ -159,14 +170,22 @@ async function generatePreview() {
 }
 
 /**
- * Parse Server-Sent Events (SSE) response format
+ * Parse Server-Sent Events (SSE) response format with live rendering
  */
 function parseSSEResponse(sseText) {
-    console.log('📡 Parsing SSE response...');
+    console.log('📡 Parsing SSE response with live rendering...');
+    
+    const previewContainer = document.getElementById('preview');
+    if (!previewContainer) return null;
+    
+    // Clear container and show theme header
+    previewContainer.innerHTML = '';
+    
     const lines = sseText.trim().split('\n');
     const slides = [];
     let theme = null;
     let totalSlides = 0;
+    let progressDiv = null;
     
     for (const line of lines) {
         if (line.startsWith('data:')) {
@@ -178,14 +197,78 @@ function parseSSEResponse(sseText) {
                     theme = data.theme;
                     totalSlides = data.totalSlides;
                     console.log(`🎨 Theme received: ${theme.name}`);
+                    
+                    // Show theme header immediately
+                    const themeDiv = document.createElement('div');
+                    themeDiv.className = 'theme-info';
+                    themeDiv.style.cssText = `
+                        background: linear-gradient(135deg, ${theme.colorPrimary}, ${theme.colorSecondary});
+                        color: white;
+                        padding: 1rem;
+                        border-radius: 8px;
+                        margin-bottom: 1rem;
+                        text-align: center;
+                    `;
+                    themeDiv.innerHTML = `
+                        <h3 style="margin: 0 0 0.5rem 0; color: white;">${theme.name}</h3>
+                        <p style="margin: 0; opacity: 0.9;">${theme.description}</p>
+                    `;
+                    previewContainer.appendChild(themeDiv);
+                    
+                    // Add progress counter
+                    progressDiv = document.createElement('div');
+                    progressDiv.id = 'slideProgress';
+                    progressDiv.style.cssText = `
+                        background: rgba(102, 126, 234, 0.1);
+                        padding: 1rem;
+                        border-radius: 8px;
+                        margin-bottom: 1rem;
+                        text-align: center;
+                        font-weight: bold;
+                        color: #667eea;
+                        font-size: 1.1rem;
+                    `;
+                    progressDiv.innerHTML = `⏳ Generating slides... 0/${totalSlides}`;
+                    previewContainer.appendChild(progressDiv);
+                    
                 } else if (data.type === 'slide') {
                     slides.push(data.slide);
                     console.log(`📄 Slide ${data.current}/${data.total}: ${data.slide.title}`);
+                    
+                    // Update progress counter
+                    if (progressDiv) {
+                        progressDiv.innerHTML = `⏳ Generating slides... ${data.current}/${data.total}`;
+                    }
+                    
+                    // Render slide immediately as it arrives
+                    const slideDiv = createSlidePreviewCard(data.slide, data.current - 1, theme);
+                    slideDiv.style.opacity = '0';
+                    slideDiv.style.transform = 'translateY(20px)';
+                    previewContainer.appendChild(slideDiv);
+                    
+                    // Animate in
+                    setTimeout(() => {
+                        slideDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                        slideDiv.style.opacity = '1';
+                        slideDiv.style.transform = 'translateY(0)';
+                    }, 50);
                 }
             } catch (e) {
-                console.warn('⚠️ Failed to parse SSE line:', line.substring(0, 100));
+                if (!line.includes('[DONE]')) {
+                    console.warn('⚠️ Failed to parse SSE line:', line.substring(0, 100));
+                }
             }
         }
+    }
+    
+    // Remove progress counter when complete
+    if (progressDiv) {
+        progressDiv.innerHTML = `✅ All ${totalSlides} slides generated successfully!`;
+        setTimeout(() => {
+            progressDiv.style.transition = 'opacity 0.3s ease';
+            progressDiv.style.opacity = '0';
+            setTimeout(() => progressDiv.remove(), 300);
+        }, 1500);
     }
     
     console.log(`✅ SSE parsing complete: ${slides.length} slides, theme: ${theme?.name || 'default'}`);
@@ -204,6 +287,55 @@ function parseSSEResponse(sseText) {
         },
         totalSlides: totalSlides || slides.length
     };
+}
+
+/**
+ * Create a slide preview card
+ */
+function createSlidePreviewCard(slide, index, theme) {
+    const slideDiv = document.createElement('div');
+    slideDiv.className = 'slide-preview';
+    slideDiv.style.cssText = `
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        position: relative;
+    `;
+    
+    const slideNumber = document.createElement('div');
+    slideNumber.style.cssText = `
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: ${theme?.colorAccent || '#F39C12'};
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    `;
+    slideNumber.textContent = `${index + 1}`;
+    slideDiv.appendChild(slideNumber);
+    
+    if (slide.type === 'title') {
+        slideDiv.innerHTML += `
+            <h2 style="color: ${theme?.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h2>
+            <p style="color: ${theme?.colorSecondary || '#2E4053'}; font-size: 1.1rem;">${slide.subtitle || ''}</p>
+        `;
+    } else if (slide.type === 'content') {
+        slideDiv.innerHTML += `
+            <h3 style="color: ${theme?.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h3>
+            ${slide.header ? `<p style="color: #666; font-style: italic; margin: 0.5rem 0;">${slide.header}</p>` : ''}
+            <ul style="color: ${theme?.colorText || '#1d1d1d'};">
+                ${slide.content ? slide.content.map(item => `<li>${item}</li>`).join('') : ''}
+            </ul>
+        `;
+    }
+    
+    return slideDiv;
 }
 
 /**
