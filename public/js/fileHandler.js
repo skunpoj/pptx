@@ -1,0 +1,288 @@
+/**
+ * File Upload and Processing Module
+ * Handles file uploads, color extraction, and template management
+ */
+
+// ========================================
+// FILE READING
+// ========================================
+
+/**
+ * Reads a file as text
+ * @param {File} file - File object from input
+ * @returns {Promise<string>} - File content as text
+ */
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+}
+
+// ========================================
+// COLOR EXTRACTION
+// ========================================
+
+/**
+ * Extracts color theme from uploaded files
+ * @param {FileList} files - Files from file input
+ * @returns {Promise<Object|null>} - Extracted theme or null
+ */
+async function extractColorsFromFiles(files) {
+    try {
+        // Send files to backend for color extraction
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+        
+        const response = await fetch('/api/extract-colors', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            console.warn('Color extraction failed, using default theme');
+            return null;
+        }
+        
+        const result = await response.json();
+        
+        if (result.theme) {
+            // Add extracted theme to global colorThemes
+            window.colorThemes['extracted-custom'] = {
+                name: result.theme.name || 'Custom from Files',
+                description: result.theme.description || 'Extracted from your uploaded files',
+                colorPrimary: result.theme.colorPrimary,
+                colorSecondary: result.theme.colorSecondary,
+                colorAccent: result.theme.colorAccent,
+                colorBackground: result.theme.colorBackground || '#FFFFFF',
+                colorText: result.theme.colorText || '#1d1d1d',
+                category: ['custom', 'extracted'],
+                isExtracted: true
+            };
+            
+            // Set as selected theme
+            window.selectedTheme = 'extracted-custom';
+            
+            return window.colorThemes['extracted-custom'];
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error extracting colors:', error);
+        return null;
+    }
+}
+
+// ========================================
+// CONTENT GENERATION FROM FILES
+// ========================================
+
+/**
+ * Generates presentation content from prompt and/or uploaded files
+ * Main orchestrator function for content expansion
+ */
+async function generateFromPrompt() {
+    const prompt = document.getElementById('ideaInput').value.trim();
+    const numSlides = parseInt(document.getElementById('numSlides').value) || 6;
+    const generateImages = document.getElementById('generateImages').checked;
+    const extractColors = document.getElementById('extractColors').checked;
+    const useAsTemplate = document.getElementById('useAsTemplate').checked;
+    const apiKey = window.getApiKey();
+    const fileInput = document.getElementById('fileUpload');
+    const files = fileInput.files;
+    
+    // Validation
+    if (!apiKey) {
+        window.showStatus('⚠️ Please enter your API key first!', 'error');
+        return;
+    }
+    
+    if (!prompt && files.length === 0) {
+        window.showStatus('⚠️ Please enter an idea or attach files!', 'error');
+        return;
+    }
+    
+    // UI state
+    const promptBtn = document.getElementById('promptBtn');
+    promptBtn.disabled = true;
+    promptBtn.innerHTML = '<span class="spinner"></span> Expanding idea...';
+    window.showStatus('🤖 AI is expanding your idea into detailed content...', 'info');
+    
+    const textInput = document.getElementById('textInput');
+    textInput.value = ''; // Clear existing content
+    
+    try {
+        let finalPrompt = prompt;
+        let extractedColors = null;
+        
+        // Process uploaded files
+        if (files.length > 0) {
+            // Handle template mode
+            if (useAsTemplate) {
+                const pptxFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.pptx'));
+                if (pptxFiles.length > 0) {
+                    window.templateFile = pptxFiles[0];
+                    window.showStatus(`📄 Using ${window.templateFile.name} as template...`, 'info');
+                } else {
+                    window.showStatus('⚠️ No PPTX file found. Please upload a PowerPoint file to use as template.', 'error');
+                    promptBtn.disabled = false;
+                    promptBtn.innerHTML = '🚀 Expand Idea into Full Content';
+                    return;
+                }
+            }
+            
+            // Extract colors if requested
+            if (extractColors) {
+                window.showStatus('🎨 Extracting color theme from files...', 'info');
+                extractedColors = await extractColorsFromFiles(files);
+                if (extractedColors) {
+                    window.showStatus(`✅ Color theme extracted: ${extractedColors.name}`, 'success');
+                }
+            }
+            
+            // Read file contents
+            const fileContents = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const text = await readFileAsText(file);
+                fileContents.push({
+                    filename: file.name,
+                    content: text
+                });
+            }
+            
+            // Combine file contents with prompt
+            let combinedFiles = '';
+            fileContents.forEach(file => {
+                combinedFiles += `\n\n=== File: ${file.filename} ===\n\n${file.content}`;
+            });
+            
+            finalPrompt = prompt 
+                ? `${prompt}\n\nUse the following file content as the base:\n${combinedFiles}`
+                : `Analyze and convert the following files into a well-structured presentation with ${numSlides} slides:\n${combinedFiles}`;
+        }
+        
+        // Call API with streaming or non-streaming based on provider
+        if (window.currentProvider === 'anthropic' && files.length === 0) {
+            await streamContentGeneration(finalPrompt, apiKey, numSlides, generateImages, textInput);
+        } else {
+            await nonStreamingContentGeneration(finalPrompt, apiKey, numSlides, generateImages, textInput);
+        }
+        
+        window.showStatus('✅ Content expanded successfully! Review it below, then click "Preview Slides" to see the design.', 'success');
+        textInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+    } catch (error) {
+        console.error('Error:', error);
+        if (error.message.includes('401') || error.message.includes('authentication')) {
+            window.showStatus('❌ Invalid API key. Please check and try again.', 'error');
+        } else {
+            window.showStatus('❌ Error: ' + error.message, 'error');
+        }
+    } finally {
+        promptBtn.disabled = false;
+        promptBtn.innerHTML = '🚀 Expand Idea into Full Content';
+    }
+}
+
+/**
+ * Streaming content generation (Anthropic only)
+ * @param {string} prompt - User prompt
+ * @param {string} apiKey - API key
+ * @param {number} numSlides - Number of slides
+ * @param {boolean} generateImages - Include images
+ * @param {HTMLElement} textInput - Textarea element to update
+ */
+async function streamContentGeneration(prompt, apiKey, numSlides, generateImages, textInput) {
+    const response = await fetch('/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            prompt, 
+            apiKey, 
+            provider: window.currentProvider,
+            numSlides,
+            generateImages,
+            stream: true
+        })
+    });
+    
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Content generation failed');
+    }
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let content = '';
+    
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                const data = line.slice(6);
+                if (data === '[DONE]') continue;
+                
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.text) {
+                        content += parsed.text;
+                        textInput.value = content;
+                        textInput.scrollTop = textInput.scrollHeight;
+                    }
+                } catch (e) {
+                    // Skip invalid JSON
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Non-streaming content generation (all providers)
+ * @param {string} prompt - User prompt
+ * @param {string} apiKey - API key
+ * @param {number} numSlides - Number of slides
+ * @param {boolean} generateImages - Include images
+ * @param {HTMLElement} textInput - Textarea element to update
+ */
+async function nonStreamingContentGeneration(prompt, apiKey, numSlides, generateImages, textInput) {
+    const response = await fetch('/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            prompt, 
+            apiKey, 
+            provider: window.currentProvider,
+            numSlides,
+            generateImages,
+            stream: false
+        })
+    });
+    
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Content generation failed');
+    }
+    
+    const result = await response.json();
+    textInput.value = result.content;
+}
+
+// ========================================
+// EXPORTS
+// ========================================
+
+window.readFileAsText = readFileAsText;
+window.extractColorsFromFiles = extractColorsFromFiles;
+window.generateFromPrompt = generateFromPrompt;
+
