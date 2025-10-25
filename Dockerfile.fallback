@@ -1,4 +1,4 @@
-# AI Text2PPT Pro - Optimized Production Dockerfile
+# AI Text2PPT Pro - Fallback Dockerfile (if npm ci fails)
 FROM node:18-bullseye
 
 # Install LibreOffice for PDF conversion (minimal)
@@ -22,9 +22,8 @@ COPY server/ ./server/
 COPY public/ ./public/
 COPY skills/pptx/html2pptx.tgz ./skills/pptx/
 
-# Install Node.js dependencies (production only)
-# Try npm ci first, fallback to npm install if it fails
-RUN npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund
+# Install Node.js dependencies (fallback method)
+RUN npm install --omit=dev --no-audit --no-fund
 
 # Install html2pptx from local .tgz file
 RUN npm install ./skills/pptx/html2pptx.tgz --no-audit --no-fund
