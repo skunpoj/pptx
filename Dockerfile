@@ -30,10 +30,13 @@ RUN npm install -g pptxgenjs jszip sharp playwright /tmp/html2pptx.tgz && \
 RUN npx playwright install --with-deps chromium
 
 # Install app dependencies
-RUN npm ci --only=production
+# Use npm install instead of ci since lock file may be out of sync
+RUN npm install --only=production
 
 # Copy application files
 COPY server.js ./
+COPY server ./server
+COPY config ./config
 COPY public ./public
 
 # Create workspace directory
