@@ -1,7 +1,7 @@
 # Rebuild Instructions for Playwright Fix
 
 ## Issue Fixed
-The Playwright browser cache permission error has been fixed in the Dockerfile by installing Playwright as `appuser` instead of `root`.
+The Playwright browser cache permission error has been fixed in the Dockerfile. Playwright is now installed as `root` (required for system dependencies with `--with-deps`), but the cache directory permissions are set so `appuser` can access the browsers via a symlink.
 
 ## How to Rebuild and Deploy
 
@@ -41,10 +41,10 @@ The Playwright browser cache permission error has been fixed in the Dockerfile b
 ## What Was Changed
 
 ### 1. Dockerfile (Fixed Playwright Permissions)
-- Moved Playwright installation to run **after** switching to `appuser`
-- This ensures the Playwright cache directory (`.cache/ms-playwright`) is owned by `appuser`
-- **Before**: Playwright installed as root → permission denied for appuser
-- **After**: Playwright installed as appuser → full permissions
+- Playwright is installed as **root** (required for `--with-deps` system dependencies)
+- Cache directory permissions are fixed: `chmod -R 755` and `chown -R appuser:appuser`
+- Symlink created: `/home/appuser/.cache/ms-playwright` → `/root/.cache/ms-playwright`
+- **Result**: `appuser` can access Playwright browsers without permission errors
 
 ### 2. Example Templates (Enhanced with Charts/Images/Shapes)
 All 6 example templates now include:
