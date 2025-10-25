@@ -793,3 +793,127 @@ app.listen(PORT, () => {
     console.log(`${'='.repeat(80)}\n`);
 });
 
+// ========================================
+// SHAREABLE PRESENTATIONS
+// ========================================
+
+// In-memory storage for shared presentations (use database in production)
+const sharedPresentations = new Map();
+
+/**
+ * Share a presentation - creates a unique shareable link
+ */
+app.post('/api/share-presentation', async (req, res) => {
+    try {
+        const { slideData, title } = req.body;
+        
+        if (!slideData || !slideData.slides) {
+            return res.status(400).json({ error: 'Invalid slide data' });
+        }
+        
+        // Generate unique share ID
+        const shareId = generateShareId();
+        
+        // Store presentation data
+        sharedPresentations.set(shareId, {
+            slideData,
+            title: title || 'AI Presentation',
+            createdAt: new Date(),
+            views: 0
+        });
+        
+        // Schedule cleanup after 7 days
+        setTimeout(() => {
+            sharedPresentations.delete(shareId);
+            console.log(`🗑️ Cleaned up shared presentation: ${shareId}`);
+        }, 7 * 24 * 60 * 60 * 1000); // 7 days
+        
+        const shareUrl = `${req.protocol}://${req.get('host')}/view/${shareId}`;
+        
+        console.log(`✅ Created shareable presentation: ${shareId}`);
+        res.json({ 
+            shareId, 
+            shareUrl,
+            expiresIn: '7 days'
+        });
+        
+    } catch (error) {
+        console.error('Share error:', error);
+        res.status(500).json({ error: 'Failed to create shareable link' });
+    }
+});
+
+/**
+ * Get shared presentation data
+ */
+app.get('/api/shared-presentation/:shareId', async (req, res) => {
+    try {
+        const { shareId } = req.params;
+        const presentation = sharedPresentations.get(shareId);
+        
+        if (!presentation) {
+            return res.status(404).json({ error: 'Presentation not found or expired' });
+        }
+        
+        // Increment view counter
+        presentation.views++;
+        
+        res.json({
+            slideData: presentation.slideData,
+            title: presentation.title,
+            views: presentation.views,
+            createdAt: presentation.createdAt
+        });
+        
+    } catch (error) {
+        console.error('Get shared presentation error:', error);
+        res.status(500).json({ error: 'Failed to load presentation' });
+    }
+});
+
+/**
+ * Update shared presentation (for modifications)
+ */
+app.post('/api/update-presentation/:shareId', async (req, res) => {
+    try {
+        const { shareId } = req.params;
+        const { slideData } = req.body;
+        
+        const presentation = sharedPresentations.get(shareId);
+        
+        if (!presentation) {
+            return res.status(404).json({ error: 'Presentation not found or expired' });
+        }
+        
+        // Update slide data
+        presentation.slideData = slideData;
+        presentation.updatedAt = new Date();
+        
+        console.log(`✅ Updated shared presentation: ${shareId}`);
+        res.json({ success: true, message: 'Presentation updated' });
+        
+    } catch (error) {
+        console.error('Update presentation error:', error);
+        res.status(500).json({ error: 'Failed to update presentation' });
+    }
+});
+
+/**
+ * Generate unique share ID
+ */
+function generateShareId() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let id = '';
+    for (let i = 0; i < 8; i++) {
+        id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+}
+
+/**
+ * Serve shared presentation viewer page
+ */
+app.get('/view/:shareId', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'viewer.html'));
+});
+

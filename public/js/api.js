@@ -478,21 +478,23 @@ async function generatePresentation() {
             }
         }
         
-        console.log('  Downloading PowerPoint file...');
+        console.log('  Preparing PowerPoint file...');
         const blob = await response.blob();
         console.log('  File size:', (blob.size / 1024).toFixed(2), 'KB');
         
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'AI-Presentation-Pro.pptx';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        // Create download URL that persists
+        const downloadUrl = window.URL.createObjectURL(blob);
+        
+        // Store for cleanup later
+        if (window.currentDownloadUrl) {
+            window.URL.revokeObjectURL(window.currentDownloadUrl);
+        }
+        window.currentDownloadUrl = downloadUrl;
         
         console.log('✅ PowerPoint generation complete!');
-        showStatus('✅ Professional presentation downloaded successfully!', 'success');
+        
+        // Show download link with auto-download option
+        showDownloadLink(downloadUrl, blob.size);
     } catch (error) {
         clearInterval(statusInterval);
         console.error('❌ PowerPoint generation error:', error);
@@ -581,9 +583,757 @@ async function modifySlides() {
     }
 }
 
+/**
+ * Shows download link for generated PowerPoint
+ * @param {string} downloadUrl - Blob URL for download
+ * @param {number} fileSize - File size in bytes
+ */
+function showDownloadLink(downloadUrl, fileSize) {
+    const fileSizeKB = (fileSize / 1024).toFixed(2);
+    const fileSizeMB = (fileSize / (1024 * 1024)).toFixed(2);
+    const sizeText = fileSize > 1024 * 1024 ? `${fileSizeMB} MB` : `${fileSizeKB} KB`;
+    
+    const timestamp = new Date().toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    // Create download section
+    const downloadSection = document.createElement('div');
+    downloadSection.id = 'downloadSection';
+    downloadSection.style.cssText = `
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin: 2rem 0;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        animation: slideIn 0.5s ease-out;
+    `;
+    
+    downloadSection.innerHTML = `
+        <style>
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .download-btn {
+                display: inline-block;
+                background: white;
+                color: #667eea;
+                padding: 1rem 2rem;
+                border-radius: 8px;
+                text-decoration: none;
+                font-weight: bold;
+                font-size: 1.1rem;
+                margin: 0.5rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            }
+            
+            .download-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+                background: #f0f0f0;
+            }
+            
+            .download-btn:active {
+                transform: translateY(0);
+            }
+            
+            .download-icon {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                animation: bounce 2s infinite;
+            }
+            
+            @keyframes bounce {
+                0%, 20%, 50%, 80%, 100% {
+                    transform: translateY(0);
+                }
+                40% {
+                    transform: translateY(-10px);
+                }
+                60% {
+                    transform: translateY(-5px);
+                }
+            }
+            
+            .file-info {
+                margin: 1rem 0;
+                opacity: 0.9;
+                font-size: 0.95rem;
+            }
+        </style>
+        
+        <div class="download-icon">📊</div>
+        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.8rem;">Your Presentation is Ready!</h2>
+        <div class="file-info">
+            <p style="margin: 0.25rem 0;">📦 File size: ${sizeText}</p>
+            <p style="margin: 0.25rem 0;">📅 Generated: ${timestamp}</p>
+        </div>
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="${downloadUrl}" download="AI-Presentation-Pro.pptx" class="download-btn">
+                ⬇️ Download PowerPoint
+            </a>
+            <button onclick="window.viewPresentation('${downloadUrl}')" class="download-btn" style="border: none; cursor: pointer;">
+                👁️ View Online
+            </button>
+        </div>
+        <p style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.8;">
+            Download to save locally or view online in your browser
+        </p>
+    `;
+    
+    // Remove old download section if exists
+    const oldSection = document.getElementById('downloadSection');
+    if (oldSection) {
+        oldSection.remove();
+    }
+    
+    // Insert after generate button section
+    const generateSection = document.getElementById('generatePptSection');
+    if (generateSection) {
+        generateSection.parentNode.insertBefore(downloadSection, generateSection.nextSibling);
+    }
+    
+    // Update status
+    showStatus(`✅ PowerPoint ready! File size: ${sizeText}`, 'success');
+    
+    // Auto-scroll to download section
+    setTimeout(() => {
+        downloadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+}
+
+/**
+ * Opens PowerPoint viewer in modal
+ * @param {string} blobUrl - Blob URL of the PowerPoint file
+ */
+function viewPresentation(blobUrl) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.id = 'presentationViewerModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+        <style>
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            
+            .viewer-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 1rem 2rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            }
+            
+            .viewer-close {
+                background: rgba(255,255,255,0.2);
+                border: 2px solid white;
+                color: white;
+                padding: 0.5rem 1.5rem;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: bold;
+                font-size: 1rem;
+                transition: all 0.3s ease;
+            }
+            
+            .viewer-close:hover {
+                background: white;
+                color: #667eea;
+                transform: scale(1.05);
+            }
+            
+            .viewer-content {
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 2rem;
+                overflow: auto;
+            }
+            
+            .viewer-iframe {
+                width: 100%;
+                height: 100%;
+                border: none;
+                border-radius: 8px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+                background: white;
+            }
+            
+            .viewer-options {
+                background: #1a1a1a;
+                padding: 1rem 2rem;
+                display: flex;
+                gap: 1rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .viewer-btn {
+                background: #667eea;
+                color: white;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: all 0.3s ease;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            
+            .viewer-btn:hover {
+                background: #764ba2;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+            
+            .loading-spinner {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 1rem;
+                color: white;
+            }
+            
+            .spinner {
+                width: 50px;
+                height: 50px;
+                border: 4px solid rgba(255,255,255,0.3);
+                border-top-color: white;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+        </style>
+        
+        <div class="viewer-header">
+            <div>
+                <h2 style="margin: 0; font-size: 1.5rem;">📊 PowerPoint Viewer</h2>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">AI-Presentation-Pro.pptx</p>
+            </div>
+            <button class="viewer-close" onclick="window.closePresentationViewer()">✕ Close</button>
+        </div>
+        
+        <div class="viewer-content" id="viewerContent">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p style="font-size: 1.1rem; margin: 0;">Loading presentation...</p>
+                <p style="font-size: 0.9rem; margin: 0; opacity: 0.7;">This may take a few moments</p>
+            </div>
+        </div>
+        
+        <div class="viewer-options">
+            <a href="${blobUrl}" download="AI-Presentation-Pro.pptx" class="viewer-btn">
+                ⬇️ Download File
+            </a>
+            <button onclick="window.sharePresentation()" class="viewer-btn">
+                🔗 Share Link
+            </button>
+            <button onclick="window.modifyCurrentSlide()" class="viewer-btn">
+                ✏️ Modify Slide
+            </button>
+            <button onclick="window.openInOffice365('${blobUrl}')" class="viewer-btn" style="background: #0078d4;">
+                📄 Office 365
+            </button>
+            <button onclick="window.openInGoogleSlides('${blobUrl}')" class="viewer-btn" style="background: #34a853;">
+                🎨 Google Slides
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+    
+    // Try to load with Office Online Viewer
+    setTimeout(() => {
+        loadPresentationViewer(blobUrl);
+    }, 100);
+}
+
+/**
+ * Loads the presentation in the viewer
+ * @param {string} blobUrl - Blob URL of PowerPoint file
+ */
+function loadPresentationViewer(blobUrl) {
+    const viewerContent = document.getElementById('viewerContent');
+    
+    // Option 1: Try Office Online Viewer (requires public URL)
+    // Option 2: Use Google Docs Viewer (requires public URL)
+    // Option 3: Show slide preview from our data
+    
+    // Since we have blob URL (local), we'll show our slide preview
+    if (window.currentSlideData && window.currentSlideData.slides) {
+        renderFullSlidePreview(viewerContent);
+    } else {
+        // Fallback: Show instructions
+        viewerContent.innerHTML = `
+            <div style="text-align: center; color: white; max-width: 600px;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">📊</div>
+                <h3 style="margin: 0 0 1rem 0;">PowerPoint File Ready</h3>
+                <p style="font-size: 1.1rem; line-height: 1.6; opacity: 0.9;">
+                    To view this presentation, you can:
+                </p>
+                <ul style="text-align: left; font-size: 1rem; line-height: 1.8; opacity: 0.8;">
+                    <li>📥 <strong>Download</strong> the file and open in PowerPoint</li>
+                    <li>☁️ <strong>Upload</strong> to Office 365 or Google Drive</li>
+                    <li>🖥️ <strong>Open</strong> with desktop PowerPoint application</li>
+                </ul>
+                <p style="margin-top: 1.5rem; font-size: 0.9rem; opacity: 0.7;">
+                    Online preview requires the file to be uploaded to a cloud service
+                </p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Renders full slide preview in viewer
+ * @param {HTMLElement} container - Container element
+ */
+function renderFullSlidePreview(container) {
+    const slides = window.currentSlideData.slides;
+    const theme = window.currentSlideData.designTheme || window.colorThemes['vibrant-purple'];
+    
+    container.innerHTML = `
+        <div style="width: 100%; max-width: 1200px; color: white;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 1.8rem;">📊 Presentation Preview</h3>
+                <p style="margin: 0; opacity: 0.8; font-size: 1rem;">${slides.length} slides • ${theme.name} theme</p>
+            </div>
+            
+            <div id="slideViewer" style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 2rem; backdrop-filter: blur(10px);">
+                <div id="slideContainer"></div>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem;">
+                    <button onclick="window.previousSlide()" class="viewer-btn" style="padding: 0.5rem 1rem;">
+                        ◀ Previous
+                    </button>
+                    <span id="slideCounter" style="font-size: 1.1rem; min-width: 100px; text-align: center;">
+                        1 / ${slides.length}
+                    </span>
+                    <button onclick="window.nextSlide()" class="viewer-btn" style="padding: 0.5rem 1rem;">
+                        Next ▶
+                    </button>
+                </div>
+            </div>
+            
+            <p style="text-align: center; margin-top: 1.5rem; opacity: 0.7; font-size: 0.9rem;">
+                💡 Use arrow keys to navigate • Download for full PowerPoint features
+            </p>
+        </div>
+    `;
+    
+    // Initialize slide viewer
+    window.currentSlideIndex = 0;
+    window.totalSlides = slides.length;
+    displaySlide(0);
+    
+    // Add keyboard navigation
+    document.addEventListener('keydown', handleSlideNavigation);
+}
+
+/**
+ * Displays a specific slide
+ * @param {number} index - Slide index
+ */
+function displaySlide(index) {
+    if (!window.currentSlideData) return;
+    
+    const slides = window.currentSlideData.slides;
+    const theme = window.currentSlideData.designTheme || window.colorThemes['vibrant-purple'];
+    
+    if (index < 0 || index >= slides.length) return;
+    
+    window.currentSlideIndex = index;
+    const slide = slides[index];
+    
+    const container = document.getElementById('slideContainer');
+    const counter = document.getElementById('slideCounter');
+    
+    if (container) {
+        // Render slide preview
+        container.innerHTML = window.renderSlidePreviewCard(slide, index, theme);
+        counter.textContent = `${index + 1} / ${slides.length}`;
+    }
+}
+
+/**
+ * Navigate to previous slide
+ */
+function previousSlide() {
+    if (window.currentSlideIndex > 0) {
+        displaySlide(window.currentSlideIndex - 1);
+    }
+}
+
+/**
+ * Navigate to next slide
+ */
+function nextSlide() {
+    if (window.currentSlideIndex < window.totalSlides - 1) {
+        displaySlide(window.currentSlideIndex + 1);
+    }
+}
+
+/**
+ * Handle keyboard navigation
+ * @param {KeyboardEvent} e - Keyboard event
+ */
+function handleSlideNavigation(e) {
+    if (!document.getElementById('presentationViewerModal')) return;
+    
+    if (e.key === 'ArrowLeft') {
+        previousSlide();
+    } else if (e.key === 'ArrowRight') {
+        nextSlide();
+    } else if (e.key === 'Escape') {
+        closePresentationViewer();
+    }
+}
+
+/**
+ * Closes the presentation viewer modal
+ */
+function closePresentationViewer() {
+    const modal = document.getElementById('presentationViewerModal');
+    if (modal) {
+        modal.style.animation = 'fadeOut 0.3s ease';
+        setTimeout(() => {
+            modal.remove();
+            document.body.style.overflow = '';
+            document.removeEventListener('keydown', handleSlideNavigation);
+        }, 300);
+    }
+}
+
+/**
+ * Opens file in Office 365
+ * @param {string} blobUrl - Blob URL (will need to be uploaded)
+ */
+function openInOffice365(blobUrl) {
+    showStatus('💡 Tip: Download the file and upload to OneDrive, then open with Office 365', 'info');
+}
+
+/**
+ * Opens file in Google Slides
+ * @param {string} blobUrl - Blob URL (will need to be uploaded)
+ */
+function openInGoogleSlides(blobUrl) {
+    showStatus('💡 Tip: Download the file and upload to Google Drive, then open with Google Slides', 'info');
+}
+
+/**
+ * Share presentation - creates a shareable link
+ */
+async function sharePresentation() {
+    if (!window.currentSlideData) {
+        showStatus('⚠️ No presentation to share. Generate a presentation first.', 'error');
+        return;
+    }
+    
+    showStatus('🔗 Creating shareable link...', 'info');
+    
+    try {
+        const response = await fetch('/api/share-presentation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                slideData: window.currentSlideData,
+                title: window.currentSlideData.slides[0]?.title || 'AI Presentation'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to create share link');
+        }
+        
+        const data = await response.json();
+        
+        // Show share link modal
+        showShareLinkModal(data.shareUrl, data.expiresIn);
+        
+        showStatus('✅ Shareable link created!', 'success');
+        
+    } catch (error) {
+        console.error('Share error:', error);
+        showStatus('❌ Failed to create share link: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Shows modal with shareable link
+ * @param {string} shareUrl - The shareable URL
+ * @param {string} expiresIn - Expiration time
+ */
+function showShareLinkModal(shareUrl, expiresIn) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 2rem; max-width: 600px; width: 90%;">
+            <h2 style="margin: 0 0 1rem 0; color: #667eea; display: flex; align-items: center; gap: 0.5rem;">
+                🔗 Shareable Link Created!
+            </h2>
+            
+            <p style="color: #666; margin-bottom: 1rem;">
+                Anyone with this link can view and modify your presentation. Link expires in ${expiresIn}.
+            </p>
+            
+            <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; gap: 0.5rem;">
+                <input type="text" value="${shareUrl}" readonly 
+                    style="flex: 1; border: none; background: transparent; font-family: monospace; font-size: 0.9rem; outline: none;"
+                    id="shareUrlInput">
+                <button onclick="copyShareUrl()" class="viewer-btn" style="padding: 0.5rem 1rem;">
+                    📋 Copy
+                </button>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button onclick="openShareUrl()" class="viewer-btn" style="background: #667eea;">
+                    🌐 Open Link
+                </button>
+                <button onclick="this.closest('div').parentElement.remove()" class="viewer-btn" style="background: #999;">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Auto-select the URL
+    setTimeout(() => {
+        document.getElementById('shareUrlInput')?.select();
+    }, 100);
+}
+
+/**
+ * Copy share URL to clipboard
+ */
+function copyShareUrl() {
+    const input = document.getElementById('shareUrlInput');
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        showStatus('✅ Link copied to clipboard!', 'success');
+    }).catch(() => {
+        showStatus('⚠️ Please copy the link manually', 'info');
+    });
+}
+
+/**
+ * Open share URL in new tab
+ */
+function openShareUrl() {
+    const input = document.getElementById('shareUrlInput');
+    window.open(input.value, '_blank');
+}
+
+/**
+ * Modify current slide in viewer
+ */
+function modifyCurrentSlide() {
+    if (!window.currentSlideData || window.currentSlideIndex === undefined) {
+        showStatus('⚠️ No slide selected', 'error');
+        return;
+    }
+    
+    const slide = window.currentSlideData.slides[window.currentSlideIndex];
+    
+    // Show modification modal
+    showSlideModificationModal(slide, window.currentSlideIndex);
+}
+
+/**
+ * Shows modal to modify slide
+ * @param {Object} slide - Slide data
+ * @param {number} index - Slide index
+ */
+function showSlideModificationModal(slide, index) {
+    const modal = document.createElement('div');
+    modal.id = 'modifySlideModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
+        overflow-y: auto;
+    `;
+    
+    const contentItems = slide.content || [];
+    const contentHtml = contentItems.map((item, i) => `
+        <div style="margin-bottom: 0.5rem;">
+            <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Point ${i + 1}:</label>
+            <input type="text" value="${escapeHtmlAttribute(item)}" 
+                data-content-index="${i}"
+                style="width: 100%; padding: 0.5rem; border: 2px solid #ddd; border-radius: 6px;">
+        </div>
+    `).join('');
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 2rem; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <h2 style="margin: 0 0 1rem 0; color: #667eea;">
+                ✏️ Modify Slide ${index + 1}
+            </h2>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Title:</label>
+                <input type="text" id="modifySlideTitle" value="${escapeHtmlAttribute(slide.title)}" 
+                    style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 6px; font-size: 1.1rem;">
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Content:</label>
+                <div id="modifySlideContent">
+                    ${contentHtml}
+                </div>
+                <button onclick="addContentPoint()" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #f0f0f0; border: 2px dashed #999; border-radius: 6px; cursor: pointer;">
+                    + Add Point
+                </button>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button onclick="saveSlideModification(${index})" class="viewer-btn" style="background: #667eea;">
+                    💾 Save Changes
+                </button>
+                <button onclick="document.getElementById('modifySlideModal').remove()" class="viewer-btn" style="background: #999;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+/**
+ * Escape HTML for attribute usage
+ */
+function escapeHtmlAttribute(text) {
+    return String(text).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Add content point to modification modal
+ */
+function addContentPoint() {
+    const container = document.getElementById('modifySlideContent');
+    const index = container.querySelectorAll('input').length;
+    
+    const div = document.createElement('div');
+    div.style.marginBottom = '0.5rem';
+    div.innerHTML = `
+        <label style="display: block; font-weight: 600; margin-bottom: 0.25rem;">Point ${index + 1}:</label>
+        <input type="text" value="" data-content-index="${index}"
+            style="width: 100%; padding: 0.5rem; border: 2px solid #ddd; border-radius: 6px;">
+    `;
+    
+    container.appendChild(div);
+}
+
+/**
+ * Save slide modification
+ */
+function saveSlideModification(slideIndex) {
+    if (!window.currentSlideData) return;
+    
+    const title = document.getElementById('modifySlideTitle').value;
+    const contentInputs = document.querySelectorAll('#modifySlideContent input');
+    const content = Array.from(contentInputs).map(input => input.value).filter(v => v.trim());
+    
+    // Update slide data
+    window.currentSlideData.slides[slideIndex].title = title;
+    window.currentSlideData.slides[slideIndex].content = content;
+    
+    // Re-render slide
+    displaySlide(slideIndex);
+    
+    // Close modal
+    document.getElementById('modifySlideModal').remove();
+    
+    showStatus('✅ Slide updated! Changes will be included in the next download.', 'success');
+}
+
+// Add fadeOut animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+
 // Export functions
 window.getApiKey = getApiKey;
 window.generatePreview = generatePreview;
 window.generatePresentation = generatePresentation;
 window.modifySlides = modifySlides;
+window.showDownloadLink = showDownloadLink;
+window.viewPresentation = viewPresentation;
+window.closePresentationViewer = closePresentationViewer;
+window.previousSlide = previousSlide;
+window.nextSlide = nextSlide;
+window.openInOffice365 = openInOffice365;
+window.openInGoogleSlides = openInGoogleSlides;
+window.sharePresentation = sharePresentation;
+window.modifyCurrentSlide = modifyCurrentSlide;
+window.copyShareUrl = copyShareUrl;
+window.openShareUrl = openShareUrl;
+window.addContentPoint = addContentPoint;
+window.saveSlideModification = saveSlideModification;
 

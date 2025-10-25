@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shared Presentation Viewer</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .viewer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .viewer-header {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .viewer-header h1 {
+            margin: 0 0 0.5rem 0;
+            color: #667eea;
+            font-size: 2rem;
+        }
+        
+        .viewer-meta {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .viewer-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .btn-secondary:hover {
+            background: #f0f4ff;
+        }
+        
+        .slide-viewer {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .slide-navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .slide-counter {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #667eea;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: white;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error {
+            text-align: center;
+            padding: 3rem;
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .share-info {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        
+        .share-url-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .share-url-input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewer-container">
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p style="font-size: 1.2rem; margin: 0;">Loading presentation...</p>
+        </div>
+        
+        <div id="errorState" class="error" style="display: none;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
+            <h2 style="margin: 0 0 0.5rem 0;">Presentation Not Found</h2>
+            <p id="errorMessage" style="opacity: 0.8;"></p>
+            <a href="/" class="btn btn-primary" style="margin-top: 1.5rem;">← Create New Presentation</a>
+        </div>
+        
+        <div id="viewerContent" style="display: none;">
+            <div class="viewer-header">
+                <h1 id="presentationTitle">📊 Presentation Title</h1>
+                <div class="viewer-meta">
+                    <span id="slideCount">0 slides</span>
+                    <span id="viewCount">0 views</span>
+                    <span id="createdDate">Created just now</span>
+                </div>
+                
+                <div class="viewer-actions">
+                    <button class="btn btn-primary" onclick="downloadPresentation()">
+                        ⬇️ Download PowerPoint
+                    </button>
+                    <button class="btn btn-secondary" onclick="openModifyModal()">
+                        ✏️ Modify Slides
+                    </button>
+                    <button class="btn btn-secondary" onclick="copyShareLink()">
+                        🔗 Copy Share Link
+                    </button>
+                    <a href="/" class="btn btn-secondary">
+                        ← Create New
+                    </a>
+                </div>
+            </div>
+            
+            <div class="slide-viewer">
+                <div class="slide-navigation">
+                    <button class="btn btn-primary" onclick="previousSlide()" id="prevBtn">
+                        ◀ Previous
+                    </button>
+                    <span class="slide-counter" id="slideCounter">1 / 1</span>
+                    <button class="btn btn-primary" onclick="nextSlide()" id="nextBtn">
+                        Next ▶
+                    </button>
+                </div>
+                
+                <div id="slideContainer" style="min-height: 400px;"></div>
+                
+                <p style="text-align: center; margin-top: 2rem; color: #666; font-size: 0.9rem;">
+                    💡 Use arrow keys (← →) to navigate slides • Press Esc to exit fullscreen
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="/js/themes.js"></script>
+    <script src="/js/preview.js"></script>
+    <script src="/js/charts.js"></script>
+    
+    <script>
+        // Get share ID from URL
+        const shareId = window.location.pathname.split('/').pop();
+        let currentSlideIndex = 0;
+        let presentationData = null;
+        
+        // Load shared presentation
+        async function loadSharedPresentation() {
+            try {
+                const response = await fetch(`/api/shared-presentation/${shareId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Presentation not found or has expired');
+                }
+                
+                const data = await response.json();
+                presentationData = data;
+                
+                // Display presentation
+                displayPresentation(data);
+                
+            } catch (error) {
+                console.error('Load error:', error);
+                showError(error.message);
+            }
+        }
+        
+        function displayPresentation(data) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('viewerContent').style.display = 'block';
+            
+            // Update header
+            document.getElementById('presentationTitle').textContent = `📊 ${data.title}`;
+            document.getElementById('slideCount').textContent = `${data.slideData.slides.length} slides`;
+            document.getElementById('viewCount').textContent = `${data.views} views`;
+            
+            const createdDate = new Date(data.createdAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            document.getElementById('createdDate').textContent = `Created ${createdDate}`;
+            
+            // Store slide data globally
+            window.currentSlideData = data.slideData;
+            
+            // Display first slide
+            displaySlide(0);
+            
+            // Set up keyboard navigation
+            document.addEventListener('keydown', handleKeyboardNav);
+        }
+        
+        function displaySlide(index) {
+            const slides = window.currentSlideData.slides;
+            const theme = window.currentSlideData.designTheme || window.colorThemes['vibrant-purple'];
+            
+            if (index < 0 || index >= slides.length) return;
+            
+            currentSlideIndex = index;
+            const slide = slides[index];
+            
+            // Render slide
+            const container = document.getElementById('slideContainer');
+            container.innerHTML = window.renderSlidePreviewCard(slide, index, theme);
+            
+            // Update counter
+            document.getElementById('slideCounter').textContent = `${index + 1} / ${slides.length}`;
+            
+            // Update button states
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === slides.length - 1;
+        }
+        
+        function previousSlide() {
+            if (currentSlideIndex > 0) {
+                displaySlide(currentSlideIndex - 1);
+            }
+        }
+        
+        function nextSlide() {
+            if (window.currentSlideData && currentSlideIndex < window.currentSlideData.slides.length - 1) {
+                displaySlide(currentSlideIndex + 1);
+            }
+        }
+        
+        function handleKeyboardNav(e) {
+            if (e.key === 'ArrowLeft') previousSlide();
+            else if (e.key === 'ArrowRight') nextSlide();
+        }
+        
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+        
+        async function downloadPresentation() {
+            alert('Download feature: This will regenerate the PowerPoint from the slide data. Feature coming soon!');
+        }
+        
+        function openModifyModal() {
+            const slide = window.currentSlideData.slides[currentSlideIndex];
+            const newTitle = prompt('Enter new title:', slide.title);
+            
+            if (newTitle && newTitle !== slide.title) {
+                slide.title = newTitle;
+                displaySlide(currentSlideIndex);
+                
+                // Save to server
+                saveModifications();
+            }
+        }
+        
+        async function saveModifications() {
+            try {
+                const response = await fetch(`/api/update-presentation/${shareId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ slideData: window.currentSlideData })
+                });
+                
+                if (response.ok) {
+                    alert('✅ Changes saved! Others viewing this link will see the updates.');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('❌ Failed to save changes. Please try again.');
+            }
+        }
+        
+        function copyShareLink() {
+            const shareUrl = window.location.href;
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                alert('✅ Share link copied to clipboard!');
+            }).catch(() => {
+                prompt('Copy this link:', shareUrl);
+            });
+        }
+        
+        // Load on page load
+        loadSharedPresentation();
+    </script>
+</body>
+</html>
+
