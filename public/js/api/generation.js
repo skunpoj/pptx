@@ -216,21 +216,27 @@ function showPresentationOptions(downloadUrl, storage) {
     title.style.color = '#333';
     optionsDiv.appendChild(title);
     
-    // View in browser button
+    // View in browser button - OPENS IN NEW TAB IMMEDIATELY
     const viewBtn = document.createElement('button');
     viewBtn.textContent = '👁️ View in Browser';
     viewBtn.className = 'btn btn-secondary';
     viewBtn.style.marginRight = '0.5rem';
-    viewBtn.onclick = () => viewPresentation(downloadUrl);
+    viewBtn.onclick = () => {
+        // Open viewer page with blob URL
+        const viewerUrl = `/viewer.html?url=${encodeURIComponent(downloadUrl)}`;
+        window.open(viewerUrl, '_blank');
+        console.log('🔗 Opened viewer in new tab');
+    };
     optionsDiv.appendChild(viewBtn);
     
     // PDF conversion (if available)
-    if (window.serverCapabilities.pdfConversion) {
+    if (storage.sessionId) {
         const pdfBtn = document.createElement('button');
-        pdfBtn.textContent = '📄 Convert to PDF';
+        pdfBtn.textContent = '📄 View PDF';
         pdfBtn.className = 'btn btn-secondary';
         pdfBtn.style.marginRight = '0.5rem';
-        pdfBtn.onclick = () => convertToPDF(storage.sessionId);
+        pdfBtn.id = 'pdfViewBtn';
+        pdfBtn.onclick = () => convertAndViewPDF(storage.sessionId, pdfBtn);
         optionsDiv.appendChild(pdfBtn);
     }
     
@@ -242,6 +248,104 @@ function showPresentationOptions(downloadUrl, storage) {
     optionsDiv.appendChild(shareBtn);
     
     container.appendChild(optionsDiv);
+}
+
+/**
+ * Convert to PDF and view/download
+ */
+async function convertAndViewPDF(sessionId, button) {
+    if (!sessionId) {
+        if (typeof showNotification === 'function') {
+            showNotification('❌ Session ID not available', 'error');
+        }
+        return;
+    }
+    
+    const originalText = button.textContent;
+    button.textContent = '⏳ Converting to PDF...';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch(`/api/convert-to-pdf/${sessionId}`, {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'PDF conversion failed');
+        }
+        
+        const result = await response.json();
+        console.log('✅ PDF conversion successful:', result);
+        
+        // Show PDF link inline
+        showPDFLinkInline(result.pdfUrl, result.viewUrl);
+        
+        // Auto-open PDF in new tab
+        window.open(result.viewUrl, '_blank');
+        
+        button.textContent = '✅ PDF Ready';
+        button.disabled = false;
+        
+        if (typeof showNotification === 'function') {
+            showNotification('✅ PDF ready! Link shown below', 'success');
+        }
+        
+    } catch (error) {
+        console.error('PDF conversion error:', error);
+        button.textContent = originalText;
+        button.disabled = false;
+        
+        if (typeof showNotification === 'function') {
+            showNotification('❌ PDF conversion failed: ' + error.message, 'error');
+        }
+    }
+}
+
+/**
+ * Show PDF link inline
+ */
+function showPDFLinkInline(pdfUrl, viewUrl) {
+    const optionsDiv = document.querySelector('.presentation-options');
+    if (!optionsDiv) return;
+    
+    // Remove existing PDF link if present
+    const existing = document.getElementById('pdfLinkDisplay');
+    if (existing) existing.remove();
+    
+    const pdfDisplay = document.createElement('div');
+    pdfDisplay.id = 'pdfLinkDisplay';
+    pdfDisplay.style.cssText = `
+        margin-top: 1rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, #ff9a5615, #f39c1215);
+        border: 2px solid #f39c12;
+        border-radius: 8px;
+    `;
+    
+    pdfDisplay.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.5rem;">📄</span>
+            <strong style="color: #e67e22; font-size: 1.1rem;">PDF Generated!</strong>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <a 
+                href="${viewUrl}" 
+                target="_blank"
+                style="padding: 0.5rem 1rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; white-space: nowrap;"
+            >👁️ View PDF</a>
+            <a 
+                href="${pdfUrl}" 
+                download="presentation.pdf"
+                style="padding: 0.5rem 1rem; background: #d35400; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; white-space: nowrap;"
+            >📥 Download PDF</a>
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+            Direct link: <a href="${viewUrl}" target="_blank" style="color: #e67e22; word-break: break-all;">${viewUrl}</a>
+        </div>
+    `;
+    
+    optionsDiv.appendChild(pdfDisplay);
 }
 
 /**
@@ -259,3 +363,4 @@ function formatFileSize(bytes) {
 window.generatePresentation = generatePresentation;
 window.modifySlides = modifySlides;
 window.showDownloadLink = showDownloadLink;
+window.convertAndViewPDF = convertAndViewPDF;

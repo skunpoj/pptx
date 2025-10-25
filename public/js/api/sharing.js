@@ -42,8 +42,8 @@ async function sharePresentation() {
                 showNotification('✅ Shareable link created!', 'success');
             }
             
-            // Show share modal
-            showShareLinkModal(result.shareUrl, result.expiresIn);
+            // Show share link INLINE next to button
+            showShareLinkInline(result.shareUrl, result.expiresIn);
         } else {
             throw new Error(result.error || 'Sharing failed');
         }
@@ -61,7 +61,93 @@ async function sharePresentation() {
 }
 
 /**
- * Show share link modal
+ * Show share link INLINE next to share button
+ */
+function showShareLinkInline(shareUrl, expiresIn) {
+    // Find the presentation options container
+    const optionsDiv = document.querySelector('.presentation-options');
+    if (!optionsDiv) {
+        console.warn('Could not find presentation options container');
+        return;
+    }
+    
+    // Remove any existing share link display
+    const existing = document.getElementById('shareLinkDisplay');
+    if (existing) existing.remove();
+    
+    // Create inline share display
+    const shareDisplay = document.createElement('div');
+    shareDisplay.id = 'shareLinkDisplay';
+    shareDisplay.style.cssText = `
+        margin-top: 1rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, #667eea15, #764ba215);
+        border: 2px solid #667eea;
+        border-radius: 8px;
+    `;
+    
+    shareDisplay.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.5rem;">🔗</span>
+            <strong style="color: #667eea; font-size: 1.1rem;">Share Link Created!</strong>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <input 
+                type="text" 
+                value="${shareUrl}" 
+                readonly 
+                id="shareLinkInput"
+                style="flex: 1; padding: 0.5rem; border: 1px solid #667eea; border-radius: 4px; font-size: 0.9rem; font-family: monospace;"
+            />
+            <button 
+                onclick="window.copyShareLink()" 
+                style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+            >📋 Copy</button>
+            <button 
+                onclick="window.open('${shareUrl}', '_blank')" 
+                style="padding: 0.5rem 1rem; background: #764ba2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+            >🔗 Open</button>
+        </div>
+        <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+            ⏱️ Link expires in ${expiresIn}
+        </div>
+    `;
+    
+    optionsDiv.appendChild(shareDisplay);
+    
+    // Store URL for copy function
+    window.currentShareUrl = shareUrl;
+    
+    // Scroll to show the link
+    setTimeout(() => {
+        shareDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+}
+
+/**
+ * Copy share link to clipboard (simplified version)
+ */
+function copyShareLink() {
+    const input = document.getElementById('shareLinkInput');
+    if (input) {
+        input.select();
+        input.setSelectionRange(0, 99999); // For mobile
+        
+        navigator.clipboard.writeText(input.value).then(() => {
+            if (typeof showNotification === 'function') {
+                showNotification('✅ Link copied!', 'success');
+            }
+        }).catch(() => {
+            document.execCommand('copy');
+            if (typeof showNotification === 'function') {
+                showNotification('✅ Link copied!', 'success');
+            }
+        });
+    }
+}
+
+/**
+ * Show share link modal (OLD - KEPT FOR BACKWARDS COMPATIBILITY)
  */
 function showShareLinkModal(shareUrl, expiresIn) {
     // Create modal
@@ -224,4 +310,5 @@ function openShareUrl() {
 // Export functions for use in other modules
 window.sharePresentation = sharePresentation;
 window.copyShareUrl = copyShareUrl;
+window.copyShareLink = copyShareLink;
 window.openShareUrl = openShareUrl;

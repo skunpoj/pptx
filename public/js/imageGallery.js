@@ -140,13 +140,31 @@ async function generateImagesForSlides() {
         window.imageGallery.images = result.images.filter(img => !img.error);
         const failedImages = result.images.filter(img => img.error);
         
+        // AUTO-INSERT IMAGES INTO SLIDES
+        console.log('📥 Auto-inserting images into slides...');
+        let insertedCount = 0;
+        window.imageGallery.images.forEach(img => {
+            if (img.slideIndex !== undefined && window.currentSlideData && window.currentSlideData.slides[img.slideIndex]) {
+                window.currentSlideData.slides[img.slideIndex].imageUrl = img.url;
+                window.currentSlideData.slides[img.slideIndex].imageDescription = img.description;
+                insertedCount++;
+                console.log(`  ✓ Inserted image into slide ${img.slideIndex + 1}: ${img.slideTitle}`);
+            }
+        });
+        
+        // Refresh preview to show images
+        if (insertedCount > 0 && typeof displayPreview === 'function') {
+            displayPreview(window.currentSlideData);
+            console.log(`✅ Auto-inserted ${insertedCount} images into slides`);
+        }
+        
         // Display in gallery
         displayImageGallery(window.imageGallery.images);
         
         // Show notification with details
         if (typeof showNotification === 'function') {
             if (result.success > 0) {
-                showNotification(`✅ Generated ${result.success} images! ${result.failed > 0 ? `(${result.failed} failed)` : ''}`, 'success');
+                showNotification(`✅ Generated ${result.success} images and inserted into slides!`, 'success');
             } else {
                 // All failed - show detailed error
                 const firstError = failedImages[0]?.error || 'Unknown error';
