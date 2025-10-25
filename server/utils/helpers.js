@@ -263,17 +263,16 @@ function parseAIResponse(responseText) {
         throw new Error('AI returned an empty or invalid response. Please try again.');
     }
     
-    // Check if response looks like HTML (common error scenario)
-    if (responseText.trim().startsWith('<')) {
-        console.error('Response appears to be HTML instead of JSON');
-        console.error('Response preview:', responseText.substring(0, 200));
-        throw new Error('AI service returned an error page instead of JSON data. Please check your API key and try again.');
-    }
-    
     // Clean up common AI response formatting
     let cleanedText = responseText
+        // Remove markdown code fences
         .replace(/```json\n?/g, "")
         .replace(/```\n?/g, "")
+        // Remove HTML comments (including multi-line)
+        .replace(/<!--[\s\S]*?-->/g, "")
+        // Remove common prefixes that AIs sometimes add
+        .replace(/^Here's the JSON.*?:\s*/i, "")
+        .replace(/^Here is the.*?:\s*/i, "")
         .trim();
     
     // Additional validation after cleaning
@@ -282,8 +281,24 @@ function parseAIResponse(responseText) {
         throw new Error('AI response was empty after formatting cleanup. Please try again.');
     }
     
+    // Check if response looks like HTML (after cleaning comments)
+    if (cleanedText.startsWith('<') && !cleanedText.startsWith('{') && !cleanedText.startsWith('[')) {
+        console.error('Response appears to be HTML instead of JSON');
+        console.error('Response preview:', cleanedText.substring(0, 200));
+        throw new Error('AI service returned an error page instead of JSON data. Please check your API key and try again.');
+    }
+    
+    // Try to extract JSON if it's embedded in text
+    let jsonText = cleanedText;
+    
+    // Look for JSON object or array
+    const jsonMatch = cleanedText.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if (jsonMatch) {
+        jsonText = jsonMatch[1];
+    }
+    
     try {
-        const data = JSON.parse(cleanedText);
+        const data = JSON.parse(jsonText);
         
         // Validate the parsed data has expected structure
         if (!data || typeof data !== 'object') {
@@ -294,7 +309,8 @@ function parseAIResponse(responseText) {
     } catch (parseError) {
         console.error('JSON Parse Error:', parseError.message);
         console.error('Error position:', parseError.message.match(/position (\d+)/)?.[1] || 'unknown');
-        console.error('Response text preview:', cleanedText.substring(0, 500));
+        console.error('Cleaned text preview:', jsonText.substring(0, 500));
+        console.error('Original text preview:', responseText.substring(0, 500));
         
         // Try to provide more helpful error message
         if (parseError.message.includes('Unexpected token')) {

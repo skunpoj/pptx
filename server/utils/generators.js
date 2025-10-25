@@ -100,46 +100,74 @@ function generateSlideProcessingCode(htmlFiles, slides) {
 function generateChartSlideCode(slide, idx) {
     const chartData = slide.chart.data;
     
-    return `
-        // Slide ${idx + 1}: ${slide.title} (Chart Slide)
-        console.log("Creating chart slide for slide${idx}.html...");
-        const slide${idx} = pptx.addSlide();
-        
-        // Add title
-        slide${idx}.addText(${JSON.stringify(slide.title)}, {
-            x: 0.5, y: 0.5, w: 9, h: 0.75,
-            fontSize: 28, bold: true, color: '1C2833'
-        });
-        
-        // Add chart
-        const chartData${idx} = ${JSON.stringify(chartData.datasets.map((dataset, i) => ({
-            name: dataset.name,
-            labels: chartData.labels,
-            values: dataset.values
-        })))};
-        
-        slide${idx}.addChart(pptx.ChartType.${slide.chart.type}, chartData${idx}, {
-            x: 0.5, y: 1.5, w: ${slide.content && slide.content.length > 0 ? '6' : '9'}, h: 4.5,
-            title: ${JSON.stringify(slide.chart.title)},
-            showTitle: true,
-            titleFontSize: 16,
-            ${slide.chart.type === 'pie' ? 'dataLabelPosition: "bestFit",' : ''}
-            ${slide.chart.type === 'line' || slide.chart.type === 'area' ? 'lineDataSymbol: "circle",' : ''}
-            showValue: true
-        });
-        
-        ${slide.content && slide.content.length > 0 ? `
+    // Properly escape and serialize all data to avoid JSON parse errors
+    const slideTitle = JSON.stringify(slide.title);
+    const chartTitle = JSON.stringify(slide.chart.title || 'Chart');
+    const chartType = (slide.chart.type || 'bar').toUpperCase();
+    
+    // Build chart data array with proper escaping
+    const chartDataArray = chartData.datasets.map((dataset) => ({
+        name: dataset.name || 'Data',
+        labels: chartData.labels,
+        values: dataset.values
+    }));
+    
+    // Serialize chart data with proper indentation for readability
+    const chartDataStr = JSON.stringify(chartDataArray, null, 8).replace(/\n/g, '\n        ');
+    
+    // Handle insights/content with proper escaping
+    let insightsCode = '';
+    if (slide.content && slide.content.length > 0) {
+        const insightsText = slide.content.map(item => `• ${item}`).join('\\n');
+        const insightsStr = JSON.stringify(insightsText);
+        insightsCode = `
         // Add insights
         slide${idx}.addText("Key Insights:", {
             x: 6.75, y: 1.5, w: 2.75, h: 0.5,
             fontSize: 14, bold: true, color: '2E4053'
         });
         
-        slide${idx}.addText(${JSON.stringify(slide.content.map((item, i) => `• ${item}`).join('\\n'))}, {
+        slide${idx}.addText(${insightsStr}, {
             x: 6.75, y: 2.1, w: 2.75, h: 3.9,
             fontSize: 11, color: '1d1d1d', valign: 'top'
+        });`;
+    }
+    
+    // Determine chart options based on type
+    const chartOptions = [];
+    if (slide.chart.type === 'pie') {
+        chartOptions.push('dataLabelPosition: "bestFit"');
+    }
+    if (slide.chart.type === 'line' || slide.chart.type === 'area') {
+        chartOptions.push('lineDataSymbol: "circle"');
+    }
+    const chartOptionsStr = chartOptions.join(',\n            ');
+    
+    const chartWidth = slide.content && slide.content.length > 0 ? '6' : '9';
+    
+    return `
+        // Slide ${idx + 1}: ${slide.title.replace(/\*/g, '').substring(0, 50)} (Chart Slide)
+        console.log("Creating chart slide ${idx + 1}...");
+        const slide${idx} = pptx.addSlide();
+        
+        // Add title
+        slide${idx}.addText(${slideTitle}, {
+            x: 0.5, y: 0.5, w: 9, h: 0.75,
+            fontSize: 28, bold: true, color: '1C2833'
         });
-        ` : ''}
+        
+        // Add chart
+        const chartData${idx} = ${chartDataStr};
+        
+        slide${idx}.addChart(pptx.ChartType.${chartType}, chartData${idx}, {
+            x: 0.5, y: 1.5, w: ${chartWidth}, h: 4.5,
+            title: ${chartTitle},
+            showTitle: true,
+            titleFontSize: 16,
+            ${chartOptionsStr ? chartOptionsStr + ',' : ''}
+            showValue: true
+        });
+        ${insightsCode}
         
         console.log("✓ Chart slide ${idx + 1} added");
     `;

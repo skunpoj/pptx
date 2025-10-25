@@ -109,15 +109,10 @@
                 
                 <div id="status"></div>
                 
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <button class="btn-secondary" onclick="generatePreview()" id="previewBtn">
-                        👁️ Preview Slides
-                    </button>
-                    <button class="btn-generate" onclick="generatePresentation()" id="generateBtn">
-                        ✨ Generate PowerPoint
-                    </button>
-                </div>
+                <!-- Preview Button -->
+                <button class="btn-primary btn-full btn-large" onclick="generatePreview()" id="previewBtn">
+                    👁️ Generate Preview
+                </button>
             </div>
 
             <!-- Right Panel: Preview -->
@@ -131,6 +126,29 @@
                 </div>
                 
                 <div class="preview" id="preview" style="overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important;"></div>
+                
+                <!-- Slide Modification Section (appears after preview) -->
+                <div id="modificationSection" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e0e7ff; flex-shrink: 0;">
+                    <div style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem;">
+                        <strong style="color: #f57c00; display: block; margin-bottom: 0.5rem;">✏️ Modify Slides</strong>
+                        <textarea id="modificationPrompt" 
+                                  placeholder="Example: 'Change slide 3 title to...' or 'Add a bullet point to slide 2 about...' or 'Remove slide 5'"
+                                  style="width: 100%; height: 60px; padding: 0.5rem; border: 1px solid #ffc107; border-radius: 4px; font-size: 0.85rem; resize: vertical;"></textarea>
+                        <button class="btn-secondary btn-full" onclick="modifySlides()" id="modifyBtn" style="margin-top: 0.5rem; font-size: 0.85rem; padding: 0.5rem;">
+                            🔄 Apply Changes
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Generate PowerPoint Button (appears after preview) -->
+                <div id="generatePptSection" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 2px solid #e0e7ff; flex-shrink: 0;">
+                    <button class="btn-generate btn-full" onclick="generatePresentation()" id="generateBtn">
+                        ✨ Generate PowerPoint
+                    </button>
+                    <p style="text-align: center; font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
+                        Click to download your presentation
+                    </p>
+                </div>
             </div>
         </div>
 

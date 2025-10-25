@@ -255,10 +255,7 @@ app.post('/api/extract-colors', upload.array('files'), async (req, res) => {
 // ========================================
 
 app.post('/api/preview', async (req, res) => {
-    // Set JSON content type immediately to prevent HTML error pages
-    res.setHeader('Content-Type', 'application/json');
-    
-    const { text, apiKey, provider = 'anthropic' } = req.body;
+    const { text, apiKey, provider = 'anthropic', stream = true } = req.body;
     
     if (!text || !apiKey) {
         return res.status(400).json({ error: 'Text and API key are required' });
@@ -268,53 +265,133 @@ app.post('/api/preview', async (req, res) => {
         console.log('📊 Preview request received');
         console.log('  Content length:', text.length, 'characters');
         console.log('  Provider:', provider);
+        console.log('  Streaming:', stream);
         
         const userPrompt = await getSlideDesignPrompt(text);
         console.log('  Prompt generated, length:', userPrompt.length);
         
-        const responseText = await callAI(provider, apiKey, userPrompt);
-        console.log('  AI response received, length:', responseText.length);
-        console.log('  AI response preview:', responseText.substring(0, 200));
-        
-        const slideData = parseAIResponse(responseText);
-        console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
-        
-        // Log chart slides before validation
-        const chartSlides = slideData.slides?.filter(s => s.layout === 'chart' && s.chart) || [];
-        if (chartSlides.length > 0) {
-            console.log('  📈 Chart slides found (before validation):', chartSlides.length);
-            chartSlides.forEach((slide, i) => {
-                console.log(`    Chart ${i + 1}: ${slide.chart.type} - ${slide.chart.title}`);
+        // STREAMING MODE: Generate slides incrementally
+        if (stream && provider === 'anthropic') {
+            console.log('🔄 Starting streaming preview generation...');
+            
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            
+            let accumulatedText = '';
+            let slidesSent = new Set();
+            
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey.trim(),
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 4000,
+                    stream: true,
+                    messages: [{ role: "user", content: userPrompt }]
+                })
             });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                    accumulatedText += parsed.delta.text;
+                                    
+                                    // Try to parse incrementally
+                                    try {
+                                        const partialData = parseAIResponse(accumulatedText);
+                                        if (partialData && partialData.slides) {
+                                            // Send only new slides
+                                            for (let i = 0; i < partialData.slides.length; i++) {
+                                                if (!slidesSent.has(i)) {
+                                                    const slide = partialData.slides[i];
+                                                    try {
+                                                        validateSlideData({ slides: [slide], designTheme: partialData.designTheme });
+                                                        console.log(`  ✓ Streaming slide ${i + 1}: ${slide.title}`);
+                                                        res.write(`data: ${JSON.stringify({ 
+                                                            type: 'slide', 
+                                                            slide: slide,
+                                                            index: i,
+                                                            theme: partialData.designTheme,
+                                                            suggestedThemeKey: partialData.suggestedThemeKey
+                                                        })}\n\n`);
+                                                        slidesSent.add(i);
+                                                    } catch (validateError) {
+                                                        // Slide not complete yet, skip
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (parseError) {
+                                        // Not enough data to parse yet, continue accumulating
+                                    }
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON
+                            }
+                        }
+                    }
+                }
+                
+                // Final parse and send complete data
+                const finalData = parseAIResponse(accumulatedText);
+                validateSlideData(finalData);
+                console.log('✅ Streaming complete, total slides:', finalData.slides.length);
+                res.write(`data: ${JSON.stringify({ type: 'complete', data: finalData })}\n\n`);
+                
+            } finally {
+                res.write('data: [DONE]\n\n');
+                res.end();
+            }
+            
+        } else {
+            // NON-STREAMING MODE (fallback)
+            res.setHeader('Content-Type', 'application/json');
+            
+            const responseText = await callAI(provider, apiKey, userPrompt);
+            console.log('  AI response received, length:', responseText.length);
+            
+            const slideData = parseAIResponse(responseText);
+            console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
+            
+            validateSlideData(slideData);
+            console.log('✅ Preview validation passed');
+            
+            res.json(slideData);
         }
-        
-        // Validate structure (this will validate and fix chart data)
-        validateSlideData(slideData);
-        
-        // Log chart slides after validation
-        const validChartSlides = slideData.slides?.filter(s => s.layout === 'chart' && s.chart) || [];
-        if (validChartSlides.length > 0) {
-            console.log('  ✅ Chart slides validated:', validChartSlides.length);
-            validChartSlides.forEach((slide, i) => {
-                console.log(`    Chart ${i + 1}: ${slide.chart.type} - ${slide.chart.data.labels.length} data points`);
-            });
-        }
-        
-        console.log('✅ Preview validation passed');
-        
-        // Return slide structure for preview
-        res.json(slideData);
         
     } catch (error) {
         console.error('❌ Preview error:', error.message);
         console.error('   Stack:', error.stack);
         
-        // Ensure we send JSON error response with helpful message
         if (!res.headersSent) {
-            // Provide user-friendly error message
             let userMessage = error.message;
             
-            // Check for common error types
             if (error.message.includes('API key') || error.message.includes('authentication')) {
                 userMessage = 'Invalid API key. Please check your API key and try again.';
             } else if (error.message.includes('rate limit')) {

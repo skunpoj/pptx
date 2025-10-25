@@ -34,9 +34,7 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     margin-bottom: 1.5rem;
-    align-items: stretch;
-    min-height: 600px;
-    max-height: 800px;
+    align-items: start;
     height: 800px;
 }
 
@@ -45,10 +43,11 @@ body {
     border-radius: 16px;
     padding: 1.5rem;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    min-height: 0;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .card h2 {
@@ -56,6 +55,25 @@ body {
     color: #333;
     margin-bottom: 1rem;
     flex-shrink: 0;
+}
+
+/* Apply scrollbar styles to cards */
+.card::-webkit-scrollbar {
+    width: 10px;
+}
+
+.card::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.card::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.card::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
 }
 
 /* ==========================================================================
@@ -311,15 +329,17 @@ textarea:focus {
 .preview-container {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    max-height: 800px;
 }
 
 .preview-container h2 {
     flex-shrink: 0;
+    margin-bottom: 1rem;
 }
 
 .preview-container .view-toggle {
     flex-shrink: 0;
+    margin-bottom: 1rem;
 }
 
 .preview-container .progress-container {
@@ -327,9 +347,8 @@ textarea:focus {
 }
 
 .preview-container .preview {
-    flex: 1 1 auto;
+    flex: 1;
     min-height: 0;
-    max-height: 650px;
     overflow-y: auto !important;
     overflow-x: hidden;
 }
