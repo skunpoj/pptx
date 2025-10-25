@@ -66,14 +66,19 @@ function getIconBadge(slide, theme) {
  * Generates header callout box
  * @param {string} headerText - Header text content
  * @param {Object} theme - Theme configuration
+ * @param {boolean} compact - Use compact spacing
  * @returns {string} - Header callout HTML
  */
-function getHeaderCallout(headerText, theme) {
+function getHeaderCallout(headerText, theme, compact = false) {
     if (!headerText) return '';
     
+    const padding = compact ? '0.4rem 0.65rem' : '0.5rem 0.75rem';
+    const marginBottom = compact ? '0.5rem' : '0.75rem';
+    const fontSize = compact ? '0.88rem' : '0.95rem';
+    
     return `
-    <div style="background: linear-gradient(90deg, ${theme.colorAccent}20 0%, transparent 100%); border-left: 3px solid ${theme.colorAccent}; padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; border-radius: 0 6px 6px 0;">
-        <p style="color: ${theme.colorSecondary}; font-size: 0.95rem; margin: 0; font-style: italic; line-height: 1.3;">${escapeHtml(headerText)}</p>
+    <div style="background: linear-gradient(90deg, ${theme.colorAccent}20 0%, transparent 100%); border-left: 3px solid ${theme.colorAccent}; padding: ${padding}; margin-bottom: ${marginBottom}; border-radius: 0 6px 6px 0;">
+        <p style="color: ${theme.colorSecondary}; font-size: ${fontSize}; margin: 0; font-style: italic; line-height: 1.3;">${escapeHtml(headerText)}</p>
     </div>`;
 }
 
@@ -96,12 +101,14 @@ function getNumberedBullets(items, theme) {
  */
 function getNumberedBulletsAdaptive(items, theme, fontSize = '1.1rem') {
     const itemCount = items.length;
-    const marginBottom = itemCount > 6 ? '0.4rem' : '0.6rem';
-    const badgeSize = itemCount > 6 ? '22px' : '26px';
-    const badgeFontSize = itemCount > 6 ? '0.7rem' : '0.8rem';
+    // More aggressive spacing reduction for many items
+    const marginBottom = itemCount > 8 ? '0.25rem' : itemCount > 6 ? '0.35rem' : '0.6rem';
+    const badgeSize = itemCount > 8 ? '20px' : itemCount > 6 ? '22px' : '26px';
+    const badgeFontSize = itemCount > 8 ? '0.65rem' : itemCount > 6 ? '0.7rem' : '0.8rem';
+    const lineHeight = itemCount > 8 ? '1.2' : '1.4';
     
     return `
-    <ul style="margin: 0; padding-left: 0; list-style: none; font-size: ${fontSize}; line-height: 1.4;">
+    <ul style="margin: 0; padding-left: 0; list-style: none; font-size: ${fontSize}; line-height: ${lineHeight};">
         ${items.map((item, idx) => `
         <li style="margin-bottom: ${marginBottom}; display: flex; align-items: start; gap: 0.5rem;">
             <span style="flex-shrink: 0; width: ${badgeSize}; height: ${badgeSize}; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${badgeFontSize}; font-weight: bold;">${idx + 1}</span>
@@ -150,22 +157,24 @@ function generateBulletSlide(slide, theme) {
     // More content = less padding and smaller fonts
     // Conservative padding to avoid overflow (html2pptx needs margins)
     // Bottom padding must be at least 2.5rem to ensure 0.5" minimum from bottom
-    let fontSize = contentLength > 6 ? '0.95rem' : contentLength > 4 ? '1rem' : '1.05rem';
-    let padding = contentLength > 6 ? '0.75rem 1rem 2.5rem 1rem' : '1rem 1.25rem 2.5rem 1.25rem';
-    let titleSize = contentLength > 6 ? '1.7rem' : '1.85rem';
+    // More aggressive sizing for 8+ items to prevent overflow
+    let fontSize = contentLength > 8 ? '0.85rem' : contentLength > 6 ? '0.95rem' : contentLength > 4 ? '1rem' : '1.05rem';
+    let padding = contentLength > 8 ? '0.7rem 1rem 2.5rem 1rem' : contentLength > 6 ? '0.75rem 1rem 2.5rem 1rem' : '1rem 1.25rem 2.5rem 1.25rem';
+    let titleSize = contentLength > 8 ? '1.6rem' : contentLength > 6 ? '1.7rem' : '1.85rem';
+    let titleMargin = contentLength > 8 ? '0.6rem' : '0.85rem';
     
     const bodyContent = `
 ${getDecorativeElements(theme, 'content')}
     
     <!-- Content -->
     <div style="position: relative; z-index: 10;">
-        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem;">
+        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: ${titleMargin};">
             ${getIconBadge(slide, theme)}
             <h2 class="fit" style="color: ${theme.colorPrimary}; font-size: ${titleSize}; font-weight: bold; margin: 0; flex: 1; line-height: 1.15;">
                 ${escapeHtml(slide.title)}
             </h2>
         </div>
-        ${getHeaderCallout(slide.header, theme)}
+        ${getHeaderCallout(slide.header, theme, contentLength > 8)}
         ${slide.imageDescription ? `<div style="background: linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%); border: 2px dashed ${theme.colorAccent}; padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 6px; text-align: center; color: ${theme.colorSecondary}; font-style: italic; font-size: 0.8rem;"><p style="margin: 0;">📸 ${escapeHtml(slide.imageDescription)}</p></div>` : ''}
         <div class="fill-height" style="display: flex; flex-direction: column; justify-content: center;">
             ${getNumberedBulletsAdaptive(slide.content, theme, fontSize)}
