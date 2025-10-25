@@ -14,17 +14,17 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy application files
+COPY . .
 
 # Install Node.js dependencies from npm
-RUN npm install --production
+RUN npm install --production --omit=dev
+
+# Install html2pptx from local .tgz file
+RUN npm install ./skills/pptx/html2pptx.tgz
 
 # Install Playwright browsers
 RUN npx playwright install --with-deps chromium
-
-# Copy application files
-COPY . .
 
 # Create directories for file storage
 RUN mkdir -p /app/workspace/generated \
