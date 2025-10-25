@@ -26,19 +26,6 @@
                     <h3>💡 AI Idea Generator</h3>
                     <p class="section-description">Let AI expand your idea into detailed presentation content. Describe your topic or upload files.</p>
                     
-                    <!-- Quick Examples -->
-                    <div class="quick-examples">
-                        <p class="examples-label">Quick Start Examples:</p>
-                        <div class="examples-grid">
-                            <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
-                        </div>
-                    </div>
-                    
                     <!-- Idea Input -->
                     <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
                     
@@ -86,12 +73,6 @@
                     <p class="helper-text">This creates detailed text content that you can edit below before generating slides</p>
                 </div>
                 
-                <!-- Main Content Editor -->
-                <div class="content-editor-section">
-                    <label class="content-label">📝 Presentation Content (edit as needed):</label>
-                    <textarea id="textInput" class="content-textarea" placeholder="Your expanded content will appear here after clicking 'Expand Idea into Full Content' above, or you can type/paste your presentation content directly here..."></textarea>
-                </div>
-                
                 <!-- Color Theme Selector -->
                 <div id="themeSelector" class="theme-selector">
                     <div class="theme-selector-inner">
@@ -101,6 +82,25 @@
                         </div>
                         <p class="theme-description">Select a color palette for your presentation (AI may suggest one based on your content)</p>
                         <div id="themeGrid" class="theme-grid"></div>
+                    </div>
+                </div>
+                
+                <!-- Main Content Editor -->
+                <div class="content-editor-section">
+                    <label class="content-label">📝 Presentation Content (edit as needed):</label>
+                    <textarea id="textInput" class="content-textarea" placeholder="Your expanded content will appear here after clicking 'Expand Idea into Full Content' above, or you can type/paste your presentation content directly here..."></textarea>
+                </div>
+                
+                <!-- Quick Examples -->
+                <div class="quick-examples">
+                    <p class="examples-label">Quick Start Examples:</p>
+                    <div class="examples-grid">
+                        <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
+                        <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
                     </div>
                 </div>
                 
@@ -148,23 +148,26 @@
 
         <!-- Settings Card -->
         <div class="card settings-card">
-            <div class="settings-tabs">
-                <button class="settings-tab active" onclick="switchSettingsTab('api')" id="tab-api">
-                    🔑 API Keys
-                </button>
-                <button class="settings-tab" onclick="switchSettingsTab('prompts')" id="tab-prompts">
-                    📝 AI Prompts
-                </button>
-            </div>
+            <h2 onclick="toggleSettingsSection()" class="collapsible-header">
+                <span>⚙️ Advanced Configuration</span>
+                <span id="settingsToggleIcon" class="toggle-icon">▼</span>
+            </h2>
             
-            <!-- API Settings Content -->
-            <div id="apiSettingsContent">
-                <h2 onclick="toggleApiSection()" class="collapsible-header">
-                    <span>🔑 API Configuration</span>
-                    <span id="apiToggleIcon" class="toggle-icon">▼</span>
-                </h2>
-            
-                <div id="apiSectionContainer" class="api-section-container">
+            <div id="settingsSectionContainer" style="display: block;">
+                <div class="settings-tabs">
+                    <button class="settings-tab active" onclick="switchSettingsTab('api')" id="tab-api">
+                        🔑 API Keys
+                    </button>
+                    <button class="settings-tab" onclick="switchSettingsTab('prompts')" id="tab-prompts">
+                        📝 AI Prompts
+                    </button>
+                </div>
+                
+                <!-- API Settings Content -->
+                <div id="apiSettingsContent">
+                    <h3 style="margin-top: 1rem;">🔑 API Configuration</h3>
+                
+                    <div id="apiSectionContainer" class="api-section-container">
                     <!-- Provider Selection -->
                     <div class="provider-selection">
                         <h3>Select AI Provider</h3>
@@ -247,19 +250,18 @@
                             <button class="btn-primary" onclick="saveApiKey('openrouter')">Save Key</button>
                         </div>
                     </div>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- AI Prompts Editor Tab -->
-            <div id="promptsSettingsContent" style="display: none;">
-                <h2>📝 AI Prompt Customization</h2>
-                <p class="prompts-description">Customize the AI prompts used for content generation, slide design, and file processing. All prompts are automatically backed up before changes.</p>
                 
-                <div id="promptEditorContainer">
-                    <div class="prompts-cta">
-                        <button class="btn-primary btn-large" onclick="showPromptEditor()">
-                            📝 Open Prompt Editor
-                        </button>
+                <!-- AI Prompts Editor Tab -->
+                <div id="promptsSettingsContent" style="display: none;">
+                    <h3 style="margin-top: 1rem;">📝 AI Prompt Customization</h3>
+                    <p class="prompts-description">Customize the AI prompts used for content generation, slide design, and file processing. All prompts are automatically backed up before changes.</p>
+                    
+                    <div id="promptEditorContainer">
+                        <div class="prompts-cta">
+                            <p style="text-align: center; color: #666;">Loading prompts...</p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -302,8 +302,6 @@ textarea:focus {
 .preview-container {
     display: flex;
     flex-direction: column;
-    position: sticky;
-    top: 1rem;
 }
 
 .preview-container h2 {

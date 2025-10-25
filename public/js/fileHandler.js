@@ -279,10 +279,53 @@ async function nonStreamingContentGeneration(prompt, apiKey, numSlides, generate
 }
 
 // ========================================
+// FILE UPLOAD EVENT HANDLING
+// ========================================
+
+/**
+ * Handles file upload - processes files immediately
+ */
+function handleFileUpload(event) {
+    const files = event.target.files;
+    if (files.length === 0) return;
+    
+    const extractColors = document.getElementById('extractColors').checked;
+    
+    // Show file upload status
+    window.showStatus(`📎 ${files.length} file(s) uploaded. Processing...`, 'info');
+    
+    // Auto-extract colors if checkbox is checked
+    if (extractColors) {
+        extractColorsFromFiles(files).then(extractedTheme => {
+            if (extractedTheme) {
+                // Display theme selector with extracted theme
+                if (window.displayThemeSelector) {
+                    window.displayThemeSelector('extracted-custom');
+                }
+                window.showStatus(`✅ Colors extracted! "${extractedTheme.name}" theme added.`, 'success');
+            }
+        });
+    }
+}
+
+/**
+ * Initialize file upload handler on page load
+ */
+if (typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+        const fileInput = document.getElementById('fileUpload');
+        if (fileInput) {
+            fileInput.addEventListener('change', handleFileUpload);
+        }
+    });
+}
+
+// ========================================
 // EXPORTS
 // ========================================
 
 window.readFileAsText = readFileAsText;
 window.extractColorsFromFiles = extractColorsFromFiles;
 window.generateFromPrompt = generateFromPrompt;
+window.handleFileUpload = handleFileUpload;
 

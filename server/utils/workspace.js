@@ -41,10 +41,21 @@ async function setupDependencies(workDir) {
     const nodeModulesPath = path.join(workDir, 'node_modules');
     await fs.mkdir(nodeModulesPath, { recursive: true });
     
-    const globalModulesPath = '/usr/local/lib/node_modules';
+    // Platform-specific global modules path
+    const globalModulesPath = process.platform === 'win32' 
+        ? path.join(process.env.APPDATA || 'C:\\', 'npm', 'node_modules')
+        : '/usr/local/lib/node_modules';
+    
+    // On Windows, symlinks require admin privileges, so skip straight to npm install
+    if (process.platform === 'win32') {
+        console.log('Windows detected, using npm install...');
+        await installDependencies(workDir);
+        console.log('✓ Dependencies installed successfully');
+        return;
+    }
     
     try {
-        // Try symlinking first (fast)
+        // Try symlinking first (fast) - Unix/Linux only
         await symlinkGlobalPackages(globalModulesPath, nodeModulesPath);
         console.log('✓ Dependencies linked successfully');
     } catch (symlinkError) {
@@ -104,10 +115,15 @@ async function symlinkGlobalPackages(globalPath, localPath) {
  * @returns {Promise<void>}
  */
 async function installDependencies(workDir) {
-    const { stdout, stderr } = await execPromise(
-        `cd ${workDir} && npm install pptxgenjs @ant/html2pptx jszip sharp playwright --no-save --no-audit --no-fund 2>&1`,
-        { timeout: 120000 } // 2 minute timeout
-    );
+    // Platform-specific command
+    const cdCommand = process.platform === 'win32' ? 'cd /d' : 'cd';
+    const command = `${cdCommand} "${workDir}" && npm install pptxgenjs @ant/html2pptx jszip sharp playwright --no-save --no-audit --no-fund`;
+    
+    console.log('Installing dependencies...');
+    const { stdout, stderr } = await execPromise(command, { 
+        timeout: 120000, // 2 minute timeout
+        shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
+    });
     
     if (stdout) console.log('npm install output:', stdout);
     if (stderr) console.error('npm install stderr:', stderr);
@@ -123,10 +139,14 @@ async function installDependencies(workDir) {
 async function runScript(workDir, scriptName, timeout = 60000) {
     console.log(`Running ${scriptName} in ${workDir}`);
     
-    const { stdout, stderr } = await execPromise(
-        `cd ${workDir} && node ${scriptName} 2>&1`,
-        { timeout }
-    );
+    // Platform-specific command
+    const cdCommand = process.platform === 'win32' ? 'cd /d' : 'cd';
+    const command = `${cdCommand} "${workDir}" && node ${scriptName}`;
+    
+    const { stdout, stderr } = await execPromise(command, { 
+        timeout,
+        shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
+    });
     
     console.log(`${scriptName} output:`, stdout);
     if (stderr) console.error(`${scriptName} stderr:`, stderr);

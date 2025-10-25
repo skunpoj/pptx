@@ -55,12 +55,12 @@ function initializeProviderSelection() {
 }
 
 /**
- * Restores API section collapsed/expanded state
+ * Restores settings section collapsed/expanded state
  */
 function initializeAPISectionState() {
-    const isCollapsed = localStorage.getItem('api_section_collapsed') === 'true';
+    const isCollapsed = localStorage.getItem('settings_section_collapsed') === 'true';
     if (isCollapsed) {
-        toggleApiSection();
+        toggleSettingsSection();
     }
 }
 
@@ -73,35 +73,43 @@ function initializeThemeSelector() {
         window.displayThemeSelector(null); // null = no AI suggestion yet
     }
     
-    // Restore previously selected theme if any
+    // Restore previously selected theme if any, otherwise use default
     const savedTheme = localStorage.getItem('selected_theme');
+    const defaultTheme = 'vibrant-purple';
+    
     if (savedTheme && window.colorThemes && window.colorThemes[savedTheme]) {
         window.selectedTheme = savedTheme;
         if (window.selectTheme) {
             window.selectTheme(savedTheme);
         }
+    } else if (window.colorThemes && window.colorThemes[defaultTheme]) {
+        // Set default theme if no saved theme exists
+        window.selectedTheme = defaultTheme;
+        if (window.selectTheme) {
+            window.selectTheme(defaultTheme);
+        }
     }
 }
 
 // ========================================
-// API CONFIGURATION
+// SETTINGS SECTION MANAGEMENT
 // ========================================
 
 /**
- * Toggles API configuration section visibility
+ * Toggles entire settings section visibility
  */
-function toggleApiSection() {
-    const container = document.getElementById('apiSectionContainer');
-    const icon = document.getElementById('apiToggleIcon');
+function toggleSettingsSection() {
+    const container = document.getElementById('settingsSectionContainer');
+    const icon = document.getElementById('settingsToggleIcon');
     
     if (container.style.display === 'none') {
         container.style.display = 'block';
         icon.textContent = '▼';
-        localStorage.setItem('api_section_collapsed', 'false');
+        localStorage.setItem('settings_section_collapsed', 'false');
     } else {
         container.style.display = 'none';
         icon.textContent = '▶';
-        localStorage.setItem('api_section_collapsed', 'true');
+        localStorage.setItem('settings_section_collapsed', 'true');
     }
 }
 
@@ -238,7 +246,7 @@ function loadExampleByCategory(category) {
 // EXPORTS
 // ========================================
 
-window.toggleApiSection = toggleApiSection;
+window.toggleSettingsSection = toggleSettingsSection;
 window.selectProvider = selectProvider;
 window.saveApiKey = saveApiKey;
 window.loadExampleByCategory = loadExampleByCategory;

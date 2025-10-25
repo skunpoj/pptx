@@ -159,6 +159,11 @@ function switchSettingsTab(tab) {
     
     if (apiContent) apiContent.style.display = tab === 'api' ? 'block' : 'none';
     if (promptsContent) promptsContent.style.display = tab === 'prompts' ? 'block' : 'none';
+    
+    // Auto-load prompts when switching to prompts tab
+    if (tab === 'prompts' && window.showPromptEditor) {
+        window.showPromptEditor();
+    }
 }
 
 // ========================================
