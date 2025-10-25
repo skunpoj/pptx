@@ -9,21 +9,22 @@ async function sharePresentation() {
         return;
     }
     
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        alert('Please enter your API key first');
-        return;
+    console.log('📤 Creating shareable link...');
+    
+    // Show loading notification
+    if (typeof showNotification === 'function') {
+        showNotification('Creating shareable link...', 'info');
     }
     
     try {
-        const response = await fetch('/api/share', {
+        const response = await fetch('/api/share-presentation', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 slideData: window.currentSlideData,
-                apiKey: apiKey
+                title: window.currentSlideData?.slides[0]?.title || 'AI Presentation'
             })
         });
         
@@ -33,15 +34,29 @@ async function sharePresentation() {
         
         const result = await response.json();
         
-        if (result.success) {
+        console.log('✅ Share link created:', result.shareUrl);
+        
+        if (result.shareId && result.shareUrl) {
+            // Show success notification
+            if (typeof showNotification === 'function') {
+                showNotification('✅ Shareable link created!', 'success');
+            }
+            
+            // Show share modal
             showShareLinkModal(result.shareUrl, result.expiresIn);
         } else {
             throw new Error(result.error || 'Sharing failed');
         }
         
     } catch (error) {
-        console.error('Sharing failed:', error);
-        showNotification('❌ Sharing failed: ' + error.message, 'error');
+        console.error('❌ Sharing failed:', error);
+        console.error('   Error details:', error.message);
+        
+        if (typeof showNotification === 'function') {
+            showNotification('❌ Sharing failed: ' + error.message, 'error');
+        } else {
+            alert('Sharing failed: ' + error.message);
+        }
     }
 }
 

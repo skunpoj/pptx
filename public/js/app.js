@@ -86,7 +86,58 @@ function initializeImageProviderSelection() {
         activeBtn.classList.add('active');
     }
     
+    // Show appropriate API key section
+    showImageProviderSection(savedImageProvider);
+    
     console.log(`🎨 Image provider initialized: ${savedImageProvider}`);
+}
+
+/**
+ * Show/hide API key sections based on selected image provider
+ */
+function showImageProviderSection(provider) {
+    // Hide all image provider sections first
+    const sections = ['huggingface', 'stability'];
+    sections.forEach(sec => {
+        const section = document.getElementById(`section-${sec}`);
+        if (section) {
+            section.style.display = 'none';
+        }
+    });
+    
+    // Show the selected provider's section
+    // For DALL-E, show OpenAI section (they use the same key)
+    let sectionToShow = provider;
+    let providerDisplayName = provider;
+    
+    if (provider === 'dalle') {
+        sectionToShow = 'openai';
+        providerDisplayName = 'DALL-E 3 (uses OpenAI key)';
+    } else if (provider === 'huggingface') {
+        providerDisplayName = 'Hugging Face (FREE)';
+    } else if (provider === 'stability') {
+        providerDisplayName = 'Stability AI';
+    }
+    
+    const selectedSection = document.getElementById(`section-${sectionToShow}`);
+    if (selectedSection) {
+        selectedSection.style.display = 'block';
+        
+        // Update the hint text
+        const hintElement = document.getElementById('currentImageProviderName');
+        if (hintElement) {
+            hintElement.textContent = providerDisplayName;
+            hintElement.style.color = '#667eea';
+            hintElement.style.fontWeight = 'bold';
+        }
+        
+        // Scroll to the section
+        setTimeout(() => {
+            selectedSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+    }
+    
+    console.log(`📋 Showing API key section for: ${sectionToShow} (${providerDisplayName})`);
 }
 
 /**
@@ -235,6 +286,9 @@ function selectImageProvider(provider) {
     if (activeBtn) {
         activeBtn.classList.add('active');
     }
+    
+    // Show/hide appropriate API key sections for image providers
+    showImageProviderSection(provider);
     
     console.log(`🎨 Image provider set to: ${provider}`);
 }

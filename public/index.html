@@ -280,6 +280,11 @@ Our Products
                         </div>
                         <p style="font-size: 0.75rem; color: #2ecc71; margin-top: 0.5rem; font-weight: 600;">🎁 Hugging Face: FREE API access to Stable Diffusion & FLUX models!</p>
                         <p style="font-size: 0.75rem; color: #888; margin-top: 0.25rem; font-style: italic;">💡 Get free API key at <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #667eea;">huggingface.co/settings/tokens</a></p>
+                        <div id="imageProviderHint" style="margin-top: 0.75rem; padding: 0.5rem; background: #f0f4ff; border-left: 3px solid #667eea; border-radius: 4px; font-size: 0.8rem; color: #555;">
+                            💡 <strong>Currently selected:</strong> <span id="currentImageProviderName">Hugging Face</span>
+                            <br>
+                            <span style="font-size: 0.75rem; color: #777;">The API key input section below will update when you select a different provider.</span>
+                        </div>
                     </div>
 
                     <!-- Hugging Face Section (for image generation) - SHOWN BY DEFAULT & FIRST -->
@@ -426,7 +431,7 @@ Our Products
                         </form>
                     </div>
                     
-                    <!-- Stability AI Section (for image generation) -->
+                    <!-- Stability AI Section (for image generation) - HIDDEN BY DEFAULT -->
                     <div class="api-section provider-section" id="section-stability" style="display: none;">
                         <h3>Stability AI API (for Image Generation)</h3>
                         <div class="info-box">
