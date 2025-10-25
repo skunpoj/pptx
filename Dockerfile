@@ -39,19 +39,13 @@ RUN pip3 install --no-cache-dir \
 # STAGE 3: User Setup (do early for better caching)
 # ============================================================================
 
-# Create non-root user for security
-# Doing this early means user creation layer is cached independent of code changes
-RUN useradd -m -u 1001 appuser
-
-# Set working directory and give ownership to appuser
+# Set working directory
 WORKDIR /app
-RUN chown appuser:appuser /app
 
-# Create workspace directories early
+# Create workspace directories early (before code copy for caching)
 RUN mkdir -p /app/workspace/generated \
     && mkdir -p /app/workspace/shared \
-    && chmod -R 755 /app/workspace \
-    && chown -R appuser:appuser /app/workspace
+    && chmod -R 755 /app/workspace
 
 # ============================================================================
 # STAGE 4: Node.js Dependencies (changes occasionally)
@@ -63,7 +57,7 @@ ENV BASE_URL="https://genis.ai"
 
 # Copy ONLY package files first for better caching
 # This layer will only rebuild if package.json or package-lock.json changes
-COPY --chown=appuser:appuser package.json package-lock.json ./
+COPY package.json package-lock.json ./
 
 # Install Node.js dependencies (production only)
 # This layer is cached as long as package files don't change
@@ -75,7 +69,7 @@ RUN npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit 
 
 # Copy ONLY the html2pptx package for installation
 # This minimizes cache invalidation
-COPY --chown=appuser:appuser skills/pptx/html2pptx.tgz ./temp-html2pptx.tgz
+COPY skills/pptx/html2pptx.tgz ./temp-html2pptx.tgz
 
 # Install html2pptx from local .tgz file
 RUN npm install ./temp-html2pptx.tgz --no-audit --no-fund && rm ./temp-html2pptx.tgz
@@ -102,25 +96,25 @@ RUN mkdir -p /home/appuser/.cache && \
 # Copy application code AFTER all dependencies are installed
 # Each folder is a separate layer for maximum cache efficiency
 # Order: least frequently changed → most frequently changed
-# Using --chown so files are owned by appuser from the start
 
 # Config files (rarely change)
-COPY --chown=appuser:appuser config/ ./config/
+COPY config/ ./config/
 
 # Skills folder (rarely changes - mostly static)
-COPY --chown=appuser:appuser skills/ ./skills/
+COPY skills/ ./skills/
 
 # Server code (changes occasionally)
-COPY --chown=appuser:appuser server/ ./server/
+COPY server/ ./server/
 
 # Public frontend code (changes frequently)
-COPY --chown=appuser:appuser public/ ./public/
+COPY public/ ./public/
 
 # Main server file (changes occasionally)
-COPY --chown=appuser:appuser server.js ./
+COPY server.js ./
 
-# Switch to non-root user for running the application
-USER appuser
+# Note: Running as root to avoid Playwright permission issues
+# Playwright needs access to /root/.cache/ms-playwright
+# For production, consider using Playwright in Docker without user switching
 
 # Expose port
 EXPOSE 3000

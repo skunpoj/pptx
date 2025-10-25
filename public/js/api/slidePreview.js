@@ -93,7 +93,87 @@ async function generatePreview() {
     previewBtn.textContent = '🔄 Generating Preview...';
     previewBtn.disabled = true;
     
-    showPreviewProgress('🤖 AI is analyzing your content...');
+    // Show detailed loading state with progress steps
+    const preview = document.getElementById('preview');
+    const wordCount = text.split(/\s+/).length;
+    const estimatedTime = Math.max(5, Math.min(20, Math.ceil(wordCount / 100)));
+    
+    preview.innerHTML = `
+        <div id="streamingStatus" style="text-align: center; padding: 2rem; max-width: 600px; margin: 0 auto;">
+            <div style="position: relative; width: 80px; height: 80px; margin: 0 auto;">
+                <span class="spinner" style="width: 80px; height: 80px; border-width: 4px; border-color: #667eea; border-top-color: transparent; display: inline-block; width: 80px; height: 80px; border: 4px solid #667eea; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem;">🤖</div>
+            </div>
+            
+            <p style="margin-top: 1.5rem; color: #333; font-size: 1.2rem; font-weight: 700;">AI is Processing Your Content</p>
+            <p id="aiStatus" style="margin-top: 0.5rem; color: #667eea; font-size: 1rem; font-weight: 600;">
+                Analyzing ${wordCount} words...
+            </p>
+            
+            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #667eea; padding: 1rem; border-radius: 8px; margin: 1.5rem 0; text-align: left;">
+                <p style="margin: 0; font-size: 0.95rem; color: #555; line-height: 1.6;">
+                    <strong style="color: #667eea;">⏱️ What's happening:</strong><br>
+                    <span id="currentStep">1️⃣ Sending content to AI for analysis</span>
+                </p>
+                <div id="progressSteps" style="margin-top: 1rem; font-size: 0.85rem; color: #777; line-height: 1.8;">
+                    <div id="step1" style="opacity: 0.5;">⏳ Analyzing content structure & themes</div>
+                    <div id="step2" style="opacity: 0.5;">⏳ Determining optimal slide count</div>
+                    <div id="step3" style="opacity: 0.5;">⏳ Creating slide layout & design</div>
+                    <div id="step4" style="opacity: 0.5;">⏳ Extracting data for charts & visuals</div>
+                    <div id="step5" style="opacity: 0.5;">⏳ Rendering slide previews</div>
+                </div>
+            </div>
+            
+            <p id="slideCount" style="margin-top: 1rem; color: #999; font-size: 0.9rem;">
+                Estimated completion: <span id="countdown">${estimatedTime}</span> seconds
+            </p>
+        </div>
+    `;
+    
+    // Start countdown timer
+    let remainingTime = estimatedTime;
+    const countdownEl = document.getElementById('countdown');
+    const countdownInterval = setInterval(() => {
+        remainingTime--;
+        if (remainingTime > 0 && countdownEl) {
+            countdownEl.textContent = remainingTime;
+        } else {
+            clearInterval(countdownInterval);
+            if (countdownEl) {
+                countdownEl.textContent = 'Finalizing...';
+            }
+        }
+    }, 1000);
+    
+    // Simulate progress steps
+    const steps = [
+        { time: 1000, status: '1️⃣ AI is analyzing your content structure...', stepEl: 'step1' },
+        { time: 3000, status: '2️⃣ AI is determining optimal slide layout...', stepEl: 'step2' },
+        { time: 5000, status: '3️⃣ AI is creating slide designs...', stepEl: 'step3' },
+        { time: 7000, status: '4️⃣ AI is extracting data for visualizations...', stepEl: 'step4' }
+    ];
+    
+    const progressTimeouts = [];
+    steps.forEach(step => {
+        const timeout = setTimeout(() => {
+            const currentStepEl = document.getElementById('currentStep');
+            const stepEl = document.getElementById(step.stepEl);
+            if (currentStepEl) currentStepEl.textContent = step.status;
+            if (stepEl) {
+                stepEl.style.opacity = '1';
+                stepEl.style.color = '#667eea';
+                stepEl.style.fontWeight = '600';
+                stepEl.innerHTML = stepEl.innerHTML.replace('⏳', '✅');
+            }
+        }, step.time);
+        progressTimeouts.push(timeout);
+    });
+    
+    // Store cleanup function
+    window.cleanupPreviewProgress = () => {
+        clearInterval(countdownInterval);
+        progressTimeouts.forEach(t => clearTimeout(t));
+    };
     
     try {
         const response = await fetch('/api/preview', {
@@ -164,11 +244,29 @@ async function generatePreview() {
         
     } catch (error) {
         console.error('Preview generation failed:', error);
-        hidePreviewProgress();
+        
+        // Cleanup all progress indicators
+        if (window.cleanupPreviewProgress) {
+            window.cleanupPreviewProgress();
+        }
+        
+        // Show error in preview area
+        preview.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: #721c24; background: #f8d7da; border: 2px solid #f5c6cb; border-radius: 8px;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                <h3 style="margin: 0 0 0.5rem 0;">Preview Generation Failed</h3>
+                <p style="margin: 0; font-size: 0.9rem;">${error.message}</p>
+                <p style="margin-top: 1rem; font-size: 0.85rem; color: #856404;">
+                    Please check your API key and try again.
+                </p>
+            </div>
+        `;
+        
         if (typeof showNotification === 'function') {
-            showNotification('❌ Preview generation failed: ' + error.message, 'error');
+            showNotification('❌ Preview failed: ' + error.message, 'error');
         }
     } finally {
+        // Restore button state
         previewBtn.textContent = originalText;
         previewBtn.disabled = false;
     }
@@ -229,11 +327,16 @@ async function handleIncrementalStream(response) {
                             totalSlides = data.totalSlides;
                             console.log(`🎨 Theme received: ${theme.name} (${totalSlides} slides)`);
                             
-                            // Remove initial loading, show theme
-                            hidePreviewProgress();
+                            // Clear initial loading UI
+                            previewContainer.innerHTML = '';
                             
+                            // Cleanup progress indicators
+                            if (window.cleanupPreviewProgress) {
+                                window.cleanupPreviewProgress();
+                            }
+                            
+                            // Show theme banner
                             const themeDiv = document.createElement('div');
-                            themeDiv.className = 'theme-info';
                             themeDiv.style.cssText = `
                                 background: linear-gradient(135deg, ${theme.colorPrimary}, ${theme.colorSecondary});
                                 color: white;
@@ -243,7 +346,7 @@ async function handleIncrementalStream(response) {
                                 text-align: center;
                             `;
                             themeDiv.innerHTML = `
-                                <h3 style="margin: 0 0 0.5rem 0; color: white;">${theme.name}</h3>
+                                <h3 style="margin: 0 0 0.5rem 0; color: white;">🎨 ${theme.name}</h3>
                                 <p style="margin: 0; opacity: 0.9;">${theme.description}</p>
                             `;
                             previewContainer.appendChild(themeDiv);
@@ -252,16 +355,16 @@ async function handleIncrementalStream(response) {
                             progressDiv = document.createElement('div');
                             progressDiv.id = 'slideProgress';
                             progressDiv.style.cssText = `
-                                background: rgba(102, 126, 234, 0.1);
+                                background: #e3f2fd;
                                 padding: 1rem;
                                 border-radius: 8px;
                                 margin-bottom: 1rem;
                                 text-align: center;
                                 font-weight: bold;
-                                color: #667eea;
+                                color: #1976d2;
                                 font-size: 1.1rem;
                             `;
-                            progressDiv.innerHTML = `⏳ Generating slides... 0/${totalSlides}`;
+                            progressDiv.innerHTML = `⏳ Generating ${totalSlides} slides... <span id="slideProgressCount">0/${totalSlides}</span>`;
                             previewContainer.appendChild(progressDiv);
                         }
                         
@@ -271,8 +374,20 @@ async function handleIncrementalStream(response) {
                             console.log(`📄 Slide ${data.current}/${data.total}: ${data.slide.title}`);
                             
                             // Update progress counter in real-time
-                            if (progressDiv) {
-                                progressDiv.innerHTML = `⏳ Generating slides... ${data.current}/${data.total}`;
+                            const progressCount = document.getElementById('slideProgressCount');
+                            if (progressCount) {
+                                progressCount.textContent = `${data.current}/${data.total}`;
+                            }
+                            
+                            // Mark step 5 as active when first slide arrives
+                            if (data.current === 1) {
+                                const step5 = document.getElementById('step5');
+                                if (step5) {
+                                    step5.style.opacity = '1';
+                                    step5.style.color = '#667eea';
+                                    step5.style.fontWeight = '600';
+                                    step5.innerHTML = '✅ Rendering slide previews';
+                                }
                             }
                             
                             // Render THIS slide right now (not waiting for others!)
@@ -293,22 +408,28 @@ async function handleIncrementalStream(response) {
                         else if (data.type === 'complete') {
                             console.log('✅ Stream complete event received');
                             
+                            // Cleanup countdown and timers
+                            if (window.cleanupPreviewProgress) {
+                                window.cleanupPreviewProgress();
+                            }
+                            
                             // Show completion message
                             if (progressDiv) {
                                 progressDiv.innerHTML = `✅ All ${totalSlides} slides generated successfully!`;
-                                progressDiv.style.background = 'rgba(40, 167, 69, 0.1)';
-                                progressDiv.style.color = '#28a745';
+                                progressDiv.style.background = '#d4edda';
+                                progressDiv.style.borderColor = '#28a745';
+                                progressDiv.style.color = '#155724';
                                 
-                                // Fade out after 1.5 seconds
+                                // Fade out after 2 seconds
                                 setTimeout(() => {
-                                    progressDiv.style.transition = 'opacity 0.3s ease';
+                                    progressDiv.style.transition = 'opacity 0.5s ease';
                                     progressDiv.style.opacity = '0';
                                     setTimeout(() => {
                                         if (progressDiv && progressDiv.parentNode) {
                                             progressDiv.remove();
                                         }
-                                    }, 300);
-                                }, 1500);
+                                    }, 500);
+                                }, 2000);
                             }
                         }
                         
@@ -674,6 +795,23 @@ window.displayPreview = displayPreview;
 window.showPreviewProgress = showPreviewProgress;
 window.hidePreviewProgress = hidePreviewProgress;
 window.handleIncrementalStream = handleIncrementalStream;
+
+// Add spinner animation CSS if not exists
+if (!document.querySelector('#spinnerAnimationStyle')) {
+    const style = document.createElement('style');
+    style.id = 'spinnerAnimationStyle';
+    style.textContent = `
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            display: inline-block;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 // Verify loading
 console.log('✅ slidePreview.js loaded - Real-time incremental rendering enabled');
