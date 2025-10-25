@@ -248,6 +248,18 @@ MIT License - Feel free to use and modify!
 
 ---
 
+## ⚠️ Project Rules - Always Applied
+
+**These rules must be followed in ALL interactions with this codebase:**
+
+1. **Summary Rule**: NEVER create comprehensive summaries without explicit user instruction
+2. **Environment Rule**: We can use and test via dockerfile over the internet on the prod env only  
+3. **User Instruction Priority**: Do not create summary automatically except when instructed by the user
+
+These rules are project-specific requirements and should be remembered across all sessions.
+
+---
+
 **Ready to create professional presentations?** 🎉
 
 Run `npm start` and open `http://localhost:3000`
