@@ -10,12 +10,12 @@ async function generatePreview() {
     const apiKey = getApiKey();
     
     if (!apiKey) {
-        showStatus('⚠️ Please enter your API key first!', 'error');
+        window.showStatus('⚠️ Please enter your API key first!', 'error');
         return;
     }
     
     if (!text) {
-        showStatus('⚠️ Please enter some text!', 'error');
+        window.showStatus('⚠️ Please enter some text!', 'error');
         return;
     }
     
@@ -28,7 +28,7 @@ async function generatePreview() {
     const wordCount = text.split(/\s+/).length;
     const estimatedTime = Math.max(5, Math.min(20, Math.ceil(wordCount / 100)));
     
-    showStatus('🤖 AI is analyzing your content and designing slides...', 'info');
+    window.showStatus('🤖 AI is analyzing your content and designing slides...', 'info');
     preview.innerHTML = `
         <div id="streamingStatus" style="text-align: center; padding: 2rem; max-width: 600px; margin: 0 auto;">
             <div style="position: relative; width: 80px; height: 80px; margin: 0 auto;">
@@ -132,7 +132,7 @@ async function generatePreview() {
             }
             await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for UX
             window.displayPreview(cached);
-            showStatus('✅ Preview loaded from cache instantly!', 'success');
+            window.showStatus('✅ Preview loaded from cache instantly!', 'success');
             return;
         }
         
@@ -152,11 +152,11 @@ async function generatePreview() {
         document.getElementById('generatePptSection').style.display = 'none';
         
         if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-            showStatus('❌ Connection error. Make sure the server is running on http://localhost:3000', 'error');
+            window.showStatus('❌ Connection error. Make sure the server is running on http://localhost:3000', 'error');
         } else if (error.message.includes('401') || error.message.includes('authentication')) {
-            showStatus('❌ Invalid API key. Please check and try again.', 'error');
+            window.showStatus('❌ Invalid API key. Please check and try again.', 'error');
         } else {
-            showStatus('❌ Error: ' + error.message, 'error');
+            window.showStatus('❌ Error: ' + error.message, 'error');
         }
     } finally {
         if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
@@ -400,9 +400,9 @@ async function handleStreamingPreview(text, apiKey) {
                         document.getElementById('generatePptSection').style.display = 'block';
                         
                         if (window.templateFile) {
-                            showStatus(`✅ ${receivedSlides.length} slides ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
+                            window.showStatus(`✅ ${receivedSlides.length} slides ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
                         } else {
-                            showStatus(`✅ ${receivedSlides.length} slides ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
+                            window.showStatus(`✅ ${receivedSlides.length} slides ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
                         }
                         
                         console.log('✅ Incremental generation complete:', receivedSlides.length, 'slides');
@@ -531,9 +531,9 @@ async function handleNonStreamingPreview(text, apiKey) {
     document.getElementById('generatePptSection').style.display = 'block';
     
     if (window.templateFile) {
-        showStatus(`✅ Preview ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
+        window.showStatus(`✅ Preview ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
     } else {
-        showStatus('✅ Preview ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
+        window.showStatus('✅ Preview ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
     }
 }
 
@@ -595,12 +595,12 @@ async function generatePresentation() {
     const apiKey = getApiKey();
     
     if (!apiKey) {
-        showStatus('⚠️ Please enter your API key first!', 'error');
+        window.showStatus('⚠️ Please enter your API key first!', 'error');
         return;
     }
     
     if (!text) {
-        showStatus('⚠️ Please enter some text!', 'error');
+        window.showStatus('⚠️ Please enter some text!', 'error');
         return;
     }
     
@@ -613,7 +613,7 @@ async function generatePresentation() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Creating PowerPoint...';
     
-    showStatus('📊 Generating your professional PowerPoint...', 'info');
+    window.showStatus('📊 Generating your professional PowerPoint...', 'info');
     
     console.log('🚀 Starting PowerPoint generation...');
     console.log('  Provider:', window.currentProvider);
@@ -633,7 +633,7 @@ async function generatePresentation() {
     let currentStep = 0;
     const statusInterval = setInterval(() => {
         if (currentStep < progressSteps.length) {
-            showStatus(progressSteps[currentStep], 'info');
+            window.showStatus(progressSteps[currentStep], 'info');
             currentStep++;
         }
     }, 8000); // Update every 8 seconds
@@ -727,11 +727,11 @@ async function generatePresentation() {
         
         if (error.message.startsWith('AUTHENTICATION_ERROR:')) {
             const cleanMessage = error.message.replace('AUTHENTICATION_ERROR: ', '');
-            showStatus('❌ Authentication Error: ' + cleanMessage, 'error');
+            window.showStatus('❌ Authentication Error: ' + cleanMessage, 'error');
         } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-            showStatus('❌ Connection error. Please check your server is running.', 'error');
+            window.showStatus('❌ Connection error. Please check your server is running.', 'error');
         } else {
-            showStatus('❌ Generation Error: ' + error.message, 'error');
+            window.showStatus('❌ Generation Error: ' + error.message, 'error');
         }
     } finally {
         btn.disabled = false;
@@ -747,17 +747,17 @@ async function modifySlides() {
     const apiKey = getApiKey();
     
     if (!modificationPrompt) {
-        showStatus('⚠️ Please enter modification instructions!', 'error');
+        window.showStatus('⚠️ Please enter modification instructions!', 'error');
         return;
     }
     
     if (!window.currentSlideData || !window.currentSlideData.slides) {
-        showStatus('⚠️ No slides to modify! Generate preview first.', 'error');
+        window.showStatus('⚠️ No slides to modify! Generate preview first.', 'error');
         return;
     }
     
     if (!apiKey) {
-        showStatus('⚠️ Please enter your API key first!', 'error');
+        window.showStatus('⚠️ Please enter your API key first!', 'error');
         return;
     }
     
@@ -766,7 +766,7 @@ async function modifySlides() {
     modifyBtn.disabled = true;
     modifyBtn.innerHTML = '<span class="spinner"></span> Applying changes...';
     
-    showStatus('🔄 AI is modifying your slides...', 'info');
+    window.showStatus('🔄 AI is modifying your slides...', 'info');
     
     try {
         // Call backend to get modification prompt from config/prompts.json
@@ -798,11 +798,11 @@ async function modifySlides() {
         // Clear modification prompt
         document.getElementById('modificationPrompt').value = '';
         
-        showStatus(`✅ Slides modified successfully! ${modifiedData.slides.length} slides total.`, 'success');
+        window.showStatus(`✅ Slides modified successfully! ${modifiedData.slides.length} slides total.`, 'success');
         
     } catch (error) {
         console.error('Modification Error:', error);
-        showStatus('❌ Error modifying slides: ' + error.message, 'error');
+        window.showStatus('❌ Error modifying slides: ' + error.message, 'error');
     } finally {
         modifyBtn.disabled = false;
         modifyBtn.innerHTML = originalBtnText;
@@ -944,7 +944,7 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
     }
     
     // Update status
-    showStatus(`✅ PowerPoint ready! File size: ${sizeText}`, 'success');
+    window.showStatus(`✅ PowerPoint ready! File size: ${sizeText}`, 'success');
     
     // Auto-scroll to download section
     setTimeout(() => {
@@ -1332,7 +1332,7 @@ function viewPDF(sessionId) {
     document.body.appendChild(modal);
     document.body.style.overflow = 'hidden';
     
-    showStatus('📄 Opening PDF viewer...', 'info');
+    window.showStatus('📄 Opening PDF viewer...', 'info');
 }
 
 /**
@@ -1340,7 +1340,7 @@ function viewPDF(sessionId) {
  * @param {string} blobUrl - Blob URL (will need to be uploaded)
  */
 function openInOffice365(blobUrl) {
-    showStatus('💡 Tip: Download the file and upload to OneDrive, then open with Office 365', 'info');
+    window.showStatus('💡 Tip: Download the file and upload to OneDrive, then open with Office 365', 'info');
 }
 
 /**
@@ -1348,7 +1348,7 @@ function openInOffice365(blobUrl) {
  * @param {string} blobUrl - Blob URL (will need to be uploaded)
  */
 function openInGoogleSlides(blobUrl) {
-    showStatus('💡 Tip: Download the file and upload to Google Drive, then open with Google Slides', 'info');
+    window.showStatus('💡 Tip: Download the file and upload to Google Drive, then open with Google Slides', 'info');
 }
 
 /**
@@ -1356,11 +1356,11 @@ function openInGoogleSlides(blobUrl) {
  */
 async function sharePresentation() {
     if (!window.currentSlideData) {
-        showStatus('⚠️ No presentation to share. Generate a presentation first.', 'error');
+        window.showStatus('⚠️ No presentation to share. Generate a presentation first.', 'error');
         return;
     }
     
-    showStatus('🔗 Creating shareable link...', 'info');
+    window.showStatus('🔗 Creating shareable link...', 'info');
     
     try {
         const response = await fetch('/api/share-presentation', {
@@ -1381,11 +1381,11 @@ async function sharePresentation() {
         // Show share link modal
         showShareLinkModal(data.shareUrl, data.expiresIn);
         
-        showStatus('✅ Shareable link created!', 'success');
+        window.showStatus('✅ Shareable link created!', 'success');
         
     } catch (error) {
         console.error('Share error:', error);
-        showStatus('❌ Failed to create share link: ' + error.message, 'error');
+        window.showStatus('❌ Failed to create share link: ' + error.message, 'error');
     }
 }
 
@@ -1455,9 +1455,9 @@ function copyShareUrl() {
     const input = document.getElementById('shareUrlInput');
     input.select();
     navigator.clipboard.writeText(input.value).then(() => {
-        showStatus('✅ Link copied to clipboard!', 'success');
+        window.showStatus('✅ Link copied to clipboard!', 'success');
     }).catch(() => {
-        showStatus('⚠️ Please copy the link manually', 'info');
+        window.showStatus('⚠️ Please copy the link manually', 'info');
     });
 }
 
@@ -1474,7 +1474,7 @@ function openShareUrl() {
  */
 function modifyCurrentSlide() {
     if (!window.currentSlideData || window.currentSlideIndex === undefined) {
-        showStatus('⚠️ No slide selected', 'error');
+        window.showStatus('⚠️ No slide selected', 'error');
         return;
     }
     
@@ -1598,7 +1598,7 @@ function saveSlideModification(slideIndex) {
     // Close modal
     document.getElementById('modifySlideModal').remove();
     
-    showStatus('✅ Slide updated! Changes will be included in the next download.', 'success');
+    window.showStatus('✅ Slide updated! Changes will be included in the next download.', 'success');
 }
 
 // Add fadeOut animation

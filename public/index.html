@@ -16,6 +16,60 @@
             <h1>🎨 AI Text2PPT Pro</h1>
         </div>
 
+        <!-- AI IDEA GENERATOR (OPTIONAL) - Moved above main grid -->
+        <div class="card" style="margin-bottom: 1rem;">
+            <div class="idea-generator-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #ff9a56;">
+                <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 AI Idea Generator (Optional)</h3>
+                <p class="section-description" style="color: #555; margin-bottom: 1rem;">Don't have content yet? Let AI expand your simple idea into detailed presentation content</p>
+                
+                <!-- Idea Input -->
+                <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
+                
+                <!-- File Upload -->
+                <div class="file-upload-section">
+                    <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
+                    <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
+                    
+                    <!-- Extract Colors Checkbox -->
+                    <label class="checkbox-label checkbox-blue">
+                        <input type="checkbox" id="extractColors">
+                        <span>
+                            <strong>🎨 Extract color theme from uploaded files</strong>
+                            <span class="checkbox-desc">Automatically detect and use colors from your documents</span>
+                        </span>
+                    </label>
+                    
+                    <!-- Use as Template Checkbox -->
+                    <label class="checkbox-label checkbox-orange">
+                        <input type="checkbox" id="useAsTemplate">
+                        <span>
+                            <strong>📄 Use uploaded PPTX as template/base</strong>
+                            <span class="checkbox-desc">Modify existing slides or add new content to uploaded PowerPoint</span>
+                        </span>
+                    </label>
+                </div>
+                
+                <!-- Generation Options -->
+                <div class="generation-options">
+                    <div>
+                        <label class="option-label">Number of slides:</label>
+                        <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
+                    </div>
+                    <div class="checkbox-container">
+                        <label class="checkbox-inline">
+                            <input type="checkbox" id="generateImages">
+                            <span>Generate AI images</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button class="btn-primary btn-full" onclick="generateFromPrompt()" id="promptBtn">
+                    🚀 Expand Idea into Full Content
+                </button>
+                <p class="helper-text">This creates detailed text content that you can edit below before generating slides</p>
+            </div>
+        </div>
+
         <!-- Main Content Grid -->
         <div class="main-grid">
             <!-- Left Panel: Content Input -->
@@ -24,60 +78,8 @@
                 
                 <!-- Two Column Layout for Left Panel -->
                 <div class="left-panel-grid">
-                    <!-- Left Column: AI Generator + Theme -->
+                    <!-- Left Column: Theme Selector -->
                     <div class="left-column">
-                        <!-- SECTION 2: AI IDEA GENERATOR (OPTIONAL) -->
-                        <div class="idea-generator-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #ff9a56; margin-bottom: 1rem;">
-                            <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 Step 0: AI Idea Generator (Optional)</h3>
-                            <p class="section-description" style="color: #555; margin-bottom: 1rem;">Don't have content yet? Let AI expand your simple idea into detailed presentation content</p>
-                            
-                            <!-- Idea Input -->
-                            <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
-                            
-                            <!-- File Upload -->
-                            <div class="file-upload-section">
-                                <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
-                                <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
-                                
-                                <!-- Extract Colors Checkbox -->
-                                <label class="checkbox-label checkbox-blue">
-                                    <input type="checkbox" id="extractColors">
-                                    <span>
-                                        <strong>🎨 Extract color theme from uploaded files</strong>
-                                        <span class="checkbox-desc">Automatically detect and use colors from your documents</span>
-                                    </span>
-                                </label>
-                                
-                                <!-- Use as Template Checkbox -->
-                                <label class="checkbox-label checkbox-orange">
-                                    <input type="checkbox" id="useAsTemplate">
-                                    <span>
-                                        <strong>📄 Use uploaded PPTX as template/base</strong>
-                                        <span class="checkbox-desc">Modify existing slides or add new content to uploaded PowerPoint</span>
-                                    </span>
-                                </label>
-                            </div>
-                            
-                            <!-- Generation Options -->
-                            <div class="generation-options">
-                                <div>
-                                    <label class="option-label">Number of slides:</label>
-                                    <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
-                                </div>
-                                <div class="checkbox-container">
-                                    <label class="checkbox-inline">
-                                        <input type="checkbox" id="generateImages">
-                                        <span>Generate AI images</span>
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <button class="btn-primary btn-full" onclick="generateFromPrompt()" id="promptBtn">
-                                🚀 Expand Idea into Full Content
-                            </button>
-                            <p class="helper-text">This creates detailed text content that you can edit above before generating slides</p>
-                        </div>
-                        
                         <!-- Color Theme Selector -->
                         <div id="themeSelector" class="theme-selector">
                             <div class="theme-selector-inner">
@@ -93,9 +95,9 @@
                     
                     <!-- Right Column: Content Input -->
                     <div class="right-column">
-                        <!-- SECTION 1: PRESENTATION CONTENT -->
+                        <!-- PRESENTATION CONTENT -->
                         <div class="content-input-section" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #667eea; height: 100%;">
-                            <h3 style="margin: 0 0 1rem 0; color: #667eea; font-size: 1.3rem;">📝 Step 1: Presentation Content</h3>
+                            <h3 style="margin: 0 0 1rem 0; color: #667eea; font-size: 1.3rem;">📝 Presentation Content</h3>
                             <p style="margin: 0 0 1rem 0; color: #555; font-size: 0.95rem;">Enter or paste your detailed presentation content here, then generate preview</p>
                             
                             <!-- Main Content Editor -->
