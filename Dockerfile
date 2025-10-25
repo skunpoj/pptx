@@ -20,9 +20,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Environment variables
-# BASE_URL: Set the base URL for shareable links
-# Default: https://genis.ai
-# Override in Railway dashboard Variables if using different domain
+# BASE_URL: Hardcoded to genis.ai for all shareable links
 ENV BASE_URL="https://genis.ai"
 
 # Copy only production-essential files

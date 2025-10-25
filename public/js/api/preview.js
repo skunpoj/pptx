@@ -60,19 +60,27 @@ function hidePreviewProgress() {
  * Generate preview of slides from text content
  */
 async function generatePreview() {
+    console.log('🎬 generatePreview called');
+    
     const textInput = document.getElementById('textInput');
     const text = textInput.value.trim();
     
     if (!text) {
+        console.warn('⚠️ No text input provided');
         alert('Please enter some content first');
         return;
     }
     
+    console.log(`📝 Processing ${text.length} characters of content`);
+    
     const apiKey = getApiKey();
     if (!apiKey) {
-        alert('Please enter your API key first');
+        console.warn('⚠️ No API key configured');
+        alert('Please enter your API key first in Advanced Configuration section');
         return;
     }
+    
+    console.log('✅ API key found, proceeding with preview generation');
     
     // Check cache first
     const cachedData = checkPreviewCache(text);

@@ -884,12 +884,18 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
     console.log(`\n${'='.repeat(80)}`);
-    console.log(`🚀 AI Text2PPT Pro Server v2.0.0-adaptive-content`);
+    console.log(`🚀 genis.ai - AI Presentation Generator v2.0.0`);
     console.log(`${'='.repeat(80)}`);
-    console.log(`📍 URL: http://localhost:${PORT}`);
+    console.log(`📍 Server: Railway deployment`);
+    console.log(`🔗 Base URL (for sharing): ${SERVER_CONFIG.BASE_URL}`);
     console.log(`✨ Features: Adaptive sizing, Progressive rendering, Detailed logging`);
-    console.log(`🔍 Version check: http://localhost:${PORT}/api/version`);
-    console.log(`🧪 Deployment check: http://localhost:${PORT}/CHECK-DEPLOYMENT.html`);
+    console.log('');
+    console.log(`🔍 Health check: /api/health`);
+    console.log(`📋 API version: /api/version`);
+    console.log('');
+    console.log(`✅ Share links will use: ${SERVER_CONFIG.BASE_URL}/view/{id}`);
+    console.log(`   📝 Example: https://genis.ai/view/abc123`);
+    console.log(`   🎯 All shareable links will use genis.ai domain`);
     console.log(`${'='.repeat(80)}\n`);
 });
 
@@ -932,7 +938,10 @@ app.post('/api/share-presentation', async (req, res) => {
         const baseUrl = SERVER_CONFIG.BASE_URL || `${req.protocol}://${req.get('host')}`;
         const shareUrl = `${baseUrl}/view/${shareId}`;
         
-        console.log(`✅ Created shareable presentation: ${shareId} (Base URL: ${baseUrl})`);
+        console.log(`✅ Created shareable presentation: ${shareId}`);
+        console.log(`   📌 Base URL: ${SERVER_CONFIG.BASE_URL ? SERVER_CONFIG.BASE_URL + ' (from ENV)' : 'Auto-detected: ' + baseUrl}`);
+        console.log(`   🔗 Share URL: ${shareUrl}`);
+        
         res.json({ 
             shareId, 
             shareUrl,

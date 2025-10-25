@@ -50,10 +50,19 @@ if (document.readyState === 'loading') {
 }
 
 /**
- * Get API key from localStorage
+ * Get API key from localStorage based on current provider
  */
 function getApiKey() {
-    return localStorage.getItem('anthropic_api_key') || '';
+    const currentProvider = window.currentProvider || localStorage.getItem('ai_provider') || 'anthropic';
+    const apiKey = localStorage.getItem(`${currentProvider}_api_key`) || '';
+    
+    if (!apiKey) {
+        console.warn(`⚠️ No API key found for provider: ${currentProvider}`);
+    } else {
+        console.log(`✅ API key loaded for provider: ${currentProvider}`);
+    }
+    
+    return apiKey;
 }
 
 /**

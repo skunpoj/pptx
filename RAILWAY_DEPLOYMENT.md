@@ -18,12 +18,10 @@ The project includes a single optimized `Dockerfile` with:
    - Click "New Project" → "Deploy from GitHub repo"
    - Select this repository
 
-2. **Configure Environment Variables (Optional)**
-   - The Dockerfile already defaults to `BASE_URL=https://genis.ai`
-   - Only set this if using a different domain:
-     - Go to Railway dashboard → Your project
-     - Click on "Variables" tab
-     - Add: `BASE_URL=https://yourdomain.com`
+2. **Environment Variables (Pre-configured)**
+   - ✅ `BASE_URL=https://genis.ai` is hardcoded in Dockerfile
+   - ✅ All share links will use `https://genis.ai/view/{id}`
+   - ✅ No additional configuration needed
 
 3. **Configure Build Settings**
    - Railway will automatically detect the Dockerfile
@@ -56,13 +54,13 @@ railway up
 
 ## Environment Variables
 
-### Pre-configured in Dockerfile
+### Pre-configured for genis.ai
 
 | Variable | Default Value | Description |
 |----------|---------------|-------------|
-| `BASE_URL` | `https://genis.ai` | Base URL for shareable presentation links |
+| `BASE_URL` | `https://genis.ai` | Hardcoded to genis.ai domain |
 
-### Optional Variables (Override in Railway if needed)
+### Optional Variables (Railway sets automatically)
 
 | Variable | Description | Default |
 |----------|-------------|---------|
