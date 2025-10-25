@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Professional AI-powered text to PowerPoint converter using Claude AI and html2pptx",
   "main": "server.js",
-  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
