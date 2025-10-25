@@ -34,7 +34,7 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     margin-bottom: 1.5rem;
-    align-items: start;
+    align-items: stretch;
 }
 
 .card {
@@ -302,6 +302,7 @@ textarea:focus {
 .preview-container {
     display: flex;
     flex-direction: column;
+    height: 100%;
 }
 
 .preview-container h2 {
@@ -320,7 +321,7 @@ textarea:focus {
 .preview {
     overflow-y: auto;
     padding: 0.5rem;
-    max-height: calc(100vh - 180px);
+    height: 100%;
 }
 
 .preview::-webkit-scrollbar {

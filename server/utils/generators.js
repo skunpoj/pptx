@@ -156,8 +156,14 @@ function generateHTMLSlideCode(file, slide, idx) {
     return `
         // Slide ${idx + 1}: ${slide.title || 'Slide'}
         console.log("Processing ${file}...");
-        await html2pptx("${file}", pptx);
-        console.log("✓ ${file} added");
+        try {
+            await html2pptx("${file}", pptx);
+            console.log("✓ ${file} added successfully");
+        } catch (slideError) {
+            console.error("ERROR processing ${file}:", slideError.message);
+            console.error("Stack:", slideError.stack);
+            throw new Error("Failed to convert ${file}: " + slideError.message);
+        }
     `;
 }
 

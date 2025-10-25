@@ -4,9 +4,9 @@
  */
 
 /**
- * Generates CSS variables from theme object
+ * Generates CSS variables and classes from theme object
  * @param {Object} theme - Theme configuration
- * @returns {string} - CSS with theme variables
+ * @returns {string} - CSS with theme variables and utility classes
  */
 function generateCSS(theme) {
     return `:root {
@@ -17,6 +17,34 @@ function generateCSS(theme) {
     --color-surface-foreground: ${theme.colorText};
     --font-family-display: Arial, sans-serif;
     --font-family-content: Arial, sans-serif;
+}
+
+/* Layout utility classes */
+.col {
+    display: flex;
+    flex-direction: column;
+}
+
+.center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fill-height {
+    flex: 1;
+}
+
+.fit {
+    max-width: 100%;
+}
+
+/* Global body styling */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-family-content);
+    color: var(--color-surface-foreground);
 }`;
 }
 
