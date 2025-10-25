@@ -115,18 +115,42 @@ async function symlinkGlobalPackages(globalPath, localPath) {
  * @returns {Promise<void>}
  */
 async function installDependencies(workDir) {
-    // Platform-specific command
-    const cdCommand = process.platform === 'win32' ? 'cd /d' : 'cd';
-    const command = `${cdCommand} "${workDir}" && npm install pptxgenjs @ant/html2pptx jszip sharp playwright --no-save --no-audit --no-fund`;
+    // First, install html2pptx from local tgz file
+    const html2pptxTgz = path.join(__dirname, '../../skills/pptx/html2pptx.tgz');
     
-    console.log('Installing dependencies...');
-    const { stdout, stderr } = await execPromise(command, { 
-        timeout: 120000, // 2 minute timeout
-        shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
-    });
-    
-    if (stdout) console.log('npm install output:', stdout);
-    if (stderr) console.error('npm install stderr:', stderr);
+    try {
+        await fs.access(html2pptxTgz);
+        console.log('✓ Found local html2pptx.tgz');
+        
+        // Install from local tgz
+        const cdCommand = process.platform === 'win32' ? 'cd /d' : 'cd';
+        const installCmd = `${cdCommand} "${workDir}" && npm install "${html2pptxTgz}" pptxgenjs jszip sharp playwright --no-save --no-audit --no-fund`;
+        
+        console.log('Installing dependencies from local package...');
+        const { stdout, stderr } = await execPromise(installCmd, { 
+            timeout: 120000,
+            shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
+        });
+        
+        if (stdout) console.log('npm install output:', stdout);
+        if (stderr && !stderr.includes('WARN')) console.error('npm install stderr:', stderr);
+        
+    } catch (error) {
+        console.warn('Local html2pptx.tgz not found, trying npm registry...');
+        
+        // Fallback to npm registry
+        const cdCommand = process.platform === 'win32' ? 'cd /d' : 'cd';
+        const command = `${cdCommand} "${workDir}" && npm install pptxgenjs @ant/html2pptx jszip sharp playwright --no-save --no-audit --no-fund`;
+        
+        console.log('Installing dependencies from npm...');
+        const { stdout, stderr } = await execPromise(command, { 
+            timeout: 120000,
+            shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
+        });
+        
+        if (stdout) console.log('npm install output:', stdout);
+        if (stderr) console.error('npm install stderr:', stderr);
+    }
 }
 
 /**

@@ -146,34 +146,39 @@ Our Products
                     <button onclick="switchView('gallery')" id="galleryViewBtn">🖼️ Gallery View</button>
                 </div>
                 
-                <!-- Slide Modification Section (appears after preview) - MOVED ABOVE PREVIEW -->
-                <div id="modificationSection" style="display: none; margin-bottom: 1rem; flex-shrink: 0;">
-                    <div style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 0.75rem;">
-                        <strong style="color: #f57c00; display: block; margin-bottom: 0.5rem;">✏️ Modify Slides</strong>
-                        <textarea id="modificationPrompt" 
-                                  placeholder="Example: 'Change slide 3 title to...' or 'Add a bullet point to slide 2 about...' or 'Remove slide 5'"
-                                  style="width: 100%; height: 60px; padding: 0.5rem; border: 1px solid #ffc107; border-radius: 4px; font-size: 0.85rem; resize: vertical;"></textarea>
-                        <button class="btn-secondary btn-full" onclick="modifySlides()" id="modifyBtn" style="margin-top: 0.5rem; font-size: 0.85rem; padding: 0.5rem;">
-                            🔄 Apply Changes
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Generate PowerPoint Button (appears after preview) - MOVED ABOVE PREVIEW -->
-                <div id="generatePptSection" style="display: none; margin-bottom: 1rem; flex-shrink: 0;">
-                    <button class="btn-generate btn-full" onclick="generatePresentation()" id="generateBtn">
-                        ✨ Generate PowerPoint
-                    </button>
-                    <p style="text-align: center; font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
-                        Click to download or view online
-                    </p>
-                </div>
-                
                 <div class="preview" id="preview" style="overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important;"></div>
             </div>
         </div>
 
-        <!-- Status Notification - SHARED BETWEEN BOTH PANELS - MOVED BELOW BUTTONS -->
+        <!-- Action Buttons Section - ABOVE STATUS AND SETTINGS -->
+        <div id="actionButtonsContainer" style="max-width: 1400px; margin: 0 auto; padding: 0 1rem;">
+            <!-- Slide Modification Section (appears after preview) -->
+            <div id="modificationSection" style="display: none; margin-bottom: 1rem;">
+                <div class="card" style="background: #fff8e1; border: 2px solid #ffc107; padding: 1rem;">
+                    <strong style="color: #f57c00; display: block; margin-bottom: 0.5rem; font-size: 1.1rem;">✏️ Modify Slides with AI</strong>
+                    <textarea id="modificationPrompt" 
+                              placeholder="Example: 'Change slide 3 title to...' or 'Add a bullet point to slide 2 about...' or 'Remove slide 5'"
+                              style="width: 100%; height: 70px; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 8px; font-size: 0.9rem; resize: vertical;"></textarea>
+                    <button class="btn-secondary btn-full" onclick="modifySlides()" id="modifyBtn" style="margin-top: 0.75rem; font-size: 1rem; padding: 0.75rem;">
+                        🔄 Apply AI Modifications
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Generate PowerPoint Button (appears after preview) -->
+            <div id="generatePptSection" style="display: none; margin-bottom: 1rem;">
+                <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.5rem; text-align: center;">
+                    <button class="btn-generate btn-full" onclick="generatePresentation()" id="generateBtn" style="background: white; color: #667eea; font-size: 1.2rem; font-weight: 700; padding: 1rem;">
+                        ✨ Generate PowerPoint Presentation
+                    </button>
+                    <p style="text-align: center; font-size: 0.9rem; color: white; margin-top: 0.75rem; opacity: 0.95;">
+                        Download PPTX, view slides online, auto-convert to PDF, or create shareable link
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Notification - ABOVE SETTINGS -->
         <div id="status"></div>
 
         <!-- Settings Card -->
