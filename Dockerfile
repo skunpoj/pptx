@@ -78,16 +78,9 @@ RUN npm install ./temp-html2pptx.tgz --no-audit --no-fund && rm ./temp-html2pptx
 # STAGE 6: Playwright (heavy, but rarely changes)
 # ============================================================================
 
-# Install Playwright browsers as ROOT (required for --with-deps system packages)
-# Then fix permissions so appuser can use them
-RUN npx playwright install chromium --with-deps && \
-    chmod -R 755 /root/.cache/ms-playwright && \
-    chown -R appuser:appuser /root/.cache/ms-playwright
-
-# Create symlink so appuser can access the playwright cache
-RUN mkdir -p /home/appuser/.cache && \
-    ln -s /root/.cache/ms-playwright /home/appuser/.cache/ms-playwright && \
-    chown -R appuser:appuser /home/appuser/.cache
+# Install Playwright browsers
+# Run as root - no user switching needed
+RUN npx playwright install chromium --with-deps
 
 # ============================================================================
 # STAGE 7: Application Code (changes frequently - copied LAST)
