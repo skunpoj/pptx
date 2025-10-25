@@ -203,6 +203,28 @@ body {
 }
 
 /* ==========================================================================
+   FLOATING PRODUCT HUNT BADGE
+   ========================================================================== */
+
+.floating-product-hunt {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.floating-product-hunt:hover {
+    transform: translateY(-3px);
+}
+
+.floating-product-hunt img {
+    display: block;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+/* ==========================================================================
    HEADER
    ========================================================================== */
 
@@ -329,6 +351,16 @@ body {
         font-size: 0.85rem;
     }
     
+    .floating-product-hunt {
+        top: 15px;
+        left: 15px;
+    }
+    
+    .floating-product-hunt img {
+        width: 200px;
+        height: auto;
+    }
+    
     .header {
         padding: 1.25rem 1.5rem;
         gap: 2rem;
@@ -384,6 +416,16 @@ body {
     
     .badge-text {
         font-size: 0.75rem;
+    }
+    
+    .floating-product-hunt {
+        top: 10px;
+        left: 10px;
+    }
+    
+    .floating-product-hunt img {
+        width: 160px;
+        height: auto;
     }
     
     .header {

@@ -107,6 +107,22 @@ async function generateImagesForSlides() {
     // Show progress
     showImageGenerationProgress(descriptions.length);
     
+    // Switch to gallery tab to show progress
+    const galleryTabBtn = document.getElementById('galleryTabBtn');
+    if (galleryTabBtn && typeof window.showImageGallery === 'function') {
+        window.showImageGallery();
+    }
+    
+    // Simulate progress updates while waiting for API
+    let simulatedProgress = 0;
+    const progressInterval = setInterval(() => {
+        if (simulatedProgress < descriptions.length) {
+            simulatedProgress++;
+            const fakeDesc = descriptions[simulatedProgress - 1]?.description || 'Generating image...';
+            updateImageGenerationProgress(simulatedProgress, descriptions.length, fakeDesc);
+        }
+    }, 15000); // Update every 15 seconds (approximate time per image)
+    
     try {
         const response = await fetch('/api/images/generate', {
             method: 'POST',
@@ -126,6 +142,12 @@ async function generateImagesForSlides() {
         
         const result = await response.json();
         console.log(`✅ Generated ${result.success} images, ${result.failed} failed`);
+        
+        // Clear simulated progress
+        clearInterval(progressInterval);
+        
+        // Update progress one final time with actual count
+        updateImageGenerationProgress(result.success, descriptions.length, '✨ Complete!');
         
         // Log detailed errors for debugging
         if (result.failed > 0) {
@@ -187,6 +209,10 @@ async function generateImagesForSlides() {
         
     } catch (error) {
         console.error('Image generation error:', error);
+        
+        // Clear progress interval on error
+        clearInterval(progressInterval);
+        
         alert('Image generation failed: ' + error.message);
     } finally {
         hideImageGenerationProgress();
@@ -194,7 +220,7 @@ async function generateImagesForSlides() {
 }
 
 /**
- * Show image generation progress
+ * Show image generation progress with real-time updates
  */
 function showImageGenerationProgress(count) {
     const galleryContainer = document.getElementById('imageGalleryContainer');
@@ -203,10 +229,43 @@ function showImageGenerationProgress(count) {
     galleryContainer.innerHTML = `
         <div style="text-align: center; padding: 3rem;">
             <div class="spinner" style="width: 60px; height: 60px; border: 4px solid #667eea; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite;"></div>
-            <h3 style="margin-top: 1rem; color: #667eea;">Generating ${count} Images...</h3>
-            <p style="color: #666; margin-top: 0.5rem;">This may take a few minutes</p>
+            <h3 style="margin-top: 1rem; color: #667eea;">🎨 Generating ${count} Images...</h3>
+            <div id="imageGenProgress" style="margin-top: 1rem; padding: 1rem; background: #f0f4ff; border-radius: 8px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                <div style="font-size: 1.2rem; font-weight: bold; color: #667eea; margin-bottom: 0.5rem;">
+                    <span id="imageGenCurrent">0</span> / ${count}
+                </div>
+                <div style="width: 100%; height: 8px; background: #e0e7ff; border-radius: 4px; overflow: hidden;">
+                    <div id="imageGenBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s ease;"></div>
+                </div>
+                <div id="imageGenStatus" style="margin-top: 0.75rem; font-size: 0.9rem; color: #666;">
+                    🔄 Starting image generation...
+                </div>
+            </div>
+            <p style="color: #999; margin-top: 1rem; font-size: 0.85rem;">
+                💡 Using ${window.currentImageProvider || 'Hugging Face'} • Each image takes 10-30 seconds
+            </p>
         </div>
     `;
+    
+    // Show notification
+    if (typeof showNotification === 'function') {
+        showNotification(`🎨 Generating ${count} images...`, 'info');
+    }
+}
+
+/**
+ * Update progress during generation
+ */
+function updateImageGenerationProgress(current, total, description) {
+    const currentEl = document.getElementById('imageGenCurrent');
+    const barEl = document.getElementById('imageGenBar');
+    const statusEl = document.getElementById('imageGenStatus');
+    
+    if (currentEl) currentEl.textContent = current;
+    if (barEl) barEl.style.width = `${(current / total) * 100}%`;
+    if (statusEl && description) {
+        statusEl.innerHTML = `✨ ${description.substring(0, 60)}...`;
+    }
 }
 
 /**
@@ -375,6 +434,7 @@ window.showImageGallery = showImageGallery;
 window.showSlidesPreview = showSlidesPreview;
 window.selectGalleryImage = selectGalleryImage;
 window.insertImageIntoSlide = insertImageIntoSlide;
+window.updateImageGenerationProgress = updateImageGenerationProgress;
 
 // Add CSS for image gallery grid
 if (!document.querySelector('#imageGalleryStyles')) {
