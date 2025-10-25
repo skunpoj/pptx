@@ -19,6 +19,10 @@ async function generatePreview() {
         return;
     }
     
+    // Start time tracking
+    window.startTimeTracking();
+    window.addTimeStep('init', 'Starting AI preview generation');
+    
     const previewBtn = document.getElementById('previewBtn');
     previewBtn.disabled = true;
     previewBtn.innerHTML = '<span class="spinner"></span> Generating preview...';
@@ -40,6 +44,8 @@ async function generatePreview() {
             <p id="aiStatus" style="margin-top: 0.5rem; color: #667eea; font-size: 1rem; font-weight: 600;">
                 Analyzing ${wordCount} words...
             </p>
+            
+            ${window.createTimeTrackerHTML ? window.createTimeTrackerHTML() : ''}
             
             <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #667eea; padding: 1rem; border-radius: 8px; margin: 1.5rem 0; text-align: left;">
                 <p style="margin: 0; font-size: 0.95rem; color: #555; line-height: 1.6;">
@@ -123,6 +129,7 @@ async function generatePreview() {
         const cached = checkPreviewCache(text);
         if (cached) {
             console.log('✅ Using cached preview data');
+            window.addTimeStep('cache', 'Loading from cache');
             if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
             const step5 = document.getElementById('step5');
             if (step5) {
@@ -132,9 +139,12 @@ async function generatePreview() {
             }
             await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for UX
             window.displayPreview(cached);
-            window.showStatus('✅ Preview loaded from cache instantly!', 'success');
+            const timeReport = window.stopTimeTracking();
+            window.showStatus(`✅ Preview loaded from cache in ${window.formatTime(timeReport.totalTime)}!`, 'success');
             return;
         }
+        
+        window.addTimeStep('content', 'Sending content to AI');
         
         if (useStreaming) {
             // STREAMING MODE: Handle incremental slide generation
@@ -316,8 +326,11 @@ async function handleStreamingPreview(text, apiKey) {
                         suggestedThemeKey = message.suggestedThemeKey;
                         totalSlides = message.totalSlides;
                         
+                        window.addTimeStep('data', `Processing ${totalSlides} slides`);
+                        
                         const theme = window.colorThemes[suggestedThemeKey] || themeData;
                         preview.innerHTML = `
+                            ${window.createTimeTrackerHTML ? window.createTimeTrackerHTML() : ''}
                             <div style="background: #f0f4ff; padding: 0.75rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid ${theme.colorPrimary};">
                                 <strong style="color: ${theme.colorPrimary};">🎨 ${theme.name}</strong>
                                 <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #666;">${theme.description}</p>
@@ -332,6 +345,12 @@ async function handleStreamingPreview(text, apiKey) {
                     } else if (message.type === 'slide') {
                         // New slide received - render it immediately!
                         receivedSlides.push(message.slide);
+                        
+                        if (message.current === 1) {
+                            window.addTimeStep('design', 'Creating slide layouts');
+                        } else if (message.current === Math.ceil(totalSlides / 2)) {
+                            window.addTimeStep('render', 'Rendering previews');
+                        }
                         
                         const theme = window.colorThemes[suggestedThemeKey] || themeData || window.colorThemes['vibrant-purple'];
                         const slideHtml = window.renderSlidePreviewCard(message.slide, message.index, theme);
@@ -358,6 +377,9 @@ async function handleStreamingPreview(text, apiKey) {
                     } else if (message.type === 'complete') {
                         // All slides received
                         window.currentSlideData = message.data;
+                        
+                        // Stop time tracking and get report
+                        const timeReport = window.stopTimeTracking();
                         
                         // Cleanup progress UI
                         if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
@@ -399,13 +421,14 @@ async function handleStreamingPreview(text, apiKey) {
                         document.getElementById('modificationSection').style.display = 'block';
                         document.getElementById('generatePptSection').style.display = 'block';
                         
+                        const timeStr = window.formatTime(timeReport.totalTime);
                         if (window.templateFile) {
-                            window.showStatus(`✅ ${receivedSlides.length} slides ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
+                            window.showStatus(`✅ ${receivedSlides.length} slides ready in ${timeStr}! Using ${window.templateFile.name} as template.`, 'success');
                         } else {
-                            window.showStatus(`✅ ${receivedSlides.length} slides ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
+                            window.showStatus(`✅ ${receivedSlides.length} slides ready in ${timeStr}! You can modify slides or generate ${window.getOutputType().toUpperCase()}.`, 'success');
                         }
                         
-                        console.log('✅ Incremental generation complete:', receivedSlides.length, 'slides');
+                        console.log('✅ Incremental generation complete:', receivedSlides.length, 'slides in', timeStr);
                     }
                 } catch (e) {
                     // Skip invalid JSON - log for debugging
@@ -503,6 +526,8 @@ async function handleNonStreamingPreview(text, apiKey) {
     
     window.currentSlideData.suggestedTheme = suggestedTheme;
     
+    window.addTimeStep('data', 'Processing slide data');
+    
     // Cleanup progress UI
     if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
     
@@ -523,6 +548,8 @@ async function handleNonStreamingPreview(text, apiKey) {
         window.displayThemeSelector(suggestedTheme);
     }
     
+    window.addTimeStep('render', 'Rendering slide previews');
+    
     // Render slides progressively with animation
     await renderSlidesProgressively(window.currentSlideData);
     
@@ -530,10 +557,14 @@ async function handleNonStreamingPreview(text, apiKey) {
     document.getElementById('modificationSection').style.display = 'block';
     document.getElementById('generatePptSection').style.display = 'block';
     
+    // Stop time tracking
+    const timeReport = window.stopTimeTracking();
+    const timeStr = window.formatTime(timeReport.totalTime);
+    
     if (window.templateFile) {
-        window.showStatus(`✅ Preview ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
+        window.showStatus(`✅ Preview ready in ${timeStr}! Using ${window.templateFile.name} as template.`, 'success');
     } else {
-        window.showStatus(`✅ Preview ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
+        window.showStatus(`✅ Preview ready in ${timeStr}! You can modify slides or generate ${window.getOutputType().toUpperCase()}.`, 'success');
     }
 }
 
@@ -911,24 +942,45 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
             <p style="margin: 0.25rem 0;">📅 Generated: ${timestamp}</p>
         </div>
         <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a href="${downloadUrl}" download="AI-Presentation-Pro.pptx" class="download-btn">
+            <a href="${downloadUrl}" download="AI-Presentation-Pro.pptx" class="download-btn" id="pptxDownloadBtn">
                 ⬇️ Download PPTX
             </a>
+            ${storage.sessionId ? `
+            <a href="/download/${storage.sessionId}/presentation.pptx" download="AI-Presentation-Pro.pptx" class="download-btn" style="background: #667eea; text-decoration: none;">
+                ⬇️ Direct PPTX Link
+            </a>
+            ` : ''}
             <button onclick="window.viewPresentation('${downloadUrl}')" class="download-btn" style="border: none; cursor: pointer;">
-                👁️ View Slides
+                👁️ View Slides Online
             </button>
             ${storage.sessionId ? `
-            <button onclick="window.viewPDF('${storage.sessionId}')" class="download-btn" style="border: none; cursor: pointer; background: #dc3545;">
-                📄 View PDF
+            <button onclick="window.viewPDF('${storage.sessionId}')" class="download-btn" style="border: none; cursor: pointer; background: #dc3545; color: white;">
+                📄 View PDF Online
             </button>
-            <a href="/download/${storage.sessionId}/presentation.pdf" download="AI-Presentation-Pro.pdf" class="download-btn" style="background: #28a745; text-decoration: none;">
+            <a href="/download/${storage.sessionId}/presentation.pdf" download="AI-Presentation-Pro.pdf" class="download-btn" style="background: #28a745; text-decoration: none; color: white;">
                 ⬇️ Download PDF
             </a>
             ` : ''}
         </div>
         <p style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.8;">
-            Download files to save locally, view slides online, or open PDF in browser
+            💡 <strong>Tip:</strong> If downloads are blocked by corporate firewall, try "View Online" buttons or use Direct Links
         </p>
+        ${storage.sessionId ? `
+        <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+            <p style="margin: 0 0 0.5rem 0; font-size: 0.9rem; font-weight: 600;">🔗 Shareable Links (bypass firewall):</p>
+            <div style="display: flex; gap: 0.5rem; align-items: center; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px; margin-top: 0.5rem;">
+                <input type="text" value="${window.location.origin}/download/${storage.sessionId}/presentation.pptx" readonly 
+                    style="flex: 1; background: white; border: none; padding: 0.5rem; border-radius: 4px; font-size: 0.85rem;" 
+                    id="directLinkInput"
+                    onclick="this.select()">
+                <button onclick="navigator.clipboard.writeText(document.getElementById('directLinkInput').value).then(() => window.showStatus('✅ Link copied!', 'success'))" 
+                    class="download-btn" style="padding: 0.5rem 1rem; margin: 0; background: white; color: #667eea; font-size: 0.9rem;">
+                    📋 Copy
+                </button>
+            </div>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.75rem; opacity: 0.9;">Share this link to download from any device</p>
+        </div>
+        ` : ''}
     `;
     
     // Remove old download section if exists

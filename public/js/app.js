@@ -13,6 +13,11 @@ window.currentProvider = 'anthropic';
 window.currentView = 'list';
 window.selectedTheme = null;
 window.templateFile = null;
+window.selectedOutputType = 'pptx'; // Default output type
+
+// Time tracking state
+window.generationStartTime = null;
+window.timeTrackingSteps = [];
 
 // ========================================
 // INITIALIZATION
@@ -26,6 +31,7 @@ window.addEventListener('load', () => {
     initializeProviderSelection();
     initializeAPISectionState();
     initializeThemeSelector();
+    initializeOutputType();
 });
 
 /**
@@ -98,6 +104,26 @@ function initializeThemeSelector() {
     } else {
         console.error('Default theme not found in colorThemes');
     }
+}
+
+/**
+ * Initializes output type selection on page load
+ */
+function initializeOutputType() {
+    const savedType = localStorage.getItem('selected_output_type');
+    if (savedType) {
+        window.selectedOutputType = savedType;
+        // Update radio button state
+        const radio = document.querySelector(`input[name="outputType"][value="${savedType}"]`);
+        if (radio) {
+            radio.checked = true;
+            selectOutputType(savedType);
+        }
+    } else {
+        // Default to pptx
+        window.selectedOutputType = 'pptx';
+    }
+    console.log('✓ Output type initialized:', window.selectedOutputType);
 }
 
 // ========================================
@@ -446,6 +472,191 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ========================================
+// OUTPUT TYPE SELECTION
+// ========================================
+
+/**
+ * Selects output file type (pptx, docx, xlsx)
+ * @param {string} type - File type
+ */
+function selectOutputType(type) {
+    window.selectedOutputType = type;
+    localStorage.setItem('selected_output_type', type);
+    
+    // Update UI feedback
+    const labels = document.querySelectorAll('.file-type-option');
+    labels.forEach(label => {
+        const input = label.querySelector('input[type="radio"]');
+        if (input && input.value === type) {
+            label.style.background = 'rgba(255, 154, 86, 0.2)';
+        } else {
+            label.style.background = '';
+        }
+    });
+    
+    console.log('✓ Output type selected:', type);
+    window.showStatus(`📄 Output type set to ${type.toUpperCase()}`, 'success');
+}
+
+/**
+ * Gets current output type
+ */
+function getOutputType() {
+    return window.selectedOutputType || 'pptx';
+}
+
+// ========================================
+// TIME TRACKING UTILITIES
+// ========================================
+
+/**
+ * Starts time tracking for generation process
+ */
+function startTimeTracking() {
+    window.generationStartTime = Date.now();
+    window.timeTrackingSteps = [];
+    console.log('⏱️ Time tracking started');
+}
+
+/**
+ * Adds a time tracking step
+ * @param {string} stepName - Name of the step
+ * @param {string} description - Step description
+ */
+function addTimeStep(stepName, description) {
+    if (!window.generationStartTime) return;
+    
+    const elapsed = Date.now() - window.generationStartTime;
+    const step = {
+        name: stepName,
+        description: description,
+        elapsed: elapsed,
+        timestamp: Date.now()
+    };
+    
+    window.timeTrackingSteps.push(step);
+    console.log(`⏱️ [${formatTime(elapsed)}] ${stepName}: ${description}`);
+    
+    // Update UI if time tracker exists
+    updateTimeTrackerUI();
+}
+
+/**
+ * Gets total elapsed time
+ */
+function getElapsedTime() {
+    if (!window.generationStartTime) return 0;
+    return Date.now() - window.generationStartTime;
+}
+
+/**
+ * Formats milliseconds to readable time
+ * @param {number} ms - Milliseconds
+ */
+function formatTime(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (minutes > 0) {
+        return `${minutes}m ${remainingSeconds}s`;
+    }
+    return `${seconds}s`;
+}
+
+/**
+ * Updates time tracker UI
+ */
+function updateTimeTrackerUI() {
+    const tracker = document.getElementById('timeTracker');
+    if (!tracker) return;
+    
+    const elapsed = getElapsedTime();
+    const elapsedEl = document.getElementById('timeElapsed');
+    if (elapsedEl) {
+        elapsedEl.textContent = formatTime(elapsed);
+    }
+    
+    // Update steps
+    const stepsContainer = document.getElementById('timeTrackerSteps');
+    if (stepsContainer && window.timeTrackingSteps.length > 0) {
+        const lastStep = window.timeTrackingSteps[window.timeTrackingSteps.length - 1];
+        const stepEl = document.querySelector(`[data-step="${lastStep.name}"]`);
+        if (stepEl) {
+            stepEl.classList.add('completed');
+            stepEl.classList.remove('active');
+            const durationEl = stepEl.querySelector('.step-duration');
+            if (durationEl) {
+                const duration = lastStep.elapsed - (window.timeTrackingSteps[window.timeTrackingSteps.length - 2]?.elapsed || 0);
+                durationEl.textContent = formatTime(duration);
+            }
+        }
+        
+        // Mark next step as active
+        const nextStepIndex = window.timeTrackingSteps.length;
+        const allSteps = stepsContainer.querySelectorAll('.time-step');
+        if (allSteps[nextStepIndex]) {
+            allSteps[nextStepIndex].classList.add('active');
+        }
+    }
+}
+
+/**
+ * Creates time tracker HTML
+ */
+function createTimeTrackerHTML() {
+    return `
+        <div class="time-tracker" id="timeTracker">
+            <div class="time-tracker-header">
+                <span class="time-tracker-title">⏱️ Generation Progress</span>
+                <span class="time-elapsed" id="timeElapsed">0s</span>
+            </div>
+            <div class="time-tracker-steps" id="timeTrackerSteps">
+                <div class="time-step active" data-step="init">
+                    <span>🚀 Initializing AI analysis</span>
+                    <span class="step-duration"></span>
+                </div>
+                <div class="time-step" data-step="content">
+                    <span>📝 Extracting content structure</span>
+                    <span class="step-duration"></span>
+                </div>
+                <div class="time-step" data-step="data">
+                    <span>📊 Processing data for charts</span>
+                    <span class="step-duration"></span>
+                </div>
+                <div class="time-step" data-step="design">
+                    <span>🎨 Creating slide layouts</span>
+                    <span class="step-duration"></span>
+                </div>
+                <div class="time-step" data-step="render">
+                    <span>✨ Rendering previews</span>
+                    <span class="step-duration"></span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Stops time tracking
+ */
+function stopTimeTracking() {
+    if (!window.generationStartTime) return;
+    
+    const totalTime = getElapsedTime();
+    console.log('⏱️ Time tracking completed - Total:', formatTime(totalTime));
+    console.log('⏱️ Steps breakdown:');
+    window.timeTrackingSteps.forEach(step => {
+        console.log(`   ${step.name}: ${step.description} (${formatTime(step.elapsed)})`);
+    });
+    
+    return {
+        totalTime,
+        steps: window.timeTrackingSteps
+    };
+}
+
+// ========================================
 // EXPORTS
 // ========================================
 
@@ -453,6 +664,14 @@ window.toggleSettingsSection = toggleSettingsSection;
 window.selectProvider = selectProvider;
 window.saveApiKey = saveApiKey;
 window.loadExampleByCategory = loadExampleByCategory;
+window.selectOutputType = selectOutputType;
+window.getOutputType = getOutputType;
+window.startTimeTracking = startTimeTracking;
+window.addTimeStep = addTimeStep;
+window.getElapsedTime = getElapsedTime;
+window.formatTime = formatTime;
+window.createTimeTrackerHTML = createTimeTrackerHTML;
+window.stopTimeTracking = stopTimeTracking;
 
 // Immediate diagnostic
 console.log('✅ app.js loaded - window.loadExampleByCategory:', typeof window.loadExampleByCategory);
