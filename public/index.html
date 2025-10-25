@@ -256,15 +256,28 @@ Our Products
                     <h3 style="margin-top: 1rem;">🔑 API Configuration</h3>
                 
                     <div id="apiSectionContainer" class="api-section-container">
-                    <!-- Provider Selection -->
+                    <!-- Provider Selection for Content Generation -->
                     <div class="provider-selection">
-                        <h3>Select AI Provider</h3>
+                        <h3>📝 Content Generation Provider</h3>
+                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Select which AI to use for writing presentation content and slide structure</p>
                         <div class="provider-buttons">
                             <button class="provider-btn active" onclick="window.selectProvider('anthropic')" id="provider-anthropic">Anthropic</button>
                             <button class="provider-btn" onclick="window.selectProvider('openai')" id="provider-openai">OpenAI</button>
                             <button class="provider-btn" onclick="window.selectProvider('gemini')" id="provider-gemini">Gemini</button>
                             <button class="provider-btn" onclick="window.selectProvider('openrouter')" id="provider-openrouter">OpenRouter</button>
                         </div>
+                    </div>
+                    
+                    <!-- Provider Selection for Image Generation -->
+                    <div class="provider-selection" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+                        <h3>🎨 Image Generation Provider</h3>
+                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Select which AI to use for creating actual images from descriptions (optional)</p>
+                        <div class="provider-buttons">
+                            <button class="provider-btn-img active" onclick="window.selectImageProvider('dalle')" id="img-provider-dalle">DALL-E 3</button>
+                            <button class="provider-btn-img" onclick="window.selectImageProvider('stability')" id="img-provider-stability">Stability AI</button>
+                            <button class="provider-btn-img" onclick="window.selectImageProvider('gemini')" id="img-provider-gemini">Gemini Imagen</button>
+                        </div>
+                        <p style="font-size: 0.75rem; color: #888; margin-top: 0.5rem; font-style: italic;">💡 Note: Image generation requires a separate API key from the provider you select above</p>
                     </div>
 
                     <!-- Anthropic Section -->
@@ -375,6 +388,35 @@ Our Products
                                        spellcheck="false"
                                        style="font-family: monospace; letter-spacing: 0.5px;">
                                 <button class="btn-primary" onclick="window.saveApiKey('openrouter'); return false;" type="button">Save Key</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Stability AI Section (for image generation) -->
+                    <div class="api-section provider-section" id="section-stability" style="display: none;">
+                        <h3>Stability AI API (for Image Generation)</h3>
+                        <div class="info-box">
+                            <strong>To get your API key:</strong>
+                            <ol>
+                                <li>Go to <a href="https://platform.stability.ai/" target="_blank">platform.stability.ai</a></li>
+                                <li>Sign up or log in</li>
+                                <li>Navigate to "API Keys"</li>
+                                <li>Create and copy your key</li>
+                            </ol>
+                            <p style="margin-top: 0.5rem; color: #666;">💡 <strong>Note:</strong> This key is only needed if you want to use Stability AI for image generation. It's separate from content generation.</p>
+                        </div>
+                        <form autocomplete="off" onsubmit="return false;">
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="apiKey-stability" 
+                                       placeholder="sk-..."
+                                       autocomplete="off"
+                                       data-form-type="other"
+                                       data-lpignore="true"
+                                       name="not-a-password"
+                                       spellcheck="false"
+                                       style="font-family: monospace; letter-spacing: 0.5px;">
+                                <button class="btn-primary" onclick="window.saveApiKey('stability'); return false;" type="button">Save Key</button>
                             </div>
                         </form>
                     </div>

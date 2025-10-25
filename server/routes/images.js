@@ -41,6 +41,9 @@ router.post('/generate', async (req, res) => {
                 } else if (provider === 'stability') {
                     // Stability AI
                     imageData = await generateWithStability(desc.description, apiKey);
+                } else if (provider === 'gemini') {
+                    // Google Gemini (Imagen)
+                    imageData = await generateWithGemini(desc.description, apiKey);
                 } else {
                     throw new Error(`Unsupported provider: ${provider}`);
                 }
@@ -139,6 +142,46 @@ async function generateWithStability(description, apiKey) {
         url: `data:image/png;base64,${data.image}`,
         seed: data.seed
     };
+}
+
+/**
+ * Generate image using Google Gemini (Imagen 3)
+ */
+async function generateWithGemini(description, apiKey) {
+    // Gemini uses Imagen 3 for image generation
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey.trim()}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            instances: [{
+                prompt: description
+            }],
+            parameters: {
+                sampleCount: 1,
+                aspectRatio: '16:9',
+                negativePrompt: 'blurry, low quality',
+                personGeneration: 'allow_adult'
+            }
+        })
+    });
+    
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Gemini API Error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    // Gemini returns base64 image in predictions
+    if (data.predictions && data.predictions[0] && data.predictions[0].bytesBase64Encoded) {
+        return {
+            url: `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`,
+            mimeType: data.predictions[0].mimeType || 'image/png'
+        };
+    }
+    
+    throw new Error('No image data returned from Gemini');
 }
 
 module.exports = router;

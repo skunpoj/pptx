@@ -50,10 +50,36 @@ async function generateImagesForSlides() {
     
     console.log(`Found ${descriptions.length} image descriptions`);
     
-    const apiKey = (typeof getApiKey === 'function') ? getApiKey() : null;
-    if (!apiKey) {
-        alert('Please enter your API key first in Advanced Configuration section');
-        return;
+    // Get the selected image generation provider
+    const imageProvider = (typeof window.getImageProvider === 'function') 
+        ? window.getImageProvider() 
+        : 'dalle';
+    
+    console.log(`Using image provider: ${imageProvider}`);
+    
+    // Get the appropriate API key based on the image provider
+    let apiKey = null;
+    if (imageProvider === 'dalle' || imageProvider === 'openai') {
+        // DALL-E uses OpenAI key
+        apiKey = localStorage.getItem('openai_api_key');
+        if (!apiKey) {
+            alert('Please enter your OpenAI API key in Advanced Configuration section to use DALL-E 3');
+            return;
+        }
+    } else if (imageProvider === 'stability') {
+        // Stability AI uses its own key (check if we have a separate field, otherwise use openai)
+        apiKey = localStorage.getItem('stability_api_key') || localStorage.getItem('openai_api_key');
+        if (!apiKey) {
+            alert('Please enter your Stability AI API key in Advanced Configuration section');
+            return;
+        }
+    } else if (imageProvider === 'gemini') {
+        // Gemini uses Google API key
+        apiKey = localStorage.getItem('gemini_api_key');
+        if (!apiKey) {
+            alert('Please enter your Google Gemini API key in Advanced Configuration section to use Imagen');
+            return;
+        }
     }
     
     // Show progress
@@ -68,7 +94,7 @@ async function generateImagesForSlides() {
             body: JSON.stringify({
                 descriptions: descriptions,
                 apiKey: apiKey,
-                provider: 'dalle' // Can be changed to 'stability' for Stability AI
+                provider: imageProvider // Uses selected provider (dalle/stability/gemini)
             })
         });
         

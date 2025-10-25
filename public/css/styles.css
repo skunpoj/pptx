@@ -1001,6 +1001,28 @@ textarea:focus {
     color: #667eea;
 }
 
+.provider-btn-img {
+    padding: 0.75rem;
+    border: 2px solid #ddd;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.provider-btn-img:hover {
+    border-color: #82C341;
+    background: #f0fff4;
+}
+
+.provider-btn-img.active {
+    border-color: #82C341;
+    background: #e6f9e6;
+    color: #2d8659;
+}
+
 .collapsible-header {
     cursor: pointer;
     display: flex;

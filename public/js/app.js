@@ -38,7 +38,7 @@ window.addEventListener('load', () => {
  * Loads saved API keys from localStorage
  */
 function initializeAPIKeys() {
-    const providers = ['anthropic', 'openai', 'gemini', 'openrouter'];
+    const providers = ['anthropic', 'openai', 'gemini', 'openrouter', 'stability'];
     
     providers.forEach(provider => {
         const savedKey = localStorage.getItem(`${provider}_api_key`);
@@ -58,6 +58,11 @@ function initializeProviderSelection() {
     const savedProvider = localStorage.getItem('ai_provider') || 'anthropic';
     window.currentProvider = savedProvider;
     selectProvider(savedProvider);
+    
+    // Also initialize image provider
+    const savedImageProvider = localStorage.getItem('image_provider') || 'dalle';
+    window.currentImageProvider = savedImageProvider;
+    selectImageProvider(savedImageProvider);
 }
 
 /**
@@ -155,7 +160,7 @@ function toggleSettingsSection() {
 }
 
 /**
- * Selects an AI provider
+ * Selects an AI provider for content generation
  * @param {string} provider - Provider name ('anthropic', 'openai', etc.)
  */
 function selectProvider(provider) {
@@ -164,16 +169,12 @@ function selectProvider(provider) {
     
     // Update button styles
     document.querySelectorAll('.provider-btn').forEach(btn => {
-        btn.style.border = '2px solid #ddd';
-        btn.style.background = 'white';
-        btn.style.color = '#666';
+        btn.classList.remove('active');
     });
     
     const activeBtn = document.getElementById(`provider-${provider}`);
     if (activeBtn) {
-        activeBtn.style.border = '2px solid #667eea';
-        activeBtn.style.background = '#e0e7ff';
-        activeBtn.style.color = '#667eea';
+        activeBtn.classList.add('active');
     }
     
     // Show/hide provider sections
@@ -185,6 +186,35 @@ function selectProvider(provider) {
     if (activeSection) {
         activeSection.style.display = 'block';
     }
+}
+
+/**
+ * Selects an AI provider for image generation
+ * @param {string} provider - Provider name ('dalle', 'stability', 'gemini')
+ */
+function selectImageProvider(provider) {
+    window.currentImageProvider = provider;
+    localStorage.setItem('image_provider', provider);
+    
+    // Update button styles
+    document.querySelectorAll('.provider-btn-img').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const activeBtn = document.getElementById(`img-provider-${provider}`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+    
+    console.log(`🎨 Image provider set to: ${provider}`);
+}
+
+/**
+ * Gets the current image generation provider
+ * @returns {string} Provider name
+ */
+function getImageProvider() {
+    return window.currentImageProvider || localStorage.getItem('image_provider') || 'dalle';
 }
 
 /**
@@ -662,6 +692,8 @@ function stopTimeTracking() {
 
 window.toggleSettingsSection = toggleSettingsSection;
 window.selectProvider = selectProvider;
+window.selectImageProvider = selectImageProvider;
+window.getImageProvider = getImageProvider;
 window.saveApiKey = saveApiKey;
 window.loadExampleByCategory = loadExampleByCategory;
 window.selectOutputType = selectOutputType;
