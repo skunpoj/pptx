@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Deployment Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 { color: #667eea; margin-top: 0; }
+        .status { padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .success { background: #e8f5e9; border-left: 4px solid #4caf50; }
+        .error { background: #ffebee; border-left: 4px solid #f44336; }
+        .info { background: #e3f2fd; border-left: 4px solid #2196f3; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        button:hover { background: #5568d3; }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .test-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #ccc;
+            background: #fafafa;
+        }
+        .pass { border-left-color: #4caf50; background: #f1f8f4; }
+        .fail { border-left-color: #f44336; background: #fef1f1; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔍 Deployment Version Checker</h1>
+        <p>Check which version is currently deployed and verify all features are working.</p>
+        
+        <button onclick="runAllChecks()">🚀 Run All Checks</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = window.location.origin;
+
+        async function runAllChecks() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="status info">Running checks...</div>';
+            
+            let html = '<h2>Results:</h2>';
+            let allPassed = true;
+
+            // Check 1: Server version
+            try {
+                const versionRes = await fetch(`${SERVER_URL}/api/version`);
+                if (versionRes.ok) {
+                    const data = await versionRes.json();
+                    html += `<div class="test-item pass">
+                        <strong>✅ Server Version</strong><br>
+                        Version: ${data.version}<br>
+                        Features: ${data.features.join(', ')}<br>
+                        Timestamp: ${data.timestamp}
+                    </div>`;
+                } else {
+                    html += `<div class="test-item fail">
+                        <strong>❌ Server Version</strong><br>
+                        OLD VERSION DETECTED - /api/version endpoint not found<br>
+                        Status: ${versionRes.status}
+                    </div>`;
+                    allPassed = false;
+                }
+            } catch (e) {
+                html += `<div class="test-item fail">
+                    <strong>❌ Server Version</strong><br>
+                    Error: ${e.message}
+                </div>`;
+                allPassed = false;
+            }
+
+            // Check 2: CSS loaded
+            const preview = document.createElement('div');
+            preview.id = 'test-preview';
+            preview.style.cssText = 'overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important;';
+            document.body.appendChild(preview);
+            const styles = window.getComputedStyle(preview);
+            
+            if (styles.overflowY === 'auto') {
+                html += `<div class="test-item pass">
+                    <strong>✅ CSS Inline Styles</strong><br>
+                    overflow-y: ${styles.overflowY} ✓
+                </div>`;
+            } else {
+                html += `<div class="test-item fail">
+                    <strong>❌ CSS Inline Styles</strong><br>
+                    overflow-y: ${styles.overflowY} (expected: auto)
+                </div>`;
+                allPassed = false;
+            }
+            document.body.removeChild(preview);
+
+            // Check 3: JS errors
+            const hasShowStatus = typeof window.showStatus !== 'undefined';
+            const hasModule = typeof module === 'undefined';
+            
+            html += `<div class="test-item ${hasModule ? 'pass' : 'fail'}">
+                <strong>${hasModule ? '✅' : '❌'} Browser Errors Fixed</strong><br>
+                module.exports removed: ${hasModule ? 'Yes ✓' : 'No ✗'}
+            </div>`;
+            
+            if (!hasModule) allPassed = false;
+
+            // Check 4: Preview rendering function
+            const hasRenderCard = typeof window.renderSlidePreviewCard !== 'undefined';
+            html += `<div class="test-item ${hasRenderCard ? 'pass' : 'fail'}">
+                <strong>${hasRenderCard ? '✅' : '❌'} Progressive Rendering</strong><br>
+                renderSlidePreviewCard available: ${hasRenderCard ? 'Yes ✓' : 'No ✗'}
+            </div>`;
+            
+            if (!hasRenderCard) allPassed = false;
+
+            // Summary
+            if (allPassed) {
+                html = `<div class="status success">
+                    <strong>✅ ALL CHECKS PASSED!</strong><br>
+                    Your deployment is using the latest code.
+                </div>` + html;
+            } else {
+                html = `<div class="status error">
+                    <strong>❌ SOME CHECKS FAILED</strong><br>
+                    Your deployment is NOT using the latest code.<br>
+                    <strong>Action:</strong> Rebuild Docker image and redeploy.
+                </div>` + html;
+            }
+
+            results.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+

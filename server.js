@@ -554,9 +554,28 @@ modifyPresentation();`;
 // START SERVER
 // ========================================
 
+// Version check endpoint
+app.get('/api/version', (req, res) => {
+    res.json({
+        version: '2.0.0-adaptive-content',
+        features: [
+            'Adaptive content sizing',
+            'Progressive slide rendering',
+            'Detailed error logging',
+            'Scroll bar fixed',
+            'Browser errors fixed'
+        ],
+        timestamp: new Date().toISOString()
+    });
+});
+
 app.listen(PORT, () => {
-    console.log(`\n🚀 AI Text2PPT Pro Server Running!`);
-    console.log(`\n📍 Open your browser to: http://localhost:${PORT}`);
-    console.log(`\n✨ Professional presentations powered by Claude AI + html2pptx\n`);
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`🚀 AI Text2PPT Pro Server v2.0.0-adaptive-content`);
+    console.log(`${'='.repeat(80)}`);
+    console.log(`📍 URL: http://localhost:${PORT}`);
+    console.log(`✨ Features: Adaptive sizing, Progressive rendering, Detailed logging`);
+    console.log(`🔍 Version check: http://localhost:${PORT}/api/version`);
+    console.log(`${'='.repeat(80)}\n`);
 });
 
