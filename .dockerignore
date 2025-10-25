@@ -9,6 +9,7 @@ test-*.html
 test-*.js
 test-*.sh
 test-*.bat
+test-*.txt
 
 # Development files
 .git/
@@ -77,3 +78,12 @@ skills/*/fill_*.py
 
 # Keep only essential skills files
 !skills/pptx/html2pptx.tgz
+
+# Docker files
+Dockerfile.optimized
+docker-compose.yml
+docker-compose.override.yml
+
+# Deployment files
+verify-deployment.*
+*.deploy

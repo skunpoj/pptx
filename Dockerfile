@@ -1,7 +1,7 @@
-# AI Text2PPT Pro - Dockerfile
+# AI Text2PPT Pro - Optimized Production Dockerfile
 FROM node:18-bullseye
 
-# Install LibreOffice for PDF conversion
+# Install LibreOffice for PDF conversion (minimal)
 RUN apt-get update && apt-get install -y \
     libreoffice \
     libreoffice-writer \
@@ -9,27 +9,36 @@ RUN apt-get update && apt-get install -y \
     libreoffice-calc \
     fonts-liberation \
     fonts-noto \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Set working directory
 WORKDIR /app
 
-# Copy application files
-COPY . .
+# Copy only production-essential files
+COPY package.json package-lock.json ./
+COPY server.js ./
+COPY server/ ./server/
+COPY public/ ./public/
+COPY skills/pptx/html2pptx.tgz ./skills/pptx/
 
-# Install Node.js dependencies from npm
-RUN npm install --production --omit=dev
+# Install Node.js dependencies (production only)
+RUN npm ci --only=production --no-audit --no-fund
 
 # Install html2pptx from local .tgz file
-RUN npm install ./skills/pptx/html2pptx.tgz
+RUN npm install ./skills/pptx/html2pptx.tgz --no-audit --no-fund
 
-# Install Playwright browsers
-RUN npx playwright install --with-deps chromium
+# Install Playwright browsers (minimal)
+RUN npx playwright install chromium --with-deps
 
 # Create directories for file storage
 RUN mkdir -p /app/workspace/generated \
     && mkdir -p /app/workspace/shared \
     && chmod -R 755 /app/workspace
+
+# Create non-root user for security
+RUN useradd -m -u 1001 appuser && chown -R appuser:appuser /app
+USER appuser
 
 # Expose port
 EXPOSE 3000
