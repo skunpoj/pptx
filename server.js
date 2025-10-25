@@ -570,6 +570,20 @@ app.post('/api/generate', async (req, res) => {
         console.log('📊 Slide count:', finalSlideData.slides?.length || 0);
         console.log('🎨 Theme:', finalSlideData.designTheme?.name || 'Unknown');
         
+        // Check for images in slides
+        const slidesWithImages = finalSlideData.slides?.filter(s => s.imageUrl) || [];
+        const slidesWithPlaceholders = finalSlideData.slides?.filter(s => s.imageDescription && !s.imageUrl) || [];
+        console.log('🖼️  Images status:');
+        console.log(`   - Slides with ACTUAL images: ${slidesWithImages.length}`);
+        console.log(`   - Slides with placeholders only: ${slidesWithPlaceholders.length}`);
+        if (slidesWithImages.length > 0) {
+            console.log('   ✅ Images will be embedded in PowerPoint!');
+            slidesWithImages.forEach((slide, i) => {
+                const urlPreview = slide.imageUrl.substring(0, 50);
+                console.log(`     • Slide "${slide.title}": ${urlPreview}...`);
+            });
+        }
+        
         // Validate
         console.log('⏳ Validating slide data...');
         sendProgress('Validating slide structure...', 2, 8);

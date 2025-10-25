@@ -54,25 +54,25 @@ async function generatePresentation() {
             });
         } else {
             // Regular generation without template
-            const requestBody = {
-                slideData: window.currentSlideData,
-                apiKey: apiKey,
-                provider: window.currentProvider || 'anthropic'
-            };
-            
-            console.log('📤 Sending request to /api/generate:', {
-                slideCount: requestBody.slideData.slides?.length,
-                hasApiKey: !!requestBody.apiKey,
-                provider: requestBody.provider
-            });
-            
+    const requestBody = {
+        slideData: window.currentSlideData,
+        apiKey: apiKey,
+        provider: window.currentProvider || 'anthropic'
+    };
+    
+    console.log('📤 Sending request to /api/generate:', {
+        slideCount: requestBody.slideData.slides?.length,
+        hasApiKey: !!requestBody.apiKey,
+        provider: requestBody.provider
+    });
+    
             response = await fetch('/api/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody)
-            });
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody)
+        });
         }
         
         if (!response.ok) {
@@ -116,7 +116,7 @@ async function generatePresentation() {
         console.log('  Download URL:', downloadUrl);
         console.log('  PDF URL:', pdfUrl);
         
-        // Show download link
+            // Show download link
         showDownloadLink(blobUrl, blob.size, { sessionId, downloadUrl, pdfUrl });
         
         const successMessage = window.templateFile 
@@ -129,7 +129,7 @@ async function generatePresentation() {
     } catch (error) {
         console.error('Generation failed:', error);
         if (typeof showNotification === 'function') {
-            showNotification('❌ Generation failed: ' + error.message, 'error');
+        showNotification('❌ Generation failed: ' + error.message, 'error');
         }
     } finally {
         // Restore button state

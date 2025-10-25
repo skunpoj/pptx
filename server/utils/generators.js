@@ -212,8 +212,8 @@ function generateHTMLSlideCode(file, slide, idx) {
     // Generate decorative shapes code
     const shapesCode = generateDecorativeShapes(slide, idx);
     
-    // Generate image code if slide has imageDescription
-    const imageCode = slide.imageDescription ? generateImagePlaceholder(slide, idx) : '';
+    // Generate image code if slide has imageDescription OR imageUrl
+    const imageCode = (slide.imageDescription || slide.imageUrl) ? generateImagePlaceholder(slide, idx) : '';
     
     return `
         // Slide ${idx + 1}: ${slide.title || 'Slide'}
@@ -295,16 +295,58 @@ function generateDecorativeShapes(slide, idx) {
 }
 
 /**
- * Generates image placeholder code
+ * Generates image code - ACTUAL image if URL exists, otherwise placeholder
  * @param {Object} slide - Slide data
  * @param {number} idx - Slide index
  * @returns {string} - JavaScript code for image
  */
 function generateImagePlaceholder(slide, idx) {
     const imageDesc = JSON.stringify(slide.imageDescription);
+    const imageUrl = slide.imageUrl ? JSON.stringify(slide.imageUrl) : null;
     
+    // If imageUrl exists, add actual image
+    if (imageUrl) {
+        return `
+            // Add ACTUAL generated image
+            try {
+                console.log("Adding actual image to slide ${idx + 1}...");
+                
+                // Add the image (supports data URLs and regular URLs)
+                currentSlide.addImage({
+                    data: ${imageUrl},
+                    x: 6.5,
+                    y: 1.5,
+                    w: 2.8,
+                    h: 2,
+                    sizing: {
+                        type: 'contain',
+                        w: 2.8,
+                        h: 2
+                    }
+                });
+                
+                console.log("✓ Added actual image to slide ${idx + 1}");
+            } catch (imgError) {
+                console.error("  ERROR adding image to slide ${idx + 1}:", imgError.message);
+                
+                // Fallback: Add placeholder if image fails
+                try {
+                    currentSlide.addShape(pptx.ShapeType.rect, {
+                        x: 6.5, y: 1.5, w: 2.8, h: 2,
+                        fill: { color: 'FFE0E0' },
+                        line: { color: 'E74C3C', width: 2, dashType: 'dash' }
+                    });
+                    currentSlide.addText('⚠️ Image Load Failed', {
+                        x: 6.6, y: 2.3, w: 2.6, h: 0.5,
+                        fontSize: 12, align: 'center', color: 'E74C3C', bold: true
+                    });
+                } catch (e) {}
+            }`;
+    }
+    
+    // Otherwise, add placeholder
     return `
-            // Add image placeholder
+            // Add image placeholder (no actual image generated yet)
             try {
                 // Create a placeholder box for the image
                 currentSlide.addShape(pptx.ShapeType.rect, {

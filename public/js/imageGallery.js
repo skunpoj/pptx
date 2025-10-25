@@ -163,22 +163,59 @@ async function generateImagesForSlides() {
         const failedImages = result.images.filter(img => img.error);
         
         // AUTO-INSERT IMAGES INTO SLIDES
-        console.log('📥 Auto-inserting images into slides...');
+        console.log('');
+        console.log('═══════════════════════════════════════════════');
+        console.log('📥 AUTO-INSERTING IMAGES INTO SLIDES');
+        console.log('═══════════════════════════════════════════════');
         let insertedCount = 0;
         window.imageGallery.images.forEach(img => {
             if (img.slideIndex !== undefined && window.currentSlideData && window.currentSlideData.slides[img.slideIndex]) {
-                window.currentSlideData.slides[img.slideIndex].imageUrl = img.url;
-                window.currentSlideData.slides[img.slideIndex].imageDescription = img.description;
+                const slide = window.currentSlideData.slides[img.slideIndex];
+                
+                // Store BOTH the URL and description
+                slide.imageUrl = img.url;
+                slide.imageDescription = img.description;
                 insertedCount++;
-                console.log(`  ✓ Inserted image into slide ${img.slideIndex + 1}: ${img.slideTitle}`);
+                
+                console.log(`  ✓ Slide ${img.slideIndex + 1}: "${img.slideTitle}"`);
+                console.log(`    - Image URL: ${img.url.substring(0, 50)}...`);
+                console.log(`    - Description: ${img.description.substring(0, 60)}...`);
+                console.log(`    - Status: ✅ INSERTED INTO SLIDE DATA`);
             }
         });
+        console.log('');
+        console.log(`✅ Total images inserted: ${insertedCount} / ${window.imageGallery.images.length}`);
+        console.log('═══════════════════════════════════════════════');
+        console.log('');
         
-        // Refresh preview to show images
-        if (insertedCount > 0 && typeof displayPreview === 'function') {
-            displayPreview(window.currentSlideData);
-            console.log(`✅ Auto-inserted ${insertedCount} images into slides`);
+        // Update ONLY the slides with new images (don't re-render everything!)
+        if (insertedCount > 0) {
+            console.log('🔄 Updating slides with new images...');
+            
+            // Switch back to Slides tab after a short delay to show the updated slides
+            setTimeout(() => {
+                if (typeof window.showSlidesPreview === 'function') {
+                    window.showSlidesPreview();
+                    console.log('📄 Switched to Slides tab to show updated images');
+                }
+                
+                // Now update the slide previews with images
+                updateSlidesWithImages(window.imageGallery.images);
+                console.log('✅ Slide images updated - scroll position preserved!');
+            }, 1000); // 1 second delay to let user see the success message
         }
+        
+        // Log the updated slide data structure for verification
+        console.log('');
+        console.log('📊 Updated Slide Data Structure:');
+        window.currentSlideData.slides.forEach((slide, idx) => {
+            if (slide.imageUrl) {
+                console.log(`  Slide ${idx + 1}: HAS imageUrl ✅`);
+            } else if (slide.imageDescription) {
+                console.log(`  Slide ${idx + 1}: Has description only (no image yet) ⏳`);
+            }
+        });
+        console.log('');
         
         // Display in gallery
         displayImageGallery(window.imageGallery.images);
@@ -428,6 +465,145 @@ function showSlidesPreview() {
     document.getElementById('slidesTabBtn')?.classList.add('active');
 }
 
+/**
+ * Update only the slides that have new images (preserves scroll position)
+ */
+function updateSlidesWithImages(generatedImages) {
+    const previewContainer = document.getElementById('preview');
+    if (!previewContainer) {
+        console.warn('Preview container not found');
+        return;
+    }
+    
+    const slideElements = previewContainer.querySelectorAll('.slide-preview');
+    if (!slideElements || slideElements.length === 0) {
+        console.warn('No slide elements found in preview');
+        return;
+    }
+    
+    const theme = window.currentSlideData?.designTheme || {};
+    
+    generatedImages.forEach(img => {
+        const slideIndex = img.slideIndex;
+        const slide = window.currentSlideData?.slides[slideIndex];
+        const slideElement = slideElements[slideIndex];
+        
+        if (!slide || !slideElement) {
+            console.warn(`Could not find slide ${slideIndex + 1} to update`);
+            return;
+        }
+        
+        // Find and replace the image placeholder section
+        const imagePlaceholderDiv = slideElement.querySelector('[style*="dashed"]');
+        
+        if (imagePlaceholderDiv) {
+            // Replace placeholder with actual image
+            const imageHtml = `
+                <div style="margin-top: 1rem; text-align: center;">
+                    <img src="${img.url}" 
+                         alt="${img.description}" 
+                         style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: fadeIn 0.5s ease;"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <div style="display: none; background: #f0f4ff; border: 2px dashed ${theme.colorAccent || '#667eea'}; padding: 1rem; border-radius: 8px; color: #666;">
+                        🖼️ Image failed to load
+                    </div>
+                </div>
+            `;
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = imageHtml;
+            const newImageElement = tempDiv.firstElementChild;
+            
+            // Replace the placeholder with actual image
+            imagePlaceholderDiv.replaceWith(newImageElement);
+            
+            console.log(`  ✓ Updated slide ${slideIndex + 1} preview with actual image`);
+            
+            // Add fade-in animation
+            newImageElement.style.opacity = '0';
+            setTimeout(() => {
+                newImageElement.style.transition = 'opacity 0.5s ease';
+                newImageElement.style.opacity = '1';
+            }, 50);
+        } else {
+            console.log(`  ℹ️  Slide ${slideIndex + 1} has no placeholder to replace (may already have image)`);
+        }
+    });
+    
+    // Add fadeIn animation if not exists
+    if (!document.querySelector('#fadeInAnimation')) {
+        const style = document.createElement('style');
+        style.id = 'fadeInAnimation';
+        style.textContent = `
+            @keyframes fadeIn {
+                from { opacity: 0; transform: scale(0.95); }
+                to { opacity: 1; transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+/**
+ * Verify that images are inserted into slide data (for debugging)
+ */
+function verifyImagesInSlideData() {
+    console.log('');
+    console.log('═══════════════════════════════════════════════');
+    console.log('🔍 IMAGE INSERTION VERIFICATION');
+    console.log('═══════════════════════════════════════════════');
+    
+    if (!window.currentSlideData) {
+        console.log('❌ No slide data available');
+        return false;
+    }
+    
+    let hasImages = 0;
+    let hasPlaceholders = 0;
+    let noImages = 0;
+    
+    console.log('📊 Checking all slides:');
+    console.log('');
+    
+    window.currentSlideData.slides.forEach((slide, idx) => {
+        if (slide.imageUrl) {
+            hasImages++;
+            console.log(`✅ Slide ${idx + 1}: "${slide.title}"`);
+            console.log(`   - Has imageUrl: ${slide.imageUrl.substring(0, 60)}...`);
+            console.log(`   - Image type: ${slide.imageUrl.startsWith('data:') ? 'Base64 embedded' : 'External URL'}`);
+            console.log(`   - Will be in PowerPoint: YES ✓`);
+            console.log('');
+        } else if (slide.imageDescription) {
+            hasPlaceholders++;
+            console.log(`⏳ Slide ${idx + 1}: "${slide.title}"`);
+            console.log(`   - Has description only: ${slide.imageDescription.substring(0, 60)}...`);
+            console.log(`   - Will show placeholder box in PowerPoint`);
+            console.log('');
+        } else {
+            noImages++;
+        }
+    });
+    
+    console.log('═══════════════════════════════════════════════');
+    console.log('📈 SUMMARY:');
+    console.log(`   • Slides with ACTUAL images: ${hasImages} ✅`);
+    console.log(`   • Slides with placeholders: ${hasPlaceholders} ⏳`);
+    console.log(`   • Slides without images: ${noImages}`);
+    console.log('═══════════════════════════════════════════════');
+    console.log('');
+    
+    if (hasImages > 0) {
+        console.log('✅ VERIFIED: Images ARE in slide data and WILL be in PowerPoint!');
+        console.log('   When you generate PowerPoint, server will log:');
+        console.log('   "✅ Images will be embedded in PowerPoint!"');
+    } else {
+        console.log('⚠️  No images with URLs found. Generate images first!');
+    }
+    
+    console.log('');
+    return hasImages > 0;
+}
+
 // Export functions
 window.generateImagesForSlides = generateImagesForSlides;
 window.showImageGallery = showImageGallery;
@@ -435,6 +611,8 @@ window.showSlidesPreview = showSlidesPreview;
 window.selectGalleryImage = selectGalleryImage;
 window.insertImageIntoSlide = insertImageIntoSlide;
 window.updateImageGenerationProgress = updateImageGenerationProgress;
+window.updateSlidesWithImages = updateSlidesWithImages;
+window.verifyImagesInSlideData = verifyImagesInSlideData;
 
 // Add CSS for image gallery grid
 if (!document.querySelector('#imageGalleryStyles')) {

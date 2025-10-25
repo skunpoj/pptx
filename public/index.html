@@ -160,8 +160,8 @@ Our Products
                 <div class="file-upload-section" style="margin-top: 1.5rem;">
                     <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end; margin-bottom: 0.75rem;">
                         <div>
-                            <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
-                            <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
+                    <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
+                    <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
                         </div>
                         <div>
                             <label class="option-label">Number of slides:</label>
@@ -194,9 +194,9 @@ Our Products
                             <strong>📸 Include AI-generated image suggestions in content</strong>
                             <span class="checkbox-desc">AI will include image descriptions in the generated content (descriptions only, not actual images)</span>
                         </span>
-                    </label>
+                        </label>
+                    </div>
                 </div>
-            </div>
 
             <!-- Right: Color Theme & Output Format -->
             <div class="card" id="themeSelector" style="background: #f0fff4; border: 2px solid #82C341;">
@@ -210,27 +210,27 @@ Our Products
                 <!-- Output File Type Selection -->
                 <label style="display: block; font-weight: 700; color: #2d8659; margin: 1.5rem 0 0.5rem 0;">📄 Output File Type:</label>
                 <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                        <input type="radio" name="outputType" value="pptx-direct" checked onchange="window.selectOutputType('pptx-direct')" style="width: 18px; height: 18px; cursor: pointer;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pptx-direct" checked onchange="window.selectOutputType('pptx-direct')" style="width: 18px; height: 18px; cursor: pointer;">
                         <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📊 PPTX Direct</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                        <input type="radio" name="outputType" value="pptx-skill" onchange="window.selectOutputType('pptx-skill')" style="width: 18px; height: 18px; cursor: pointer;">
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pptx-skill" onchange="window.selectOutputType('pptx-skill')" style="width: 18px; height: 18px; cursor: pointer;">
                         <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📊 PPTX Skill</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                        <input type="radio" name="outputType" value="docx" onchange="window.selectOutputType('docx')" style="width: 18px; height: 18px; cursor: pointer;">
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="docx" onchange="window.selectOutputType('docx')" style="width: 18px; height: 18px; cursor: pointer;">
                         <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📝 Word</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                        <input type="radio" name="outputType" value="pdf" onchange="window.selectOutputType('pdf')" style="width: 18px; height: 18px; cursor: pointer;">
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pdf" onchange="window.selectOutputType('pdf')" style="width: 18px; height: 18px; cursor: pointer;">
                         <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📄 PDF</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                        <input type="radio" name="outputType" value="xlsx" onchange="window.selectOutputType('xlsx')" style="width: 18px; height: 18px; cursor: pointer;">
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="xlsx" onchange="window.selectOutputType('xlsx')" style="width: 18px; height: 18px; cursor: pointer;">
                         <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📈 Excel</span>
-                    </label>
-                </div>
+                        </label>
+                    </div>
                 <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: #666;">Select the output format for your generated document</p>
             </div>
         </div>
@@ -339,7 +339,7 @@ Our Products
                             </ol>
                         </div>
                         <form autocomplete="off" onsubmit="return false;">
-                            <div class="input-group">
+                        <div class="input-group">
                                 <input type="text" 
                                        id="apiKey-anthropic" 
                                        placeholder="sk-ant-api03-..."
@@ -350,7 +350,7 @@ Our Products
                                        spellcheck="false"
                                        style="font-family: monospace; letter-spacing: 0.5px;">
                                 <button class="btn-primary" onclick="window.saveApiKey('anthropic'); return false;" type="button">Save Key</button>
-                            </div>
+                        </div>
                         </form>
                     </div>
 
@@ -367,7 +367,7 @@ Our Products
                             </ol>
                         </div>
                         <form autocomplete="off" onsubmit="return false;">
-                            <div class="input-group">
+                        <div class="input-group">
                                 <input type="text" 
                                        id="apiKey-openai" 
                                        placeholder="sk-..."
@@ -378,7 +378,7 @@ Our Products
                                        spellcheck="false"
                                        style="font-family: monospace; letter-spacing: 0.5px;">
                                 <button class="btn-primary" onclick="window.saveApiKey('openai'); return false;" type="button">Save Key</button>
-                            </div>
+                        </div>
                         </form>
                     </div>
 
@@ -395,7 +395,7 @@ Our Products
                             </ol>
                         </div>
                         <form autocomplete="off" onsubmit="return false;">
-                            <div class="input-group">
+                        <div class="input-group">
                                 <input type="text" 
                                        id="apiKey-gemini" 
                                        placeholder="AIza..."
@@ -406,7 +406,7 @@ Our Products
                                        spellcheck="false"
                                        style="font-family: monospace; letter-spacing: 0.5px;">
                                 <button class="btn-primary" onclick="window.saveApiKey('gemini'); return false;" type="button">Save Key</button>
-                            </div>
+                        </div>
                         </form>
                     </div>
 
@@ -423,7 +423,7 @@ Our Products
                             </ol>
                         </div>
                         <form autocomplete="off" onsubmit="return false;">
-                            <div class="input-group">
+                        <div class="input-group">
                                 <input type="text" 
                                        id="apiKey-openrouter" 
                                        placeholder="sk-or-..."
@@ -434,7 +434,7 @@ Our Products
                                        spellcheck="false"
                                        style="font-family: monospace; letter-spacing: 0.5px;">
                                 <button class="btn-primary" onclick="window.saveApiKey('openrouter'); return false;" type="button">Save Key</button>
-                            </div>
+                        </div>
                         </form>
                     </div>
                     
@@ -490,8 +490,8 @@ Our Products
                 <div class="footer-security-banner">
                     <span class="security-icon">🔒</span>
                     <p>All processing on your server • Your API key stays local & secure</p>
-                </div>
-                
+    </div>
+
                 <!-- Features Grid -->
                 <div class="footer-section">
                     <h3 class="footer-section-title">✨ Powerful Features</h3>
@@ -504,45 +504,45 @@ Our Products
                             professional themes, live previews, and smart designs. Edit online, share instantly with unique links, auto-convert to PDF, and customize every detail—all while 
                             keeping your data secure on your own server. Whether you're crafting business pitches, educational content, or marketing presentations, GENIS.AI makes it effortless. 
                             <a href="https://aboutus.genis.ai" target="_blank" rel="noopener noreferrer" class="footer-link">Learn more about us →</a>
-                        </p>
-                    </div>
-                    
+                    </p>
+                </div>
+                
                     <div class="footer-features-grid">
                         <div class="footer-feature-card">
                             <div class="feature-icon">🤖</div>
                             <strong>AI-Powered</strong>
                             <span>Claude, GPT-4, Gemini, or FREE Bedrock</span>
-                        </div>
+                    </div>
                         <div class="footer-feature-card">
                             <div class="feature-icon">📊</div>
                             <strong>Native Charts</strong>
                             <span>Bar, Pie, Line, Area - fully editable</span>
-                        </div>
+                    </div>
                         <div class="footer-feature-card">
                             <div class="feature-icon">🎨</div>
                             <strong>8+ Themes</strong>
                             <span>Professional color schemes</span>
-                        </div>
+                    </div>
                         <div class="footer-feature-card">
                             <div class="feature-icon">📄</div>
                             <strong>Auto PDF</strong>
                             <span>PPTX + PDF generated together</span>
-                        </div>
+                    </div>
                         <div class="footer-feature-card">
                             <div class="feature-icon">🔗</div>
                             <strong>Share Links</strong>
                             <span>One link, unlimited views</span>
-                        </div>
+                    </div>
                         <div class="footer-feature-card">
                             <div class="feature-icon">✏️</div>
                             <strong>Edit Online</strong>
                             <span>Modify slides in browser</span>
-                        </div>
+                    </div>
                         <div class="footer-feature-card">
                             <div class="feature-icon">👁️</div>
                             <strong>Live Preview</strong>
                             <span>See before you download</span>
-                        </div>
+                    </div>
                         <div class="footer-feature-card">
                             <div class="feature-icon">🎯</div>
                             <strong>Smart Design</strong>
@@ -559,7 +559,7 @@ Our Products
                             <div class="api-badge">Option 1</div>
                             <h4>Bring Your Own Key (BYOK)</h4>
                             <p>Use your own Anthropic, OpenAI, Google Gemini, or OpenRouter API key. You control costs and usage.</p>
-                        </div>
+                    </div>
                         <div class="footer-api-card footer-api-featured">
                             <div class="api-badge featured">💎 Option 2</div>
                             <h4>Use Our FREE Amazon Bedrock!</h4>
@@ -575,15 +575,15 @@ Our Products
                         <div class="step-card">
                             <div class="step-number">1</div>
                             <p>Enter your API key (or skip to use FREE Bedrock)</p>
-                        </div>
+                </div>
                         <div class="step-card">
                             <div class="step-number">2</div>
                             <p>Type your content or use AI Idea Generator</p>
-                        </div>
+                </div>
                         <div class="step-card">
                             <div class="step-number">3</div>
                             <p>Click "Generate Preview" to see slides</p>
-                        </div>
+            </div>
                         <div class="step-card">
                             <div class="step-number">4</div>
                             <p>Modify slides if needed with AI assistance</p>
@@ -596,9 +596,9 @@ Our Products
                             <div class="step-number">6</div>
                             <p>View online, share links, or download PDF!</p>
                         </div>
-                    </div>
-                </div>
-                
+        </div>
+    </div>
+
                 <p class="footer-credits">Powered by Claude AI, html2pptx + PptxGenJS</p>
             </div>
         </div>

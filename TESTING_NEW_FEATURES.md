@@ -3,7 +3,7 @@
 ## ✨ Recent Improvements (All Implemented!)
 
 ### 1. 🖼️ **Auto-Insert Generated Images**
-**What changed**: Images now automatically insert into slides!
+**What changed**: Images now automatically insert into slides AND embed in PowerPoint!
 
 **How to test**:
 1. Generate slide preview with images enabled
@@ -12,14 +12,66 @@
 4. **NEW**: Shows real-time progress bar: `0 / 9` → `9 / 9`
 5. **NEW**: Each image shows description being generated
 6. **NEW**: When done, images AUTO-INSERT into slides
-7. Switch back to "📄 Slides" tab to see images in preview!
+7. **NEW**: Automatically switches BACK to "📄 Slides" tab
+8. **NEW**: ONLY the slides with images are updated (scroll preserved!)
+9. See placeholders replaced with actual images!
 
 **Expected behavior**:
+- ✅ Switches to Image Gallery tab automatically
 - ✅ Progress bar shows: "🎨 Generating 9 Images..."
 - ✅ Counter updates: 0/9 → 1/9 → 2/9 → ... → 9/9
 - ✅ Shows provider: "💡 Using Hugging Face • Each image takes 10-30 seconds"
 - ✅ Notification: "✅ Generated 9 images and inserted into slides!"
-- ✅ Slides preview shows actual images (not just placeholders)
+- ✅ **Auto-switches BACK to Slides tab after 1 second**
+- ✅ **Only updates slides with images** (doesn't re-render everything)
+- ✅ **Scroll position preserved!**
+- ✅ Placeholders replaced with actual images (fade-in animation)
+
+**VERIFY IMAGES ARE INSERTED** - Run in browser console:
+```javascript
+verifyImagesInSlideData()
+```
+
+**You should see**:
+```
+═══════════════════════════════════════════════
+🔍 IMAGE INSERTION VERIFICATION
+═══════════════════════════════════════════════
+✅ Slide 2: "Our Growth Story"
+   - Has imageUrl: data:image/png;base64,iVBORw0KGgoAAAANS...
+   - Image type: Base64 embedded
+   - Will be in PowerPoint: YES ✓
+
+✅ Slide 3: "Market Expansion"
+   - Has imageUrl: data:image/png;base64,iVBORw0KGgoAAAANS...
+   - Image type: Base64 embedded
+   - Will be in PowerPoint: YES ✓
+
+═══════════════════════════════════════════════
+📈 SUMMARY:
+   • Slides with ACTUAL images: 9 ✅
+   • Slides with placeholders: 0 ⏳
+   • Slides without images: 3
+═══════════════════════════════════════════════
+
+✅ VERIFIED: Images ARE in slide data and WILL be in PowerPoint!
+```
+
+**Then generate PowerPoint** - Server console will show:
+```
+🖼️  Images status:
+   - Slides with ACTUAL images: 9
+   - Slides with placeholders only: 0
+   ✅ Images will be embedded in PowerPoint!
+     • Slide "Our Growth Story": data:image/png;base64,iVBORw0KGgoAAAANS...
+     • Slide "Market Expansion": data:image/png;base64,iVBORw0KGgoAAAANS...
+
+⏳ Generating HTML slides...
+  ✓ Created slide0.html (title): Company Overview
+  ✓ Created slide1.html (content): Our Growth Story
+Adding actual image to slide 2...
+✓ Added actual image to slide 2
+```
 
 ---
 
