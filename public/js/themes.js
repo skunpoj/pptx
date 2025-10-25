@@ -90,7 +90,7 @@ function displayThemeSelector(suggestedThemeKey) {
     const themeSelector = document.getElementById('themeSelector');
     const suggestedBadge = document.getElementById('suggestedBadge');
     
-    if (!themeGrid) return; // Guard clause
+    if (!themeGrid || !colorThemes) return; // Guard clause
     
     themeGrid.innerHTML = '';
     themeSelector.style.display = 'block';
@@ -105,6 +105,8 @@ function displayThemeSelector(suggestedThemeKey) {
     
     Object.keys(colorThemes).forEach(themeKey => {
         const theme = colorThemes[themeKey];
+        if (!theme) return; // Skip if theme is undefined
+        
         const isSuggested = themeKey === suggestedThemeKey;
         const currentSelectedTheme = window.selectedTheme || selectedTheme;
         const isSelected = currentSelectedTheme === themeKey || (!currentSelectedTheme && isSuggested);
@@ -140,17 +142,25 @@ function displayThemeSelector(suggestedThemeKey) {
 }
 
 function selectTheme(themeKey) {
+    // Validate theme exists
+    if (!colorThemes || !colorThemes[themeKey]) {
+        console.error('Invalid theme key:', themeKey);
+        return;
+    }
+    
     selectedTheme = themeKey;
     window.selectedTheme = themeKey;
     
     // Save to localStorage
     localStorage.setItem('selected_theme', themeKey);
     
+    const theme = colorThemes[themeKey];
+    
     if (window.currentSlideData) {
         window.currentSlideData.designTheme = {
-            ...colorThemes[themeKey],
-            name: colorThemes[themeKey].name,
-            description: colorThemes[themeKey].description
+            ...theme,
+            name: theme.name,
+            description: theme.description
         };
         
         const suggestedTheme = window.currentSlideData.suggestedTheme || null;
@@ -161,7 +171,7 @@ function selectTheme(themeKey) {
         }
         
         if (window.showStatus) {
-            window.showStatus(`✨ Theme changed to ${colorThemes[themeKey].name}. Click "Generate PowerPoint" to create with new colors.`, 'success');
+            window.showStatus(`✨ Theme changed to ${theme.name}. Click "Generate PowerPoint" to create with new colors.`, 'success');
         }
     } else {
         // No slide data yet, just update the visual selection
@@ -169,7 +179,7 @@ function selectTheme(themeKey) {
         displayThemeSelector(suggestedTheme);
         
         if (window.showStatus) {
-            window.showStatus(`✨ ${colorThemes[themeKey].name} selected. This will be used when you generate your slides.`, 'success');
+            window.showStatus(`✨ ${theme.name} selected. This will be used when you generate your slides.`, 'success');
         }
     }
 }

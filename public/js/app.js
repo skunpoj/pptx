@@ -68,6 +68,13 @@ function initializeAPISectionState() {
  * Initializes theme selector on page load
  */
 function initializeThemeSelector() {
+    // Ensure colorThemes is loaded
+    if (!window.colorThemes) {
+        console.log('Waiting for colorThemes to load...');
+        setTimeout(initializeThemeSelector, 100);
+        return;
+    }
+    
     // Display all available themes for user to choose from
     if (window.displayThemeSelector) {
         window.displayThemeSelector(null); // null = no AI suggestion yet
@@ -77,17 +84,19 @@ function initializeThemeSelector() {
     const savedTheme = localStorage.getItem('selected_theme');
     const defaultTheme = 'vibrant-purple';
     
-    if (savedTheme && window.colorThemes && window.colorThemes[savedTheme]) {
+    if (savedTheme && window.colorThemes[savedTheme]) {
         window.selectedTheme = savedTheme;
         if (window.selectTheme) {
             window.selectTheme(savedTheme);
         }
-    } else if (window.colorThemes && window.colorThemes[defaultTheme]) {
+    } else if (window.colorThemes[defaultTheme]) {
         // Set default theme if no saved theme exists
         window.selectedTheme = defaultTheme;
         if (window.selectTheme) {
             window.selectTheme(defaultTheme);
         }
+    } else {
+        console.error('Default theme not found in colorThemes');
     }
 }
 
