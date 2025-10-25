@@ -320,12 +320,11 @@ textarea:focus {
 .preview-container .preview {
     flex: 1;
     min-height: 0;
+    overflow-y: auto;
 }
 
 .preview {
-    overflow-y: auto;
     padding: 0.5rem;
-    height: 100%;
 }
 
 .preview::-webkit-scrollbar {

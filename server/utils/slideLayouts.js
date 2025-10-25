@@ -119,7 +119,7 @@ ${getDecorativeElements(theme, 'title')}
         <div style="width: 120px; height: 4px; background: ${theme.colorAccent}; margin: 2rem auto;"></div>
     </div>`;
     
-    const bodyStyles = `class="col center" style="width: 960px; height: 540px; background: linear-gradient(135deg, ${theme.colorPrimary} 0%, ${theme.colorSecondary} 100%); position: relative; overflow: hidden;"`;
+    const bodyStyles = `class="col center" style="width: 960px; height: 540px; background: linear-gradient(135deg, ${theme.colorPrimary} 0%, ${theme.colorSecondary} 100%); position: relative;"`;
     
     return wrapHTML(theme, bodyContent, bodyStyles);
 }
@@ -149,7 +149,7 @@ ${getDecorativeElements(theme, 'content')}
         </div>
     </div>`;
     
-    const bodyStyles = `class="col" style="width: 960px; height: 540px; padding: 2rem 2rem 3rem 2rem; position: relative; overflow: hidden;"`;
+    const bodyStyles = `class="col" style="width: 960px; height: 540px; padding: 2rem 2rem 3rem 2rem; position: relative;"`;
     
     return wrapHTML(theme, bodyContent, bodyStyles);
 }
@@ -190,7 +190,7 @@ ${getDecorativeElements(theme, 'content')}
         </div>
     </div>`;
     
-    const bodyStyles = `class="col" style="width: 960px; height: 540px; padding: 2rem 2rem 3rem 2rem; position: relative; overflow: hidden;"`;
+    const bodyStyles = `class="col" style="width: 960px; height: 540px; padding: 2rem 2rem 3rem 2rem; position: relative;"`;
     
     return wrapHTML(theme, bodyContent, bodyStyles);
 }
