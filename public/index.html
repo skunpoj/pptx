@@ -47,17 +47,17 @@ Our Products
                     <div class="quick-examples" style="margin-top: 1rem;">
                         <p class="examples-label">📚 Quick Start Examples:</p>
                         <div class="examples-grid">
-                            <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
+                            <button class="btn-secondary" onclick="window.loadExampleByCategory('tech')">💻 Tech</button>
+                            <button class="btn-secondary" onclick="window.loadExampleByCategory('business')">💼 Business</button>
+                            <button class="btn-secondary" onclick="window.loadExampleByCategory('education')">📚 Education</button>
+                            <button class="btn-secondary" onclick="window.loadExampleByCategory('health')">🏥 Healthcare</button>
+                            <button class="btn-secondary" onclick="window.loadExampleByCategory('marketing')">📈 Marketing</button>
+                            <button class="btn-secondary" onclick="window.loadExampleByCategory('environment')">🌍 Environment</button>
                         </div>
                     </div>
                     
                     <!-- Preview Button -->
-                    <button class="btn-primary btn-full btn-large" onclick="generatePreview()" id="previewBtn" style="margin-top: 1rem;">
+                    <button class="btn-primary btn-full btn-large" onclick="window.generatePreview()" id="previewBtn" style="margin-top: 1rem;">
                         👁️ Generate Preview
                     </button>
                 </div>
@@ -69,8 +69,8 @@ Our Products
                 
                 <!-- View Toggle -->
                 <div class="view-toggle" id="viewToggle" style="display: none;">
-                    <button class="active" onclick="switchView('list')" id="listViewBtn">📋 List View</button>
-                    <button onclick="switchView('gallery')" id="galleryViewBtn">🖼️ Gallery View</button>
+                    <button class="active" onclick="window.switchView('list')" id="listViewBtn">📋 List View</button>
+                    <button onclick="window.switchView('gallery')" id="galleryViewBtn">🖼️ Gallery View</button>
                 </div>
                 
                 <div class="preview" id="preview" style="overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important;"></div>
@@ -126,7 +126,7 @@ Our Products
                         </div>
                     </div>
                     
-                    <button class="btn-primary btn-full" onclick="generateFromPrompt()" id="promptBtn">
+                    <button class="btn-primary btn-full" onclick="window.generateFromPrompt()" id="promptBtn">
                         🚀 Expand Idea into Full Content
                     </button>
                     <p class="helper-text">This creates detailed text content that you can edit above before generating slides</p>
@@ -155,7 +155,7 @@ Our Products
                     <textarea id="modificationPrompt" 
                               placeholder="Example: 'Change slide 3 title to...' or 'Add a bullet point to slide 2 about...' or 'Remove slide 5'"
                               style="width: 100%; height: 70px; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 8px; font-size: 0.9rem; resize: vertical;"></textarea>
-                    <button class="btn-secondary btn-full" onclick="modifySlides()" id="modifyBtn" style="margin-top: 0.75rem; font-size: 1rem; padding: 0.75rem;">
+                    <button class="btn-secondary btn-full" onclick="window.modifySlides()" id="modifyBtn" style="margin-top: 0.75rem; font-size: 1rem; padding: 0.75rem;">
                         🔄 Apply AI Modifications
                     </button>
                 </div>
@@ -164,7 +164,7 @@ Our Products
             <!-- Generate PowerPoint Button (appears after preview) -->
             <div id="generatePptSection" style="display: none; margin-bottom: 1rem;">
                 <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.5rem; text-align: center;">
-                    <button class="btn-generate btn-full" onclick="generatePresentation()" id="generateBtn" style="background: white; color: #667eea; font-size: 1.2rem; font-weight: 700; padding: 1rem;">
+                    <button class="btn-generate btn-full" onclick="window.generatePresentation()" id="generateBtn" style="background: white; color: #667eea; font-size: 1.2rem; font-weight: 700; padding: 1rem;">
                         ✨ Generate PowerPoint Presentation
                     </button>
                     <p style="text-align: center; font-size: 0.9rem; color: white; margin-top: 0.75rem; opacity: 0.95;">
@@ -179,17 +179,17 @@ Our Products
 
         <!-- Settings Card -->
         <div class="card settings-card">
-            <h2 onclick="toggleSettingsSection()" class="collapsible-header">
+            <h2 onclick="window.toggleSettingsSection()" class="collapsible-header">
                 <span>⚙️ Advanced Configuration</span>
                 <span id="settingsToggleIcon" class="toggle-icon">▼</span>
             </h2>
             
             <div id="settingsSectionContainer" style="display: block;">
                 <div class="settings-tabs">
-                    <button class="settings-tab active" onclick="switchSettingsTab('api')" id="tab-api">
+                    <button class="settings-tab active" onclick="window.switchSettingsTab('api')" id="tab-api">
                         🔑 API Keys
                     </button>
-                    <button class="settings-tab" onclick="switchSettingsTab('prompts')" id="tab-prompts">
+                    <button class="settings-tab" onclick="window.switchSettingsTab('prompts')" id="tab-prompts">
                         📝 AI Prompts
                     </button>
                 </div>
@@ -203,10 +203,10 @@ Our Products
                     <div class="provider-selection">
                         <h3>Select AI Provider</h3>
                         <div class="provider-buttons">
-                            <button class="provider-btn active" onclick="selectProvider('anthropic')" id="provider-anthropic">Anthropic</button>
-                            <button class="provider-btn" onclick="selectProvider('openai')" id="provider-openai">OpenAI</button>
-                            <button class="provider-btn" onclick="selectProvider('gemini')" id="provider-gemini">Gemini</button>
-                            <button class="provider-btn" onclick="selectProvider('openrouter')" id="provider-openrouter">OpenRouter</button>
+                            <button class="provider-btn active" onclick="window.selectProvider('anthropic')" id="provider-anthropic">Anthropic</button>
+                            <button class="provider-btn" onclick="window.selectProvider('openai')" id="provider-openai">OpenAI</button>
+                            <button class="provider-btn" onclick="window.selectProvider('gemini')" id="provider-gemini">Gemini</button>
+                            <button class="provider-btn" onclick="window.selectProvider('openrouter')" id="provider-openrouter">OpenRouter</button>
                         </div>
                     </div>
 
@@ -224,7 +224,7 @@ Our Products
                         </div>
                         <div class="input-group">
                             <input type="password" id="apiKey-anthropic" placeholder="sk-ant-api03-...">
-                            <button class="btn-primary" onclick="saveApiKey('anthropic')">Save Key</button>
+                            <button class="btn-primary" onclick="window.saveApiKey('anthropic')">Save Key</button>
                         </div>
                     </div>
 
@@ -242,7 +242,7 @@ Our Products
                         </div>
                         <div class="input-group">
                             <input type="password" id="apiKey-openai" placeholder="sk-...">
-                            <button class="btn-primary" onclick="saveApiKey('openai')">Save Key</button>
+                            <button class="btn-primary" onclick="window.saveApiKey('openai')">Save Key</button>
                         </div>
                     </div>
 
@@ -260,7 +260,7 @@ Our Products
                         </div>
                         <div class="input-group">
                             <input type="password" id="apiKey-gemini" placeholder="AIza...">
-                            <button class="btn-primary" onclick="saveApiKey('gemini')">Save Key</button>
+                            <button class="btn-primary" onclick="window.saveApiKey('gemini')">Save Key</button>
                         </div>
                     </div>
 
@@ -278,7 +278,7 @@ Our Products
                         </div>
                         <div class="input-group">
                             <input type="password" id="apiKey-openrouter" placeholder="sk-or-...">
-                            <button class="btn-primary" onclick="saveApiKey('openrouter')">Save Key</button>
+                            <button class="btn-primary" onclick="window.saveApiKey('openrouter')">Save Key</button>
                         </div>
                     </div>
                     </div>
