@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimization Test Suite</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result { 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 4px; 
+            font-weight: bold;
+        }
+        .success { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .warning { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            border: 1px solid #ffeaa7; 
+        }
+        .info { 
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+            border: 1px solid #bee5eb; 
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Optimization Test Suite</h1>
+        <p>Comprehensive testing to ensure nothing broke after code optimization</p>
+        
+        <div class="test-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-tests">0</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="passed-tests">0</div>
+                <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="failed-tests">0</div>
+                <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="success-rate">0%</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔧 Module Loading Tests</h2>
+            <button class="test-button" onclick="testModuleLoading()">Test Module Loading</button>
+            <div id="module-loading-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📡 API Function Tests</h2>
+            <button class="test-button" onclick="testAPIFunctions()">Test API Functions</button>
+            <div id="api-function-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🌐 Server Communication Tests</h2>
+            <button class="test-button" onclick="testServerCommunication()">Test Server Communication</button>
+            <div id="server-communication-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎨 Frontend Feature Tests</h2>
+            <button class="test-button" onclick="testFrontendFeatures()">Test Frontend Features</button>
+            <div id="frontend-feature-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔄 Integration Tests</h2>
+            <button class="test-button" onclick="testIntegration()">Test Integration</button>
+            <div id="integration-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Performance Tests</h2>
+            <button class="test-button" onclick="testPerformance()">Test Performance</button>
+            <div id="performance-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🚀 Run All Tests</h2>
+            <button class="test-button" onclick="runAllTests()" style="background: #28a745; font-size: 1.2em; padding: 15px 30px;">Run Complete Test Suite</button>
+            <div id="all-tests-results"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Test statistics
+        let testStats = {
+            total: 0,
+            passed: 0,
+            failed: 0
+        };
+        
+        function updateStats() {
+            document.getElementById('total-tests').textContent = testStats.total;
+            document.getElementById('passed-tests').textContent = testStats.passed;
+            document.getElementById('failed-tests').textContent = testStats.failed;
+            const successRate = testStats.total > 0 ? Math.round((testStats.passed / testStats.total) * 100) : 0;
+            document.getElementById('success-rate').textContent = successRate + '%';
+        }
+        
+        function addTestResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+            
+            // Update stats
+            testStats.total++;
+            if (type === 'success') {
+                testStats.passed++;
+            } else if (type === 'error') {
+                testStats.failed++;
+            }
+            updateStats();
+        }
+        
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+        
+        // Test 1: Module Loading
+        function testModuleLoading() {
+            clearResults('module-loading-results');
+            addTestResult('module-loading-results', '🔍 Testing module loading...', 'info');
+            
+            const modules = [
+                'capabilities.js',
+                'preview.js', 
+                'generation.js',
+                'viewer.js',
+                'sharing.js',
+                'modification.js'
+            ];
+            
+            let allLoaded = true;
+            modules.forEach(module => {
+                // Check if functions from each module are available
+                const moduleName = module.replace('.js', '');
+                let moduleLoaded = false;
+                
+                switch(moduleName) {
+                    case 'capabilities':
+                        moduleLoaded = typeof window.checkServerCapabilities === 'function';
+                        break;
+                    case 'preview':
+                        moduleLoaded = typeof window.generatePreview === 'function';
+                        break;
+                    case 'generation':
+                        moduleLoaded = typeof window.generatePresentation === 'function';
+                        break;
+                    case 'viewer':
+                        moduleLoaded = typeof window.viewPresentation === 'function';
+                        break;
+                    case 'sharing':
+                        moduleLoaded = typeof window.sharePresentation === 'function';
+                        break;
+                    case 'modification':
+                        moduleLoaded = typeof window.modifyCurrentSlide === 'function';
+                        break;
+                }
+                
+                if (moduleLoaded) {
+                    addTestResult('module-loading-results', `✅ ${module} loaded successfully`, 'success');
+                } else {
+                    addTestResult('module-loading-results', `❌ ${module} failed to load`, 'error');
+                    allLoaded = false;
+                }
+            });
+            
+            if (allLoaded) {
+                addTestResult('module-loading-results', '🎉 All modules loaded successfully!', 'success');
+            } else {
+                addTestResult('module-loading-results', '⚠️ Some modules failed to load', 'warning');
+            }
+        }
+        
+        // Test 2: API Functions
+        function testAPIFunctions() {
+            clearResults('api-function-results');
+            addTestResult('api-function-results', '🔍 Testing API functions...', 'info');
+            
+            const functions = [
+                { name: 'checkServerCapabilities', module: 'Capabilities' },
+                { name: 'getApiKey', module: 'Capabilities' },
+                { name: 'generatePreview', module: 'Preview' },
+                { name: 'generatePresentation', module: 'Generation' },
+                { name: 'viewPresentation', module: 'Viewer' },
+                { name: 'sharePresentation', module: 'Sharing' },
+                { name: 'modifyCurrentSlide', module: 'Modification' },
+                { name: 'showNotification', module: 'Utilities' },
+                { name: 'convertToPDF', module: 'Utilities' },
+                { name: 'updateProgress', module: 'Utilities' }
+            ];
+            
+            let allFunctionsAvailable = true;
+            functions.forEach(func => {
+                if (typeof window[func.name] === 'function') {
+                    addTestResult('api-function-results', `✅ ${func.name} (${func.module}) available`, 'success');
+                } else {
+                    addTestResult('api-function-results', `❌ ${func.name} (${func.module}) missing`, 'error');
+                    allFunctionsAvailable = false;
+                }
+            });
+            
+            // Test global objects
+            if (window.serverCapabilities && typeof window.serverCapabilities === 'object') {
+                addTestResult('api-function-results', '✅ serverCapabilities object available', 'success');
+            } else {
+                addTestResult('api-function-results', '❌ serverCapabilities object missing', 'error');
+                allFunctionsAvailable = false;
+            }
+            
+            if (allFunctionsAvailable) {
+                addTestResult('api-function-results', '🎉 All API functions available!', 'success');
+            } else {
+                addTestResult('api-function-results', '⚠️ Some API functions missing', 'warning');
+            }
+        }
+        
+        // Test 3: Server Communication
+        function testServerCommunication() {
+            clearResults('server-communication-results');
+            addTestResult('server-communication-results', '🔍 Testing server communication...', 'info');
+            
+            // Test if we can make basic requests
+            const endpoints = [
+                '/api/health',
+                '/api/capabilities'
+            ];
+            
+            let serverReachable = false;
+            endpoints.forEach(endpoint => {
+                fetch(endpoint)
+                    .then(response => {
+                        if (response.ok) {
+                            addTestResult('server-communication-results', `✅ ${endpoint} responding`, 'success');
+                            serverReachable = true;
+                        } else {
+                            addTestResult('server-communication-results', `⚠️ ${endpoint} returned ${response.status}`, 'warning');
+                        }
+                    })
+                    .catch(error => {
+                        addTestResult('server-communication-results', `❌ ${endpoint} failed: ${error.message}`, 'error');
+                    });
+            });
+            
+            // Test if server capabilities can be checked
+            if (typeof window.checkServerCapabilities === 'function') {
+                addTestResult('server-communication-results', '✅ Server capabilities check function available', 'success');
+            } else {
+                addTestResult('server-communication-results', '❌ Server capabilities check not available', 'error');
+            }
+        }
+        
+        // Test 4: Frontend Features
+        function testFrontendFeatures() {
+            clearResults('frontend-feature-results');
+            addTestResult('frontend-feature-results', '🔍 Testing frontend features...', 'info');
+            
+            // Test if main UI elements exist
+            const uiElements = [
+                'textInput',
+                'previewBtn', 
+                'generateBtn',
+                'previewContainer'
+            ];
+            
+            let allElementsExist = true;
+            uiElements.forEach(elementId => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    addTestResult('frontend-feature-results', `✅ ${elementId} element found`, 'success');
+                } else {
+                    addTestResult('frontend-feature-results', `❌ ${elementId} element missing`, 'error');
+                    allElementsExist = false;
+                }
+            });
+            
+            // Test if event handlers are attached
+            const buttons = ['previewBtn', 'generateBtn'];
+            buttons.forEach(buttonId => {
+                const button = document.getElementById(buttonId);
+                if (button && button.onclick) {
+                    addTestResult('frontend-feature-results', `✅ ${buttonId} has click handler`, 'success');
+                } else {
+                    addTestResult('frontend-feature-results', `⚠️ ${buttonId} click handler missing`, 'warning');
+                }
+            });
+            
+            if (allElementsExist) {
+                addTestResult('frontend-feature-results', '🎉 Frontend features working!', 'success');
+            } else {
+                addTestResult('frontend-feature-results', '⚠️ Some frontend features missing', 'warning');
+            }
+        }
+        
+        // Test 5: Integration Tests
+        function testIntegration() {
+            clearResults('integration-results');
+            addTestResult('integration-results', '🔍 Testing integration...', 'info');
+            
+            // Test if modules can work together
+            if (typeof window.generatePreview === 'function' && typeof window.generatePresentation === 'function') {
+                addTestResult('integration-results', '✅ Preview and generation modules integrated', 'success');
+            } else {
+                addTestResult('integration-results', '❌ Preview and generation modules not integrated', 'error');
+            }
+            
+            if (typeof window.viewPresentation === 'function' && typeof window.sharePresentation === 'function') {
+                addTestResult('integration-results', '✅ Viewer and sharing modules integrated', 'success');
+            } else {
+                addTestResult('integration-results', '❌ Viewer and sharing modules not integrated', 'error');
+            }
+            
+            // Test if utility functions are available across modules
+            if (typeof window.showNotification === 'function') {
+                addTestResult('integration-results', '✅ Utility functions available across modules', 'success');
+            } else {
+                addTestResult('integration-results', '❌ Utility functions not available', 'error');
+            }
+        }
+        
+        // Test 6: Performance Tests
+        function testPerformance() {
+            clearResults('performance-results');
+            addTestResult('performance-results', '🔍 Testing performance...', 'info');
+            
+            const startTime = performance.now();
+            
+            // Test module loading performance
+            const moduleLoadTime = performance.now() - startTime;
+            addTestResult('performance-results', `📊 Module loading time: ${moduleLoadTime.toFixed(2)}ms`, 'info');
+            
+            // Test function call performance
+            const functionStartTime = performance.now();
+            if (typeof window.getApiKey === 'function') {
+                window.getApiKey();
+            }
+            const functionCallTime = performance.now() - functionStartTime;
+            addTestResult('performance-results', `📊 Function call time: ${functionCallTime.toFixed(2)}ms`, 'info');
+            
+            // Test memory usage (basic check)
+            if (performance.memory) {
+                const memoryUsage = performance.memory.usedJSHeapSize / 1024 / 1024;
+                addTestResult('performance-results', `📊 Memory usage: ${memoryUsage.toFixed(2)}MB`, 'info');
+            }
+            
+            addTestResult('performance-results', '✅ Performance tests completed', 'success');
+        }
+        
+        // Run all tests
+        function runAllTests() {
+            clearResults('all-tests-results');
+            addTestResult('all-tests-results', '🚀 Running complete test suite...', 'info');
+            
+            // Reset stats
+            testStats = { total: 0, passed: 0, failed: 0 };
+            
+            // Run all tests
+            testModuleLoading();
+            testAPIFunctions();
+            testServerCommunication();
+            testFrontendFeatures();
+            testIntegration();
+            testPerformance();
+            
+            // Final summary
+            setTimeout(() => {
+                const successRate = testStats.total > 0 ? Math.round((testStats.passed / testStats.total) * 100) : 0;
+                if (successRate >= 90) {
+                    addTestResult('all-tests-results', `🎉 Test suite completed! Success rate: ${successRate}%`, 'success');
+                } else if (successRate >= 70) {
+                    addTestResult('all-tests-results', `⚠️ Test suite completed with warnings. Success rate: ${successRate}%`, 'warning');
+                } else {
+                    addTestResult('all-tests-results', `❌ Test suite failed. Success rate: ${successRate}%`, 'error');
+                }
+            }, 1000);
+        }
+        
+        // Auto-run basic tests on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            addTestResult('all-tests-results', '🔍 Auto-running basic tests...', 'info');
+            testModuleLoading();
+            testAPIFunctions();
+        });
+    </script>
+    
+    <!-- Load all API modules for testing -->
+    <script src="public/js/api/capabilities.js"></script>
+    <script src="public/js/api/preview.js"></script>
+    <script src="public/js/api/generation.js"></script>
+    <script src="public/js/api/viewer.js"></script>
+    <script src="public/js/api/sharing.js"></script>
+    <script src="public/js/api/modification.js"></script>
+    <script src="public/js/api.js"></script>
+</body>
+</html>

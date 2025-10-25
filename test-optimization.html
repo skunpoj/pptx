@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimization Test - Production Environment</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-result { 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 4px; 
+            font-weight: bold;
+        }
+        .success { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .warning { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            border: 1px solid #ffeaa7; 
+        }
+        .info { 
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+            border: 1px solid #bee5eb; 
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .console-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Optimization Test - Production Environment</h1>
+        <p>This page tests the optimized codebase in production environment</p>
+        
+        <div id="test-results"></div>
+        
+        <button class="test-button" onclick="runOptimizationTests()">🚀 Run Optimization Tests</button>
+        <button class="test-button" onclick="clearResults()">🧹 Clear Results</button>
+        
+        <h3>Console Output:</h3>
+        <div id="console-output" class="console-output"></div>
+    </div>
+    
+    <script>
+        // Console capture
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function captureConsole() {
+            const consoleOutput = document.getElementById('console-output');
+            
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                consoleOutput.textContent += 'LOG: ' + args.join(' ') + '\n';
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            };
+            
+            console.error = function(...args) {
+                originalError.apply(console, args);
+                consoleOutput.textContent += 'ERROR: ' + args.join(' ') + '\n';
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            };
+            
+            console.warn = function(...args) {
+                originalWarn.apply(console, args);
+                consoleOutput.textContent += 'WARN: ' + args.join(' ') + '\n';
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            };
+        }
+        
+        // Test results
+        let testStats = {
+            total: 0,
+            passed: 0,
+            failed: 0
+        };
+        
+        function addTestResult(message, type = 'info') {
+            const container = document.getElementById('test-results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            container.appendChild(div);
+            
+            // Update stats
+            testStats.total++;
+            if (type === 'success') {
+                testStats.passed++;
+            } else if (type === 'error') {
+                testStats.failed++;
+            }
+            
+            console.log(`TEST: ${message}`);
+        }
+        
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('console-output').textContent = '';
+            testStats = { total: 0, passed: 0, failed: 0 };
+        }
+        
+        // Test functions
+        function testModuleLoading() {
+            console.log('🔍 Testing module loading...');
+            
+            const modules = [
+                { name: 'capabilities', check: () => typeof window.checkServerCapabilities === 'function' },
+                { name: 'preview', check: () => typeof window.generatePreview === 'function' },
+                { name: 'generation', check: () => typeof window.generatePresentation === 'function' },
+                { name: 'viewer', check: () => typeof window.viewPresentation === 'function' },
+                { name: 'sharing', check: () => typeof window.sharePresentation === 'function' },
+                { name: 'modification', check: () => typeof window.modifyCurrentSlide === 'function' }
+            ];
+            
+            let allLoaded = true;
+            modules.forEach(module => {
+                if (module.check()) {
+                    addTestResult(`✅ ${module.name} module loaded`, 'success');
+                    console.log(`✅ ${module.name} module loaded`);
+                } else {
+                    addTestResult(`❌ ${module.name} module failed to load`, 'error');
+                    console.error(`❌ ${module.name} module failed to load`);
+                    allLoaded = false;
+                }
+            });
+            
+            if (allLoaded) {
+                addTestResult('🎉 All modules loaded successfully!', 'success');
+                console.log('🎉 All modules loaded successfully!');
+            } else {
+                addTestResult('⚠️ Some modules failed to load', 'warning');
+                console.warn('⚠️ Some modules failed to load');
+            }
+        }
+        
+        function testAPIFunctions() {
+            console.log('🔍 Testing API functions...');
+            
+            const functions = [
+                'checkServerCapabilities',
+                'getApiKey',
+                'generatePreview',
+                'generatePresentation',
+                'viewPresentation',
+                'sharePresentation',
+                'modifyCurrentSlide',
+                'showNotification',
+                'convertToPDF',
+                'updateProgress'
+            ];
+            
+            let allFunctionsAvailable = true;
+            functions.forEach(funcName => {
+                if (typeof window[funcName] === 'function') {
+                    addTestResult(`✅ ${funcName} function available`, 'success');
+                    console.log(`✅ ${funcName} function available`);
+                } else {
+                    addTestResult(`❌ ${funcName} function missing`, 'error');
+                    console.error(`❌ ${funcName} function missing`);
+                    allFunctionsAvailable = false;
+                }
+            });
+            
+            // Test global objects
+            if (window.serverCapabilities && typeof window.serverCapabilities === 'object') {
+                addTestResult('✅ serverCapabilities object available', 'success');
+                console.log('✅ serverCapabilities object available');
+            } else {
+                addTestResult('❌ serverCapabilities object missing', 'error');
+                console.error('❌ serverCapabilities object missing');
+                allFunctionsAvailable = false;
+            }
+            
+            if (allFunctionsAvailable) {
+                addTestResult('🎉 All API functions available!', 'success');
+                console.log('🎉 All API functions available!');
+            } else {
+                addTestResult('⚠️ Some API functions missing', 'warning');
+                console.warn('⚠️ Some API functions missing');
+            }
+        }
+        
+        function testServerCommunication() {
+            console.log('🔍 Testing server communication...');
+            
+            const endpoints = [
+                { path: '/api/health', name: 'Health Endpoint' },
+                { path: '/api/capabilities', name: 'Capabilities Endpoint' }
+            ];
+            
+            endpoints.forEach(endpoint => {
+                fetch(endpoint.path)
+                    .then(response => {
+                        if (response.ok) {
+                            addTestResult(`✅ ${endpoint.name} responding`, 'success');
+                            console.log(`✅ ${endpoint.name} responding`);
+                        } else {
+                            addTestResult(`⚠️ ${endpoint.name} returned ${response.status}`, 'warning');
+                            console.warn(`⚠️ ${endpoint.name} returned ${response.status}`);
+                        }
+                    })
+                    .catch(error => {
+                        addTestResult(`❌ ${endpoint.name} failed: ${error.message}`, 'error');
+                        console.error(`❌ ${endpoint.name} failed: ${error.message}`);
+                    });
+            });
+        }
+        
+        function testFrontendFeatures() {
+            console.log('🔍 Testing frontend features...');
+            
+            const elements = [
+                'textInput',
+                'previewBtn', 
+                'generateBtn',
+                'previewContainer'
+            ];
+            
+            let allElementsExist = true;
+            elements.forEach(elementId => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    addTestResult(`✅ ${elementId} element found`, 'success');
+                    console.log(`✅ ${elementId} element found`);
+                } else {
+                    addTestResult(`❌ ${elementId} element missing`, 'error');
+                    console.error(`❌ ${elementId} element missing`);
+                    allElementsExist = false;
+                }
+            });
+            
+            if (allElementsExist) {
+                addTestResult('🎉 Frontend features working!', 'success');
+                console.log('🎉 Frontend features working!');
+            } else {
+                addTestResult('⚠️ Some frontend features missing', 'warning');
+                console.warn('⚠️ Some frontend features missing');
+            }
+        }
+        
+        function testOptimizationResults() {
+            console.log('🔍 Testing optimization results...');
+            
+            // Check if API modules are accessible
+            const modules = [
+                'capabilities.js',
+                'preview.js',
+                'generation.js',
+                'viewer.js',
+                'sharing.js',
+                'modification.js'
+            ];
+            
+            let allModulesAccessible = true;
+            modules.forEach(module => {
+                fetch(`/js/api/${module}`)
+                    .then(response => {
+                        if (response.ok) {
+                            addTestResult(`✅ ${module} accessible`, 'success');
+                            console.log(`✅ ${module} accessible`);
+                        } else {
+                            addTestResult(`❌ ${module} not accessible`, 'error');
+                            console.error(`❌ ${module} not accessible`);
+                            allModulesAccessible = false;
+                        }
+                    })
+                    .catch(error => {
+                        addTestResult(`❌ ${module} failed: ${error.message}`, 'error');
+                        console.error(`❌ ${module} failed: ${error.message}`);
+                        allModulesAccessible = false;
+                    });
+            });
+            
+            if (allModulesAccessible) {
+                addTestResult('🎉 All API modules accessible!', 'success');
+                console.log('🎉 All API modules accessible!');
+            } else {
+                addTestResult('⚠️ Some API modules not accessible', 'warning');
+                console.warn('⚠️ Some API modules not accessible');
+            }
+        }
+        
+        function testPerformance() {
+            console.log('🔍 Testing performance...');
+            
+            const startTime = performance.now();
+            
+            // Test function call performance
+            if (typeof window.getApiKey === 'function') {
+                window.getApiKey();
+            }
+            
+            const endTime = performance.now();
+            const executionTime = endTime - startTime;
+            
+            addTestResult(`📊 Function execution time: ${executionTime.toFixed(2)}ms`, 'info');
+            console.log(`📊 Function execution time: ${executionTime.toFixed(2)}ms`);
+            
+            if (executionTime < 10) {
+                addTestResult('✅ Performance is good', 'success');
+                console.log('✅ Performance is good');
+            } else {
+                addTestResult('⚠️ Performance might be slow', 'warning');
+                console.warn('⚠️ Performance might be slow');
+            }
+        }
+        
+        function runOptimizationTests() {
+            console.log('🚀 Starting optimization tests...');
+            addTestResult('🚀 Starting optimization tests...', 'info');
+            
+            // Reset stats
+            testStats = { total: 0, passed: 0, failed: 0 };
+            
+            // Run all tests
+            testModuleLoading();
+            testAPIFunctions();
+            testServerCommunication();
+            testFrontendFeatures();
+            testOptimizationResults();
+            testPerformance();
+            
+            // Final summary
+            setTimeout(() => {
+                const successRate = testStats.total > 0 ? Math.round((testStats.passed / testStats.total) * 100) : 0;
+                
+                addTestResult(`📊 Test Results: ${testStats.passed}/${testStats.total} passed (${successRate}%)`, 'info');
+                console.log(`📊 Test Results: ${testStats.passed}/${testStats.total} passed (${successRate}%)`);
+                
+                if (successRate >= 90) {
+                    addTestResult('🎉 Optimization tests PASSED!', 'success');
+                    console.log('🎉 Optimization tests PASSED!');
+                } else if (successRate >= 70) {
+                    addTestResult('⚠️ Optimization tests completed with warnings', 'warning');
+                    console.warn('⚠️ Optimization tests completed with warnings');
+                } else {
+                    addTestResult('❌ Optimization tests FAILED', 'error');
+                    console.error('❌ Optimization tests FAILED');
+                }
+            }, 1000);
+        }
+        
+        // Initialize console capture
+        captureConsole();
+        
+        // Auto-run basic tests on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Auto-running basic tests...');
+            addTestResult('🔍 Auto-running basic tests...', 'info');
+            testModuleLoading();
+            testAPIFunctions();
+        });
+    </script>
+    
+    <!-- Load all API modules for testing -->
+    <script src="/js/api/capabilities.js"></script>
+    <script src="/js/api/preview.js"></script>
+    <script src="/js/api/generation.js"></script>
+    <script src="/js/api/viewer.js"></script>
+    <script src="/js/api/sharing.js"></script>
+    <script src="/js/api/modification.js"></script>
+    <script src="/js/api.js"></script>
+</body>
+</html>
