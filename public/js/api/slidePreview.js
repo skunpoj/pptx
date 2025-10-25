@@ -116,10 +116,17 @@ async function generatePreview() {
         
         let slideData;
         try {
-            slideData = JSON.parse(responseText);
+            // Check if response is SSE format (starts with "data:")
+            if (responseText.trim().startsWith('data:')) {
+                console.log('📡 Parsing streaming SSE response...');
+                slideData = parseSSEResponse(responseText);
+            } else {
+                // Regular JSON response
+                slideData = JSON.parse(responseText);
+            }
         } catch (parseError) {
             console.error('❌ JSON parse error:', parseError);
-            console.error('❌ Response text:', responseText);
+            console.error('❌ Response text:', responseText.substring(0, 500));
             throw new Error('Invalid JSON response from server');
         }
         
@@ -149,6 +156,54 @@ async function generatePreview() {
         previewBtn.textContent = originalText;
         previewBtn.disabled = false;
     }
+}
+
+/**
+ * Parse Server-Sent Events (SSE) response format
+ */
+function parseSSEResponse(sseText) {
+    console.log('📡 Parsing SSE response...');
+    const lines = sseText.trim().split('\n');
+    const slides = [];
+    let theme = null;
+    let totalSlides = 0;
+    
+    for (const line of lines) {
+        if (line.startsWith('data:')) {
+            try {
+                const jsonStr = line.substring(5).trim(); // Remove "data:" prefix
+                const data = JSON.parse(jsonStr);
+                
+                if (data.type === 'theme') {
+                    theme = data.theme;
+                    totalSlides = data.totalSlides;
+                    console.log(`🎨 Theme received: ${theme.name}`);
+                } else if (data.type === 'slide') {
+                    slides.push(data.slide);
+                    console.log(`📄 Slide ${data.current}/${data.total}: ${data.slide.title}`);
+                }
+            } catch (e) {
+                console.warn('⚠️ Failed to parse SSE line:', line.substring(0, 100));
+            }
+        }
+    }
+    
+    console.log(`✅ SSE parsing complete: ${slides.length} slides, theme: ${theme?.name || 'default'}`);
+    
+    // Construct the slideData object expected by displayPreview
+    return {
+        slides: slides,
+        designTheme: theme || {
+            name: 'Default Theme',
+            description: 'Professional presentation theme',
+            colorPrimary: '#667eea',
+            colorSecondary: '#764ba2',
+            colorAccent: '#F39C12',
+            colorBackground: '#FFFFFF',
+            colorText: '#1d1d1d'
+        },
+        totalSlides: totalSlides || slides.length
+    };
 }
 
 /**
