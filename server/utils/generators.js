@@ -83,7 +83,7 @@ function generateSlideProcessingCode(htmlFiles, slides) {
         
         // Chart slides: generate directly with pptxgenjs
         if (slide.layout === 'chart' && slide.chart) {
-            return generateChartSlideCode(slide, idx, theme);
+            return generateChartSlideCode(slide, idx);
         }
         
         // Other slides: use html2pptx + add graphics

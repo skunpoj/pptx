@@ -313,6 +313,10 @@ textarea:focus {
     flex-shrink: 0;
 }
 
+.preview-container .progress-container {
+    flex-shrink: 0;
+}
+
 .preview-container .preview {
     flex: 1;
     min-height: 0;
