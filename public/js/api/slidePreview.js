@@ -617,13 +617,60 @@ function createSlidePreviewCard(slide, index, theme) {
             <p style="color: ${theme?.colorSecondary || '#2E4053'}; font-size: 1.1rem;">${slide.subtitle || ''}</p>
         `;
     } else if (slide.type === 'content') {
-        slideDiv.innerHTML += `
-            <h3 style="color: ${theme?.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h3>
-            ${slide.header ? `<p style="color: #666; font-style: italic; margin: 0.5rem 0;">${slide.header}</p>` : ''}
-            <ul style="color: ${theme?.colorText || '#1d1d1d'};">
-                ${slide.content ? slide.content.map(item => `<li>${item}</li>`).join('') : ''}
-            </ul>
-        `;
+        // Check if this is a chart slide
+        if (slide.layout === 'chart' && slide.chart) {
+            slideDiv.innerHTML += `
+                <h3 style="color: ${theme?.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h3>
+                ${slide.header ? `<p style="color: #666; font-style: italic; margin: 0.5rem 0;">${slide.header}</p>` : ''}
+                <div style="background: #f8f9fa; border: 2px solid ${theme?.colorAccent || '#F39C12'}; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                    <div style="font-weight: 600; color: ${theme?.colorPrimary || '#667eea'}; margin-bottom: 0.5rem; text-align: center;">
+                        📊 ${slide.chart.title || 'Chart'}
+                    </div>
+                    <div style="text-align: center;">
+                        ${typeof window.generateChartSVG === 'function' ? window.generateChartSVG(slide.chart, theme || {}, 450, 250) : '<p>Chart rendering not available</p>'}
+                    </div>
+                </div>
+                ${slide.content && slide.content.length > 0 ? `
+                    <ul style="color: ${theme?.colorText || '#1d1d1d'}; margin-top: 1rem;">
+                        ${slide.content.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                ` : ''}
+            `;
+        } else {
+            // Regular content slide
+            slideDiv.innerHTML += `
+                <h3 style="color: ${theme?.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h3>
+                ${slide.header ? `<p style="color: #666; font-style: italic; margin: 0.5rem 0;">${slide.header}</p>` : ''}
+                ${slide.content ? `
+                    <ul style="color: ${theme?.colorText || '#1d1d1d'};">
+                        ${slide.content.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                ` : ''}
+                ${slide.imageUrl ? `
+                    <div style="margin-top: 1rem; text-align: center;">
+                        <img src="${slide.imageUrl}" 
+                             alt="${slide.imageDescription || 'Slide image'}" 
+                             style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display: none; background: #f0f4ff; border: 2px dashed ${theme?.colorAccent || '#667eea'}; padding: 1rem; border-radius: 8px; color: #666;">
+                            🖼️ Image failed to load
+                        </div>
+                    </div>
+                ` : (slide.imageDescription ? `
+                    <div style="margin-top: 1rem; background: #f0f4ff; border: 2px dashed ${theme?.colorAccent || '#667eea'}; padding: 1rem; border-radius: 8px;">
+                        <div style="font-weight: 600; color: ${theme?.colorPrimary || '#667eea'}; margin-bottom: 0.5rem;">
+                            🖼️ Image Placeholder
+                        </div>
+                        <div style="font-size: 0.9rem; color: #666; font-style: italic;">
+                            ${slide.imageDescription}
+                        </div>
+                        <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #999;">
+                            Generate images to replace this placeholder
+                        </div>
+                    </div>
+                ` : '')}
+            `;
+        }
     }
     
     return slideDiv;
@@ -771,12 +818,61 @@ function displayPreview(slideData) {
                     <p style="color: ${slideData.designTheme?.colorSecondary || '#2E4053'}; font-size: 1.1rem;">${slide.subtitle || ''}</p>
                 `;
             } else if (slide.type === 'content') {
-                slideDiv.innerHTML += `
-                    <h3 style="color: ${slideData.designTheme?.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h3>
-                    <ul style="color: ${slideData.designTheme?.colorText || '#1d1d1d'};">
-                        ${slide.content ? slide.content.map(item => `<li>${item}</li>`).join('') : ''}
-                    </ul>
-                `;
+                const theme = slideData.designTheme || {};
+                // Check if this is a chart slide
+                if (slide.layout === 'chart' && slide.chart) {
+                    slideDiv.innerHTML += `
+                        <h3 style="color: ${theme.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h3>
+                        ${slide.header ? `<p style="color: #666; font-style: italic; margin: 0.5rem 0;">${slide.header}</p>` : ''}
+                        <div style="background: #f8f9fa; border: 2px solid ${theme.colorAccent || '#F39C12'}; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                            <div style="font-weight: 600; color: ${theme.colorPrimary || '#667eea'}; margin-bottom: 0.5rem; text-align: center;">
+                                📊 ${slide.chart.title || 'Chart'}
+                            </div>
+                            <div style="text-align: center;">
+                                ${typeof window.generateChartSVG === 'function' ? window.generateChartSVG(slide.chart, theme, 450, 250) : '<p>Chart rendering not available</p>'}
+                            </div>
+                        </div>
+                        ${slide.content && slide.content.length > 0 ? `
+                            <ul style="color: ${theme.colorText || '#1d1d1d'}; margin-top: 1rem;">
+                                ${slide.content.map(item => `<li>${item}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                    `;
+                } else {
+                    // Regular content slide
+                    slideDiv.innerHTML += `
+                        <h3 style="color: ${theme.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h3>
+                        ${slide.header ? `<p style="color: #666; font-style: italic; margin: 0.5rem 0;">${slide.header}</p>` : ''}
+                        ${slide.content ? `
+                            <ul style="color: ${theme.colorText || '#1d1d1d'};">
+                                ${slide.content.map(item => `<li>${item}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        ${slide.imageUrl ? `
+                            <div style="margin-top: 1rem; text-align: center;">
+                                <img src="${slide.imageUrl}" 
+                                     alt="${slide.imageDescription || 'Slide image'}" 
+                                     style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div style="display: none; background: #f0f4ff; border: 2px dashed ${theme.colorAccent || '#667eea'}; padding: 1rem; border-radius: 8px; color: #666;">
+                                    🖼️ Image failed to load
+                                </div>
+                            </div>
+                        ` : (slide.imageDescription ? `
+                            <div style="margin-top: 1rem; background: #f0f4ff; border: 2px dashed ${theme.colorAccent || '#667eea'}; padding: 1rem; border-radius: 8px;">
+                                <div style="font-weight: 600; color: ${theme.colorPrimary || '#667eea'}; margin-bottom: 0.5rem;">
+                                    🖼️ Image Placeholder
+                                </div>
+                                <div style="font-size: 0.9rem; color: #666; font-style: italic;">
+                                    ${slide.imageDescription}
+                                </div>
+                                <div style="margin-top: 0.5rem; font-size: 0.8rem; color: #999;">
+                                    Click "Generate Images" to create this image
+                                </div>
+                            </div>
+                        ` : '')}
+                    `;
+                }
             }
             
             previewContainer.appendChild(slideDiv);

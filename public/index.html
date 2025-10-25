@@ -81,13 +81,30 @@ Our Products
             <div class="card preview-container">
                 <h2>👁️ Slide Preview</h2>
                 
-                <!-- View Toggle -->
+                <!-- Tab Navigation -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #ddd;">
+                    <button class="gallery-tab-btn active" id="slidesTabBtn" onclick="window.showSlidesPreview()">
+                        📄 Slides
+                    </button>
+                    <button class="gallery-tab-btn" id="galleryTabBtn" onclick="window.showImageGallery()">
+                        🖼️ Image Gallery
+                    </button>
+                    <button class="btn-secondary" onclick="window.generateImagesForSlides()" style="margin-left: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        🎨 Generate Images
+                    </button>
+                </div>
+                
+                <!-- View Toggle (for slides tab) -->
                 <div class="view-toggle" id="viewToggle" style="display: none;">
                     <button class="active" onclick="window.switchView('list')" id="listViewBtn">📋 List View</button>
                     <button onclick="window.switchView('gallery')" id="galleryViewBtn">🖼️ Gallery View</button>
                 </div>
                 
+                <!-- Slides Preview Container -->
                 <div class="preview" id="preview" style="overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important;"></div>
+                
+                <!-- Image Gallery Container -->
+                <div id="imageGalleryContainer" style="display: none; overflow-y: auto !important; flex: 1 1 auto !important; min-height: 0 !important;"></div>
             </div>
         </div>
 
@@ -494,6 +511,7 @@ Our Products
     <script src="/js/charts.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/preview.js"></script>
+    <script src="/js/imageGallery.js"></script>
     
     <!-- API modules BEFORE api.js (important for function exports) -->
     <!-- Using fresh file name to avoid caching issues -->
