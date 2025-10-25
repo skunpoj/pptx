@@ -1,5 +1,54 @@
 // API communication module
 
+// Global state for server capabilities
+window.serverCapabilities = {
+    pdfConversion: false,
+    features: {
+        pptxDownload: true,
+        pdfDownload: false,
+        pdfViewer: false,
+        shareableLinks: true,
+        onlineViewer: true
+    },
+    loaded: false
+};
+
+/**
+ * Check server capabilities on page load
+ * Determines which features are available (e.g., PDF conversion)
+ */
+async function checkServerCapabilities() {
+    try {
+        const response = await fetch('/api/capabilities');
+        if (response.ok) {
+            const capabilities = await response.json();
+            window.serverCapabilities = {
+                ...capabilities,
+                loaded: true
+            };
+            
+            // Log status
+            if (!capabilities.pdfConversion) {
+                console.warn('⚠️ PDF features disabled:', capabilities.message);
+            } else {
+                console.log('✅ All features available, including PDF conversion');
+            }
+            
+            return capabilities;
+        }
+    } catch (error) {
+        console.warn('Could not check server capabilities:', error);
+    }
+    return window.serverCapabilities;
+}
+
+// Check capabilities when page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkServerCapabilities);
+} else {
+    checkServerCapabilities();
+}
+
 function getApiKey() {
     const currentProvider = window.currentProvider || 'anthropic';
     return localStorage.getItem(`${currentProvider}_api_key`);
@@ -953,7 +1002,7 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
             <button onclick="window.viewPresentation('${downloadUrl}')" class="download-btn" style="border: none; cursor: pointer;">
                 👁️ View Slides Online
             </button>
-            ${storage.sessionId ? `
+            ${storage.sessionId && window.serverCapabilities.features.pdfViewer ? `
             <button onclick="window.viewPDF('${storage.sessionId}')" class="download-btn" style="border: none; cursor: pointer; background: #dc3545; color: white;">
                 📄 View PDF Online
             </button>
@@ -962,6 +1011,14 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
             </a>
             ` : ''}
         </div>
+        ${!window.serverCapabilities.features.pdfViewer && storage.sessionId ? `
+        <div style="background: rgba(255, 193, 7, 0.2); border: 2px solid rgba(255, 193, 7, 0.6); padding: 1rem; border-radius: 8px; margin-top: 1rem;">
+            <p style="margin: 0; font-size: 0.9rem;">
+                ℹ️ <strong>PDF features are currently unavailable</strong> (LibreOffice not installed in dev environment).<br>
+                <span style="font-size: 0.85rem;">Use Docker deployment for full PDF conversion and viewing features.</span>
+            </p>
+        </div>
+        ` : ''}
         <p style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.8;">
             💡 <strong>Tip:</strong> If downloads are blocked by corporate firewall, try "View Online" buttons or use Direct Links
         </p>

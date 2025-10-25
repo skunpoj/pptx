@@ -64,13 +64,16 @@ app.get('/landing', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'landing.html'));
 });
 
+// Global state for LibreOffice availability
+let LIBREOFFICE_AVAILABLE = false;
+
 // Initialize storage on startup
 (async () => {
     try {
         await initializeStorage();
-        const libreOfficeAvailable = await checkLibreOffice();
+        LIBREOFFICE_AVAILABLE = await checkLibreOffice();
         console.log(`📁 File storage initialized`);
-        console.log(`📄 PDF conversion: ${libreOfficeAvailable ? '✅ Available (LibreOffice)' : '⚠️ Unavailable (install LibreOffice)'}`);
+        console.log(`📄 PDF conversion: ${LIBREOFFICE_AVAILABLE ? '✅ Available (LibreOffice)' : '⚠️ Unavailable (install LibreOffice)'}`);
         
         // Start auto-cleanup scheduler
         startAutoCleanup();
@@ -86,6 +89,41 @@ const upload = multer({
 
 // Mount routes
 app.use('/api', promptRoutes);
+
+// ========================================
+// SERVER CAPABILITIES & HEALTH ENDPOINTS
+// ========================================
+
+/**
+ * Health check endpoint
+ */
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok',
+        timestamp: new Date().toISOString()
+    });
+});
+
+/**
+ * Server capabilities endpoint
+ * Tells frontend what features are available
+ */
+app.get('/api/capabilities', (req, res) => {
+    res.json({
+        pdfConversion: LIBREOFFICE_AVAILABLE,
+        environment: process.env.NODE_ENV || 'development',
+        features: {
+            pptxDownload: true,
+            pdfDownload: LIBREOFFICE_AVAILABLE,
+            pdfViewer: LIBREOFFICE_AVAILABLE,
+            shareableLinks: true,
+            onlineViewer: true
+        },
+        message: LIBREOFFICE_AVAILABLE 
+            ? 'All features available' 
+            : 'PDF features disabled - LibreOffice not installed (use Docker for full features)'
+    });
+});
 
 // ========================================
 // CONTENT GENERATION ENDPOINT

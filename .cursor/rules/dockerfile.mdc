@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+dont forget we are able to use and test via dockerfile over the internet on the prod env only

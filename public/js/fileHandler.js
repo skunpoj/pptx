@@ -125,11 +125,11 @@ async function generateFromPrompt() {
     window.showStatus('🤖 AI is expanding your idea into detailed content...', 'info');
     
     const textInput = document.getElementById('textInput');
-    textInput.value = ''; // Clear existing content
     
     try {
         let finalPrompt = prompt;
         let extractedColors = null;
+        let fileContentForTextarea = ''; // Content to show in textarea
         
         // Process uploaded files
         if (files.length > 0) {
@@ -167,15 +167,30 @@ async function generateFromPrompt() {
                 });
             }
             
-            // Combine file contents with prompt
-            let combinedFiles = '';
+            // Combine file contents with prompt - this goes to AI
+            let combinedFilesForAI = '';
             fileContents.forEach(file => {
-                combinedFiles += `\n\n=== File: ${file.filename} ===\n\n${file.content}`;
+                combinedFilesForAI += `\n\n=== File: ${file.filename} ===\n\n${file.content}`;
             });
             
+            // Also prepare file content to show in textarea (for user visibility)
+            fileContents.forEach(file => {
+                fileContentForTextarea += `\n\n=== Content from: ${file.filename} ===\n\n${file.content}`;
+            });
+            
+            // Build the prompt for AI (includes file content)
             finalPrompt = prompt 
-                ? `${prompt}\n\nUse the following file content as the base:\n${combinedFiles}`
-                : `Analyze and convert the following files into a well-structured presentation with ${numSlides} slides:\n${combinedFiles}`;
+                ? `${prompt}\n\nUse the following file content as the base for generating detailed presentation content:\n${combinedFilesForAI}`
+                : `Analyze and convert the following files into detailed, well-structured presentation content with ${numSlides} slides:\n${combinedFilesForAI}`;
+            
+            // Show file content in the presentation content textarea immediately
+            // This ensures users see what content is being used
+            if (fileContentForTextarea) {
+                textInput.value = `📎 Uploaded File Content:\n${fileContentForTextarea}\n\n⏳ AI is now expanding this into detailed presentation content...`;
+            }
+        } else {
+            // No files - clear the textarea
+            textInput.value = '';
         }
         
         // Call API with streaming or non-streaming based on provider

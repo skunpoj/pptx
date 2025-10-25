@@ -13,7 +13,12 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>🎨 AI Text2PPT Pro</h1>
+            <div class="header-content">
+                <h1>🎨 AI Text2PPT Pro</h1>
+                <button onclick="showWelcomeModal()" class="user-manual-btn" title="User Manual & Features">
+                    📖
+                </button>
+            </div>
         </div>
 
         <!-- Main Content Grid -->
@@ -77,10 +82,38 @@ Our Products
             </div>
         </div>
 
-        <!-- Status Notification - MOVED HERE (above AI idea generator) -->
+        <!-- Status Notification -->
         <div id="status"></div>
 
-        <!-- AI IDEA GENERATOR & THEME SELECTOR - Below main panels -->
+        <!-- Action Buttons Section -->
+        <div id="actionButtonsContainer" style="max-width: 1400px; margin: 0 auto; padding: 0 1rem;">
+            <!-- Slide Modification Section (appears after preview) -->
+            <div id="modificationSection" style="display: none; margin-bottom: 1rem;">
+                <div class="card" style="background: #fff8e1; border: 2px solid #ffc107; padding: 1rem;">
+                    <strong style="color: #f57c00; display: block; margin-bottom: 0.5rem; font-size: 1.1rem;">✏️ Modify Slides with AI</strong>
+                    <textarea id="modificationPrompt" 
+                              placeholder="Example: 'Change slide 3 title to...' or 'Add a bullet point to slide 2 about...' or 'Remove slide 5'"
+                              style="width: 100%; height: 70px; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 8px; font-size: 0.9rem; resize: vertical;"></textarea>
+                    <button class="btn-secondary btn-full" onclick="window.modifySlides()" id="modifyBtn" style="margin-top: 0.75rem; font-size: 1rem; padding: 0.75rem;">
+                        🔄 Apply AI Modifications
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Generate PowerPoint Button (appears after preview) -->
+            <div id="generatePptSection" style="display: none; margin-bottom: 1rem;">
+                <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.5rem; text-align: center;">
+                    <button class="btn-generate btn-full" onclick="window.generatePresentation()" id="generateBtn" style="background: white; color: #667eea; font-size: 1.2rem; font-weight: 700; padding: 1rem;">
+                        ✨ Generate PowerPoint Presentation
+                    </button>
+                    <p style="text-align: center; font-size: 0.9rem; color: white; margin-top: 0.75rem; opacity: 0.95;">
+                        Download PPTX, view slides online, auto-convert to PDF, or create shareable link
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI IDEA GENERATOR & THEME SELECTOR - Below modify slides section, above settings -->
         <div class="card" style="margin-top: 1rem;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                 <!-- Left: AI Idea Generator -->
@@ -165,34 +198,6 @@ Our Products
                         <p class="theme-description">Select a color palette for your presentation (AI may suggest one based on your content)</p>
                         <div id="themeGrid" class="theme-grid"></div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Action Buttons Section - ABOVE STATUS AND SETTINGS -->
-        <div id="actionButtonsContainer" style="max-width: 1400px; margin: 0 auto; padding: 0 1rem;">
-            <!-- Slide Modification Section (appears after preview) -->
-            <div id="modificationSection" style="display: none; margin-bottom: 1rem;">
-                <div class="card" style="background: #fff8e1; border: 2px solid #ffc107; padding: 1rem;">
-                    <strong style="color: #f57c00; display: block; margin-bottom: 0.5rem; font-size: 1.1rem;">✏️ Modify Slides with AI</strong>
-                    <textarea id="modificationPrompt" 
-                              placeholder="Example: 'Change slide 3 title to...' or 'Add a bullet point to slide 2 about...' or 'Remove slide 5'"
-                              style="width: 100%; height: 70px; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 8px; font-size: 0.9rem; resize: vertical;"></textarea>
-                    <button class="btn-secondary btn-full" onclick="window.modifySlides()" id="modifyBtn" style="margin-top: 0.75rem; font-size: 1rem; padding: 0.75rem;">
-                        🔄 Apply AI Modifications
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Generate PowerPoint Button (appears after preview) -->
-            <div id="generatePptSection" style="display: none; margin-bottom: 1rem;">
-                <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.5rem; text-align: center;">
-                    <button class="btn-generate btn-full" onclick="window.generatePresentation()" id="generateBtn" style="background: white; color: #667eea; font-size: 1.2rem; font-weight: 700; padding: 1rem;">
-                        ✨ Generate PowerPoint Presentation
-                    </button>
-                    <p style="text-align: center; font-size: 0.9rem; color: white; margin-top: 0.75rem; opacity: 0.95;">
-                        Download PPTX, view slides online, auto-convert to PDF, or create shareable link
-                    </p>
                 </div>
             </div>
         </div>
@@ -322,8 +327,8 @@ Our Products
         <div class="footer">
             <p>Professional presentations powered by Claude AI • Using html2pptx + PptxGenJS</p>
             <p class="footer-note">All processing happens on your server • Your API key is stored locally</p>
-            <button onclick="showWelcomeModal()" style="background: #667eea; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 1rem;">
-                📖 Show User Manual / Features
+            <button onclick="showWelcomeModal()" style="background: transparent; color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.3); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 500; margin-top: 1rem; font-size: 0.9rem; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='white';" onmouseout="this.style.background='transparent'; this.style.color='rgba(255,255,255,0.7)';">
+                📖 User Manual
             </button>
         </div>
     </div>

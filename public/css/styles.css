@@ -163,15 +163,64 @@ body {
     margin-bottom: 2rem;
 }
 
+.header-content {
+    position: relative;
+    display: inline-block;
+}
+
 .header h1 {
     font-size: 3.5rem;
     margin-bottom: 0.5rem;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    display: inline-block;
 }
 
 .header p {
     font-size: 1.25rem;
     opacity: 0.95;
+}
+
+/* User Manual Button in Header */
+.user-manual-btn {
+    position: absolute;
+    top: 0;
+    right: -60px;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.user-manual-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.user-manual-btn:active {
+    transform: translateY(0);
+}
+
+/* Responsive header button */
+@media (max-width: 768px) {
+    .user-manual-btn {
+        position: static;
+        display: block;
+        margin: 0.5rem auto 0;
+        font-size: 1.2rem;
+        padding: 0.4rem 0.6rem;
+    }
+    
+    .header h1 {
+        font-size: 2.5rem;
+    }
 }
 
 .badge {
