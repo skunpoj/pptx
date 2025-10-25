@@ -133,25 +133,34 @@ async function installDependencies(workDir) {
  * Runs a JavaScript file in the workspace
  * @param {string} workDir - Workspace directory
  * @param {string} scriptName - Script filename to run
- * @param {number} timeout - Timeout in milliseconds (default: 60000)
+ * @param {number} timeout - Timeout in milliseconds (default: 120000)
  * @returns {Promise<{stdout: string, stderr: string}>}
  */
-async function runScript(workDir, scriptName, timeout = 60000) {
+async function runScript(workDir, scriptName, timeout = 120000) {
     console.log(`Running ${scriptName} in ${workDir}`);
     
     // Platform-specific command
     const cdCommand = process.platform === 'win32' ? 'cd /d' : 'cd';
     const command = `${cdCommand} "${workDir}" && node ${scriptName}`;
     
-    const { stdout, stderr } = await execPromise(command, { 
-        timeout,
-        shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
-    });
-    
-    console.log(`${scriptName} output:`, stdout);
-    if (stderr) console.error(`${scriptName} stderr:`, stderr);
-    
-    return { stdout, stderr };
+    try {
+        const { stdout, stderr } = await execPromise(command, { 
+            timeout,
+            shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh',
+            maxBuffer: 10 * 1024 * 1024 // 10MB buffer for large outputs
+        });
+        
+        console.log(`${scriptName} output:`, stdout);
+        if (stderr) console.error(`${scriptName} stderr:`, stderr);
+        
+        return { stdout, stderr };
+    } catch (error) {
+        console.error(`Error running ${scriptName}:`, error.message);
+        if (error.killed) {
+            throw new Error(`Script timeout after ${timeout}ms. The presentation generation is taking too long. This might be due to missing dependencies or Playwright issues.`);
+        }
+        throw error;
+    }
 }
 
 /**

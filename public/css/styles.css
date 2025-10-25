@@ -42,6 +42,7 @@ body {
     border-radius: 16px;
     padding: 1.5rem;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    min-height: 0;
 }
 
 .card h2 {
@@ -318,9 +319,11 @@ textarea:focus {
 }
 
 .preview-container .preview {
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
-    overflow-y: auto;
+    max-height: 100%;
+    overflow-y: auto !important;
+    overflow-x: hidden;
 }
 
 .preview {

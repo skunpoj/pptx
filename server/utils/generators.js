@@ -157,11 +157,25 @@ function generateHTMLSlideCode(file, slide, idx) {
         // Slide ${idx + 1}: ${slide.title || 'Slide'}
         console.log("Processing ${file}...");
         try {
-            await html2pptx("${file}", pptx);
+            const result = await html2pptx("${file}", pptx);
             console.log("✓ ${file} added successfully");
+            console.log("  Result:", JSON.stringify({ hasSlide: !!result.slide, placeholderCount: result.placeholders?.length || 0 }));
         } catch (slideError) {
-            console.error("ERROR processing ${file}:", slideError.message);
-            console.error("Stack:", slideError.stack);
+            console.error("ERROR processing ${file}:");
+            console.error("  Message:", slideError.message);
+            console.error("  Stack:", slideError.stack);
+            console.error("  Error type:", slideError.constructor.name);
+            
+            // Try to read the HTML file to debug
+            const fs = require('fs').promises;
+            try {
+                const htmlContent = await fs.readFile("${file}", 'utf-8');
+                console.error("  HTML file length:", htmlContent.length);
+                console.error("  HTML preview:", htmlContent.substring(0, 500));
+            } catch (readError) {
+                console.error("  Could not read HTML file:", readError.message);
+            }
+            
             throw new Error("Failed to convert ${file}: " + slideError.message);
         }
     `;
