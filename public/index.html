@@ -22,14 +22,85 @@
             <div class="card">
                 <h2>📝 Your Content</h2>
                 
-                <!-- SECTION 1: PRESENTATION CONTENT -->
-                <div class="content-input-section" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 3px solid #667eea;">
-                    <h3 style="margin: 0 0 1rem 0; color: #667eea; font-size: 1.3rem;">📝 Step 1: Presentation Content</h3>
-                    <p style="margin: 0 0 1rem 0; color: #555; font-size: 0.95rem;">Enter or paste your detailed presentation content here, then generate preview</p>
+                <!-- Two Column Layout for Left Panel -->
+                <div class="left-panel-grid">
+                    <!-- Left Column: AI Generator + Theme -->
+                    <div class="left-column">
+                        <!-- SECTION 2: AI IDEA GENERATOR (OPTIONAL) -->
+                        <div class="idea-generator-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #ff9a56; margin-bottom: 1rem;">
+                            <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 Step 0: AI Idea Generator (Optional)</h3>
+                            <p class="section-description" style="color: #555; margin-bottom: 1rem;">Don't have content yet? Let AI expand your simple idea into detailed presentation content</p>
+                            
+                            <!-- Idea Input -->
+                            <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
+                            
+                            <!-- File Upload -->
+                            <div class="file-upload-section">
+                                <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
+                                <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
+                                
+                                <!-- Extract Colors Checkbox -->
+                                <label class="checkbox-label checkbox-blue">
+                                    <input type="checkbox" id="extractColors">
+                                    <span>
+                                        <strong>🎨 Extract color theme from uploaded files</strong>
+                                        <span class="checkbox-desc">Automatically detect and use colors from your documents</span>
+                                    </span>
+                                </label>
+                                
+                                <!-- Use as Template Checkbox -->
+                                <label class="checkbox-label checkbox-orange">
+                                    <input type="checkbox" id="useAsTemplate">
+                                    <span>
+                                        <strong>📄 Use uploaded PPTX as template/base</strong>
+                                        <span class="checkbox-desc">Modify existing slides or add new content to uploaded PowerPoint</span>
+                                    </span>
+                                </label>
+                            </div>
+                            
+                            <!-- Generation Options -->
+                            <div class="generation-options">
+                                <div>
+                                    <label class="option-label">Number of slides:</label>
+                                    <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
+                                </div>
+                                <div class="checkbox-container">
+                                    <label class="checkbox-inline">
+                                        <input type="checkbox" id="generateImages">
+                                        <span>Generate AI images</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <button class="btn-primary btn-full" onclick="generateFromPrompt()" id="promptBtn">
+                                🚀 Expand Idea into Full Content
+                            </button>
+                            <p class="helper-text">This creates detailed text content that you can edit above before generating slides</p>
+                        </div>
+                        
+                        <!-- Color Theme Selector -->
+                        <div id="themeSelector" class="theme-selector">
+                            <div class="theme-selector-inner">
+                                <div class="theme-header">
+                                    <h3>🎨 Choose Color Theme</h3>
+                                    <span id="suggestedBadge" class="suggested-badge" style="display: none;">AI Suggested</span>
+                                </div>
+                                <p class="theme-description">Select a color palette for your presentation (AI may suggest one based on your content)</p>
+                                <div id="themeGrid" class="theme-grid"></div>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <!-- Main Content Editor -->
-                    <div class="content-editor-section">
-                        <textarea id="textInput" class="content-textarea" placeholder="Type or paste your detailed presentation content here...
+                    <!-- Right Column: Content Input -->
+                    <div class="right-column">
+                        <!-- SECTION 1: PRESENTATION CONTENT -->
+                        <div class="content-input-section" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #667eea; height: 100%;">
+                            <h3 style="margin: 0 0 1rem 0; color: #667eea; font-size: 1.3rem;">📝 Step 1: Presentation Content</h3>
+                            <p style="margin: 0 0 1rem 0; color: #555; font-size: 0.95rem;">Enter or paste your detailed presentation content here, then generate preview</p>
+                            
+                            <!-- Main Content Editor -->
+                            <div class="content-editor-section">
+                                <textarea id="textInput" class="content-textarea" placeholder="Type or paste your detailed presentation content here...
 
 Example:
 Company Overview
@@ -41,88 +112,26 @@ Our Products
 - AI-powered analytics platform
 - Real-time dashboard
 - Custom reporting tools"></textarea>
-                    </div>
-                    
-                    <!-- Quick Examples -->
-                    <div class="quick-examples" style="margin-top: 1rem;">
-                        <p class="examples-label">📚 Quick Start Examples:</p>
-                        <div class="examples-grid">
-                            <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
-                            <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
+                            </div>
+                            
+                            <!-- Quick Examples -->
+                            <div class="quick-examples" style="margin-top: 1rem;">
+                                <p class="examples-label">📚 Quick Start Examples:</p>
+                                <div class="examples-grid">
+                                    <button class="btn-secondary" onclick="loadExampleByCategory('tech')">💻 Tech</button>
+                                    <button class="btn-secondary" onclick="loadExampleByCategory('business')">💼 Business</button>
+                                    <button class="btn-secondary" onclick="loadExampleByCategory('education')">📚 Education</button>
+                                    <button class="btn-secondary" onclick="loadExampleByCategory('health')">🏥 Healthcare</button>
+                                    <button class="btn-secondary" onclick="loadExampleByCategory('marketing')">📈 Marketing</button>
+                                    <button class="btn-secondary" onclick="loadExampleByCategory('environment')">🌍 Environment</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Preview Button -->
+                            <button class="btn-primary btn-full btn-large" onclick="generatePreview()" id="previewBtn" style="margin-top: 1rem;">
+                                👁️ Generate Preview
+                            </button>
                         </div>
-                    </div>
-                    
-                    <!-- Preview Button -->
-                    <button class="btn-primary btn-full btn-large" onclick="generatePreview()" id="previewBtn" style="margin-top: 1rem;">
-                        👁️ Generate Preview
-                    </button>
-                </div>
-                
-                <!-- SECTION 2: AI IDEA GENERATOR (OPTIONAL) -->
-                <div class="idea-generator-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); padding: 1.5rem; border-radius: 12px; border: 3px solid #ff9a56;">
-                    <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 Step 0: AI Idea Generator (Optional)</h3>
-                    <p class="section-description" style="color: #555; margin-bottom: 1rem;">Don't have content yet? Let AI expand your simple idea into detailed presentation content</p>
-                    
-                    <!-- Idea Input -->
-                    <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
-                    
-                    <!-- File Upload -->
-                    <div class="file-upload-section">
-                        <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
-                        <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
-                        
-                        <!-- Extract Colors Checkbox -->
-                        <label class="checkbox-label checkbox-blue">
-                            <input type="checkbox" id="extractColors">
-                            <span>
-                                <strong>🎨 Extract color theme from uploaded files</strong>
-                                <span class="checkbox-desc">Automatically detect and use colors from your documents</span>
-                            </span>
-                        </label>
-                        
-                        <!-- Use as Template Checkbox -->
-                        <label class="checkbox-label checkbox-orange">
-                            <input type="checkbox" id="useAsTemplate">
-                            <span>
-                                <strong>📄 Use uploaded PPTX as template/base</strong>
-                                <span class="checkbox-desc">Modify existing slides or add new content to uploaded PowerPoint</span>
-                            </span>
-                        </label>
-                    </div>
-                    
-                    <!-- Generation Options -->
-                    <div class="generation-options">
-                        <div>
-                            <label class="option-label">Number of slides:</label>
-                            <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
-                        </div>
-                        <div class="checkbox-container">
-                            <label class="checkbox-inline">
-                                <input type="checkbox" id="generateImages">
-                                <span>Generate AI images</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <button class="btn-primary btn-full" onclick="generateFromPrompt()" id="promptBtn">
-                        🚀 Expand Idea into Full Content
-                    </button>
-                    <p class="helper-text">This creates detailed text content that you can edit above before generating slides</p>
-                </div>
-                
-                <!-- Color Theme Selector - MOVED TO BOTTOM -->
-                <div id="themeSelector" class="theme-selector">
-                    <div class="theme-selector-inner">
-                        <div class="theme-header">
-                            <h3>🎨 Choose Color Theme</h3>
-                            <span id="suggestedBadge" class="suggested-badge" style="display: none;">AI Suggested</span>
-                        </div>
-                        <p class="theme-description">Select a color palette for your presentation (AI may suggest one based on your content)</p>
-                        <div id="themeGrid" class="theme-grid"></div>
                     </div>
                 </div>
             </div>

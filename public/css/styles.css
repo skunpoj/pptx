@@ -561,7 +561,7 @@ textarea:focus {
    ========================================================================== */
 
 .theme-selector {
-    margin-bottom: 1rem;
+    margin-bottom: 0;
     flex-shrink: 0;
 }
 
@@ -737,6 +737,46 @@ textarea:focus {
 }
 
 /* ==========================================================================
+   LEFT PANEL GRID LAYOUT
+   ========================================================================== */
+
+.left-panel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    height: 100%;
+}
+
+.left-column {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.right-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.left-column::-webkit-scrollbar {
+    width: 8px;
+}
+
+.left-column::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.left-column::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.left-column::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
+}
+
+/* ==========================================================================
    IDEA GENERATOR SECTION
    ========================================================================== */
 
@@ -888,9 +928,21 @@ textarea:focus {
     font-style: italic;
 }
 
+.content-input-section {
+    display: flex;
+    flex-direction: column;
+}
+
 .content-editor-section {
     margin-bottom: 1rem;
-    flex-shrink: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-editor-section textarea {
+    flex: 1;
+    min-height: 300px;
 }
 
 .content-label {
@@ -987,6 +1039,10 @@ textarea:focus {
 
 @media (max-width: 768px) {
     .main-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .left-panel-grid {
         grid-template-columns: 1fr;
     }
     
