@@ -1,343 +1,409 @@
-# 🐳 Docker Deployment Guide
+# 🐳 Docker Deployment Guide - AI Text2PPT Pro
 
-## Quick Start
+## ✅ All Integration Fixes Applied
 
-All changes are now applied to your code. To deploy them to production:
+The following fixes have been applied and will be included in your Docker deployment:
 
-### 1. Rebuild Docker Image
+### Fixed Issues:
+1. ✅ **Generate Preview Button** - Now uses `window.generatePreview()`
+2. ✅ **Expand Idea Button** - Now uses `window.generateFromPrompt()`
+3. ✅ **Status Notifications** - All 29+ instances fixed to use `window.showStatus()`
+4. ✅ **Function References** - All cross-module function calls use proper window prefix
+5. ✅ **Layout** - AI Generator and Theme Selector repositioned below main panels
+6. ✅ **Step Labels** - Removed confusing "Step 0" and "Step 1" labels
+
+### Modified Files (will be built into Docker image):
+- ✅ `public/js/api.js` - 30+ fixes for window function calls
+- ✅ `public/index.html` - Layout reorganization
+- ✅ `public/diagnostic.html` - New diagnostic tool
+- ✅ `public/test-integration.html` - New integration tests
+
+---
+
+## 🚀 Deployment Steps
+
+### Step 1: Build Docker Image
+
 ```bash
-cd /path/to/pptx-1
-docker-compose down
-docker-compose build --no-cache
+docker-compose build
+```
+
+This will:
+- Install Node.js 18
+- Install LibreOffice (for PDF conversion)
+- Copy all application files (including fixes)
+- Install npm dependencies
+- Create workspace directories
+
+**Expected output:**
+```
+Successfully built [image-id]
+Successfully tagged ai-text2ppt-pro:latest
+```
+
+### Step 2: Start Container
+
+```bash
 docker-compose up -d
 ```
 
-**Why `--no-cache`?**
-- Ensures all code changes are included
-- Prevents using old cached layers
-- Guarantees fresh build with latest fixes
+**Expected output:**
+```
+Creating ai-text2ppt-pro ... done
+```
 
-### 2. Verify Deployment
+### Step 3: Check Container Status
+
 ```bash
-# Check container is running
 docker-compose ps
+```
 
-# Check logs
+**Should show:**
+```
+NAME               STATUS          PORTS
+ai-text2ppt-pro   Up X seconds    0.0.0.0:3000->3000/tcp
+```
+
+### Step 4: View Logs
+
+```bash
 docker-compose logs -f
 ```
 
-### 3. Test the Application
-
-Visit these URLs (replace with your production URL):
-
-**Test Page:**
+**Expected output:**
 ```
-https://your-production-url/test-features.html
+Server running on http://localhost:3000
 ```
-- Click "🚀 Run All Tests"
-- All tests should pass ✅
-
-**Main Application:**
-```
-https://your-production-url/
-```
-- Generate preview
-- Verify scroll bar appears
-- Create PowerPoint
 
 ---
 
-## What Was Fixed
+## 🧪 Testing in Production
 
-### ✅ File Organization
-- All `.md` files now in `doc/` folder
-- Test JavaScript files in `test/` folder
-- Clean project structure
+### Method 1: Diagnostic Page (Recommended)
 
-### ✅ Error Messages
-- Clear, user-friendly error messages
-- No more console output shown as errors
-- Proper error handling
+Once deployed, access:
+```
+http://your-domain.com/diagnostic.html
+```
 
-### ✅ Progressive Rendering
-- Slides render smoothly with animation
-- `renderSlidePreviewCard` function properly exported
-- Module dependencies fixed
+**Tests to run:**
+1. Click "Test Generate Preview Button" - Should show all ✅
+2. Click "Test Expand Idea Button" - Should show all ✅
+3. Click "Test Status Notification" - Should show messages
+4. Check "System Information" section - Should show loaded modules
+5. Check "Required Elements Status" - All should be green
 
-### ✅ Scroll Bar
-- CSS confirmed correct
-- Appears automatically when content exceeds container
-- Test page included to verify
+**Expected Results:**
+```
+✅ window.generatePreview function exists
+✅ window.showStatus function exists
+✅ window.getApiKey function exists
+✅ #textInput element exists
+✅ #previewBtn element exists
+All checks passed! Generate Preview should work
+```
+
+### Method 2: Integration Tests
+
+Access:
+```
+http://your-domain.com/test-integration.html
+```
+
+**Should show:**
+- Total Tests: ~30
+- Passed: ~30
+- Failed: 0
+
+### Method 3: Main Application
+
+Access:
+```
+http://your-domain.com/
+```
+
+**Verification Steps:**
+
+1. **Check Layout** ✅
+   - Header at top
+   - Two panels side-by-side (Content left, Preview right)
+   - AI Generator and Theme Selector below in two columns
+   - No "Step 0" or "Step 1" labels
+
+2. **Test Generate Preview Button** ✅
+   - Enter some text in "Presentation Content"
+   - Click "👁️ Generate Preview"
+   - Should show: "⚠️ Please enter your API key first!" (if no key)
+   - Status message should appear below action buttons
+
+3. **Test Expand Idea Button** ✅
+   - Scroll to "💡 AI Idea Generator" section
+   - Should be below main panels, on left side
+   - Click "🚀 Expand Idea into Full Content"
+   - Should show: "⚠️ Please enter your API key first!" (if no key)
+
+4. **Test Status Notifications** ✅
+   - Click any button
+   - Status message should appear in the notification area
+   - Should have colored background (red for error, green for success)
+
+5. **Set API Key and Test** ✅
+   - Scroll to "⚙️ Advanced Configuration"
+   - Select provider (Anthropic/OpenAI/Gemini)
+   - Enter API key
+   - Click "Save Key"
+   - Should see: "✅ API key saved!"
+   - Now test buttons - should work with real API calls
 
 ---
 
-## Testing Instructions
+## 🔍 Browser Console Checks
 
-### Test Page Features
+Open browser DevTools (F12) → Console tab:
 
-1. **Open Test Page**
-   ```
-   https://your-production-url/test-features.html
-   ```
-
-2. **Run All Tests**
-   - Click "🚀 Run All Tests"
-   - Should see all green checkmarks ✅
-
-3. **Test Scroll Bar**
-   - Click "📜 Test Scroll Bar"
-   - Scrollable container appears
-   - Metrics show scroll is working
-
-4. **Test Progressive Rendering**
-   - Click "⚡ Test Progressive Rendering"
-   - Watch 6 slides render with animation
-   - Scroll bar appears if content is tall
-
-### Main Application Testing
-
-1. **Load Example Content**
-   - Click any category (Tech, Business, etc.)
-   - Content loads in textarea
-
-2. **Generate Preview**
-   - Enter your API key
-   - Click "👁️ Preview Slides"
-   - Slides render progressively
-   - Scroll bar appears with multiple slides
-
-3. **Generate PowerPoint**
-   - Click "✨ Generate PowerPoint"
-   - Wait for generation
-   - Download should start
-   - Error messages are clear if issues occur
-
----
-
-## Browser Console Checks
-
-Open browser DevTools (F12) and check:
-
-### ✅ Expected (No Errors)
 ```javascript
-// These should all be available
-typeof window.showStatus           // "function"
-typeof window.displayPreview        // "function"
-typeof window.renderSlidePreviewCard // "function"
-typeof window.colorThemes           // "object"
-typeof window.switchView            // "function"
+// All should return "function"
+typeof window.generatePreview
+typeof window.generateFromPrompt
+typeof window.showStatus
+typeof window.displayPreview
+typeof window.getApiKey
+
+// Should return number > 0
+Object.keys(window.colorThemes).length
+
+// Should return string (e.g., "anthropic")
+window.currentProvider
+
+// Test status manually
+window.showStatus('Test message', 'success')
 ```
 
-### ❌ Should NOT See
-- `Uncaught ReferenceError: switchView is not defined`
-- `module is not defined`
-- `renderSlidePreviewCard is not a function`
+**Expected Console Output:**
+- No red errors
+- No "undefined function" errors
+- No "ReferenceError" messages
 
 ---
 
-## Docker Commands Reference
+## 📊 Health Check
 
-### View Logs
+Check container health:
 ```bash
-# Follow logs in real-time
-docker-compose logs -f
-
-# Last 100 lines
-docker-compose logs --tail=100
-
-# Specific service logs
-docker-compose logs -f web
-```
-
-### Check Container Status
-```bash
-# List running containers
 docker-compose ps
-
-# Detailed info
-docker ps -a
 ```
 
-### Restart Container
+Or direct health check:
 ```bash
-# Restart without rebuilding
-docker-compose restart
+curl http://localhost:3000/api/health
+```
 
-# Stop and start
-docker-compose down
+**Expected response:**
+```json
+{"status":"ok"}
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Issue: "Function not defined" errors
+
+**Solution:**
+```bash
+# Rebuild with no cache
+docker-compose build --no-cache
 docker-compose up -d
 ```
 
-### Complete Rebuild
+### Issue: Buttons don't respond
+
+**Check:**
+1. Open `/diagnostic.html` first
+2. Verify all tests pass
+3. Check browser console for errors
+4. Hard refresh browser (Ctrl+F5)
+
+**Verify files in container:**
 ```bash
-# Nuclear option - completely fresh build
-docker-compose down -v
-docker system prune -f
+docker exec ai-text2ppt-pro ls -la /app/public/js/
+```
+
+Should show all 8 .js files with recent timestamps.
+
+### Issue: Status notifications don't appear
+
+**Check:**
+1. Inspect element, verify `<div id="status">` exists
+2. Check CSS is loaded
+3. Open `/diagnostic.html` and run status test
+
+### Issue: Layout looks wrong
+
+**Solution:**
+```bash
+# Clear browser cache
+# Hard refresh (Ctrl+Shift+F5)
+# Check /diagnostic.html shows all elements found
+```
+
+### Issue: Changes not appearing after rebuild
+
+**Solution:**
+```bash
+# Stop and remove containers
+docker-compose down
+
+# Remove images
+docker rmi ai-text2ppt-pro
+
+# Rebuild from scratch
 docker-compose build --no-cache
 docker-compose up -d
 ```
 
 ---
 
-## Troubleshooting
+## 📝 Deployment Checklist
 
-### Issue: Changes Not Visible
+Before going live:
 
-**Solution:**
-```bash
-# Force rebuild without cache
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+- [ ] Build Docker image successfully
+- [ ] Container starts without errors
+- [ ] Health check passes
+- [ ] Access main page (shows new layout)
+- [ ] Access `/diagnostic.html` (all tests green)
+- [ ] Access `/test-integration.html` (all tests pass)
+- [ ] Generate Preview button shows API key warning
+- [ ] Expand Idea button shows API key warning
+- [ ] Status notifications appear correctly
+- [ ] No console errors in browser
+- [ ] API key can be saved
+- [ ] Theme selector displays themes
+- [ ] Welcome modal appears on first visit
 
-# Clear browser cache too
-# Hard reload: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)
+After going live with API key:
+
+- [ ] Generate Preview creates slides
+- [ ] Expand Idea generates content
+- [ ] PowerPoint download works
+- [ ] PDF generation works
+- [ ] Slide modification works
+- [ ] File upload works
+- [ ] Theme selection works
+
+---
+
+## 🔐 Environment Variables (Optional)
+
+You can pre-configure in `docker-compose.yml`:
+
+```yaml
+environment:
+  - NODE_ENV=production
+  - PORT=3000
+  # Optional: Pre-configure provider (users can still change)
+  - DEFAULT_PROVIDER=anthropic
 ```
 
-### Issue: Container Won't Start
+---
 
-**Check logs:**
-```bash
-docker-compose logs
+## 📦 What's Included in Docker Image
 
-# Look for:
-# - Port conflicts
-# - Missing dependencies
-# - npm install errors
+All fixed files:
+```
+/app/
+├── server.js                      ✅ Main server
+├── package.json                   ✅ Dependencies
+├── public/
+│   ├── index.html                ✅ Fixed layout
+│   ├── diagnostic.html           ✅ NEW: Diagnostic tool
+│   ├── test-integration.html     ✅ NEW: Integration tests
+│   ├── js/
+│   │   ├── api.js               ✅ FIXED: All window calls
+│   │   ├── app.js               ✅ App state
+│   │   ├── charts.js            ✅ Chart generation
+│   │   ├── fileHandler.js       ✅ File handling
+│   │   ├── preview.js           ✅ Preview rendering
+│   │   ├── promptEditor.js      ✅ Prompt editor
+│   │   ├── themes.js            ✅ Theme system
+│   │   └── ui.js                ✅ UI functions
+│   └── css/
+│       └── styles.css           ✅ Styling
+├── server/
+│   └── [backend modules]        ✅ API routes
+└── workspace/                   ✅ Temp files
 ```
 
-**Solution:**
-```bash
-# Check if port 3000 is in use
-docker-compose down
-docker ps | grep 3000
+---
 
-# If another container is using it, stop it
-docker stop <container-id>
+## 🌐 Production URLs
+
+Replace `your-domain.com` with your actual domain:
+
+- **Main App**: `https://your-domain.com/`
+- **Diagnostic**: `https://your-domain.com/diagnostic.html`
+- **Tests**: `https://your-domain.com/test-integration.html`
+- **Health**: `https://your-domain.com/api/health`
+
+---
+
+## 🎯 Success Criteria
+
+✅ **Deployment Successful When:**
+
+1. Container health check shows "healthy"
+2. Diagnostic page shows all green checks
+3. Integration tests all pass
+4. Main page loads with new layout
+5. Both buttons show API key warning (before key set)
+6. Status notifications appear and display correctly
+7. No browser console errors
+8. API key can be saved successfully
+
+✅ **Application Working When:**
+
+1. Generate Preview creates slide previews (with API key)
+2. Expand Idea generates content (with API key)
+3. PowerPoint files download successfully
+4. PDF conversion works
+5. All features from feature list work
+
+---
+
+## 📞 Quick Reference Commands
+
+```bash
+# Build and start
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
 
 # Restart
-docker-compose up -d
-```
+docker-compose restart
 
-### Issue: "module.exports" Errors in Browser
+# Stop
+docker-compose down
 
-**This is fixed in the code, but if you still see it:**
-```bash
-# Rebuild without cache
+# Rebuild from scratch
+docker-compose down
 docker-compose build --no-cache
 docker-compose up -d
 
-# Hard refresh browser
-# Ctrl+Shift+R
+# Check container
+docker-compose ps
+
+# Access container shell
+docker exec -it ai-text2ppt-pro /bin/bash
+
+# Check files
+docker exec ai-text2ppt-pro ls -la /app/public/js/
 ```
 
-### Issue: Test Page Shows Failures
-
-**Check which tests fail:**
-- Server Version → Check if container is running
-- Function Tests → Hard refresh browser (Ctrl+Shift+R)
-- Scroll Bar → Might be expected if content fits
-- Progressive Rendering → Check browser console for errors
-
-**Solution:**
-```bash
-# Rebuild and hard refresh
-docker-compose build --no-cache
-docker-compose up -d
-# Then hard refresh browser
-```
-
-### Issue: Scroll Bar Not Showing
-
-**This might be expected!**
-- Scroll bar only appears when content height > container height
-- With few slides, content might fit
-- Use test page "Test Progressive Rendering" to see with 6 slides
-
 ---
 
-## Files Modified in This Update
+✅ **All fixes are ready for Docker deployment!**
 
-### Server-Side
-- `server/utils/helpers.js` - Error handling fixed
-
-### Client-Side
-- `public/js/preview.js` - Module exports fixed
-- `public/test-features.html` - New test page added
-
-### Documentation
-- `doc/FIXES-APPLIED-2025-10-25.md` - Detailed changelog
-- `doc/DOCKER-DEPLOYMENT-GUIDE.md` - This guide
-
-### Organization
-- All `.md` files moved to `doc/`
-- Test `.js` files moved to `test/`
-
----
-
-## Verification Checklist
-
-After deployment, verify:
-
-- [ ] Container is running: `docker-compose ps`
-- [ ] Logs show no errors: `docker-compose logs`
-- [ ] Test page loads: `/test-features.html`
-- [ ] All tests pass on test page
-- [ ] Main app loads: `/`
-- [ ] Preview generation works
-- [ ] Scroll bar appears with many slides
-- [ ] PowerPoint generation works
-- [ ] Error messages are clear
-- [ ] No console errors in browser
-
----
-
-## Production URL Setup
-
-If you need to update your production URL in any configs:
-
-1. **Check docker-compose.yml**
-   - Environment variables
-   - Port mappings
-
-2. **Check Dockerfile**
-   - EXPOSE directives
-   - ENV variables
-
-3. **Check reverse proxy** (if using)
-   - nginx/Apache configuration
-   - SSL certificates
-   - Domain routing
-
----
-
-## Support
-
-### Quick Debug Steps
-1. Check Docker logs: `docker-compose logs -f`
-2. Check browser console: F12 → Console
-3. Try test page: `/test-features.html`
-4. Hard refresh browser: Ctrl+Shift+R
-5. Rebuild if needed: `docker-compose build --no-cache`
-
-### Log Locations
-- **Docker logs:** `docker-compose logs`
-- **Browser console:** F12 → Console tab
-- **Network tab:** F12 → Network tab (for API calls)
-
-### Still Having Issues?
-1. Ensure you ran `docker-compose build --no-cache`
-2. Hard refresh your browser (Ctrl+Shift+R)
-3. Check browser console for JavaScript errors
-4. Check Docker logs for server errors
-5. Try the test page first to isolate the issue
-
----
-
-## Version Information
-
-**Update Date:** October 25, 2025  
-**Version:** 2.0.1-fixes  
-**Deployment:** Docker Production  
-**Status:** ✅ Ready to Deploy
+Build and deploy with confidence - all integration issues have been resolved.
 

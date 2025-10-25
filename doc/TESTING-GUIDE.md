@@ -1,252 +1,320 @@
-# Testing Guide for Multi-Provider Update
+# Testing Guide - PDF Features Environment Detection
 
-## What Was Fixed
+## Quick Test Summary
 
-### Issue #1: API Section Not Collapsible ✅
-**Before:** The API section was always visible and took up screen space.
-**After:** Click the "🔑 API Configuration" header to collapse/expand it. Your preference is saved.
+✅ **Code Changes Completed:**
+- Server-side LibreOffice detection
+- Health and Capabilities API endpoints
+- Frontend auto-detection and conditional UI
+- User-friendly messaging
 
-### Issue #2: Only Anthropic Support ✅
-**Before:** Only Anthropic API keys were supported.
-**After:** Now supports 4 providers: Anthropic, OpenAI, Gemini, and OpenRouter.
+✅ **Linting:** No errors found
 
-### Issue #3: AI Ignoring User Prompts 🎯 (CRITICAL FIX)
-**Before:** When you entered your own text, the AI would generate something else (like healthcare examples).
-**After:** The AI now creates presentations based EXACTLY on your input text.
+## How to Test
 
-## Testing Steps
+### Test 1: Local Development (No LibreOffice)
 
-### 1. Test Collapsible API Section
-
-1. Open http://localhost:3000 in your browser
-2. Click on "🔑 API Configuration" header
-3. ✅ Verify: Section collapses, icon changes to ▶
-4. Click header again
-5. ✅ Verify: Section expands, icon changes to ▼
-6. Collapse it, then refresh the page
-7. ✅ Verify: Section stays collapsed after refresh
-
-### 2. Test Multiple Providers
-
-1. In the API Configuration section, you should see 4 provider buttons:
-   - Anthropic (selected by default)
-   - OpenAI
-   - Gemini
-   - OpenRouter
-
-2. Click "OpenAI" button
-3. ✅ Verify: Button style changes (highlighted)
-4. ✅ Verify: OpenAI API key section appears with instructions
-5. ✅ Verify: Link to platform.openai.com is present
-
-6. Click "Gemini" button
-7. ✅ Verify: Gemini section appears with Google AI Studio link
-
-8. Click "OpenRouter" button
-9. ✅ Verify: OpenRouter section appears
-
-10. Refresh the page
-11. ✅ Verify: Last selected provider is still selected
-
-### 3. Test User Prompt Obedience (MOST IMPORTANT)
-
-This is the critical test to verify the AI respects YOUR content.
-
-#### Test A: Custom Space Topic
-1. Clear the text input box
-2. Type this exactly:
-```
-Introduction to Mars Colonization
-
-Mars is the fourth planet from the Sun and has long been a target for human colonization. The planet has water ice, a thin atmosphere, and a day length similar to Earth.
-
-Key challenges include radiation exposure, extreme cold temperatures, and lack of breathable atmosphere. Solutions being developed include underground habitats, radiation shielding, and in-situ resource utilization.
-
-SpaceX, NASA, and other organizations are working on transport systems, life support, and sustainable habitats. The timeline for first human landing is estimated around 2030-2040.
+**Start Server:**
+```bash
+node server.js
 ```
 
-3. Click "👁️ Preview Slides"
-4. ✅ CRITICAL CHECK: Does the title slide say "Mars Colonization" or something about Mars?
-5. ✅ CRITICAL CHECK: Do the content slides talk about Mars, radiation, SpaceX, etc.?
-6. ❌ FAIL if it shows healthcare, business, or any other unrelated topic
-
-#### Test B: Custom Business Topic
-1. Clear the text input box
-2. Type this:
+**Expected Console Output:**
 ```
-Social Media Strategy for Small Restaurants
-
-Social media is essential for restaurants to reach local customers. Platforms like Instagram and Facebook allow you to showcase your dishes and connect with diners.
-
-Post high-quality food photos, behind-the-scenes content, and customer testimonials. Use local hashtags and geotags to increase discoverability.
-
-Engage with followers by responding to comments and messages promptly. Run promotions and contests to build excitement.
-
-Track metrics like engagement rate, follower growth, and website clicks to measure success.
+📁 File storage initialized
+📄 PDF conversion: ⚠️ Unavailable (install LibreOffice)
+Server running on port 3000
 ```
 
-3. Click "👁️ Preview Slides"
-4. ✅ CRITICAL CHECK: Title should be about "Social Media" and "Restaurants"
-5. ✅ CRITICAL CHECK: Content should mention Instagram, food photos, hashtags, etc.
-6. ❌ FAIL if it shows generic business topics unrelated to social media for restaurants
+**Test Endpoints:**
+```bash
+# Health check
+curl http://localhost:3000/api/health
 
-#### Test C: Custom Tech Topic
-1. Use the AI Prompt Generator
-2. Type: "Create a presentation about blockchain technology for beginners"
-3. Click "✨ Generate Content from Idea"
-4. ✅ Verify: Text box fills with content about blockchain
-5. Click "👁️ Preview Slides"
-6. ✅ CRITICAL CHECK: Preview shows blockchain-related content
-7. ❌ FAIL if it shows healthcare or other unrelated topics
+# Capabilities check
+curl http://localhost:3000/api/capabilities
+```
 
-#### Test D: Verify Example Templates Still Work
-1. Click on "🏥 Healthcare" example button
-2. ✅ Verify: Text loads about healthcare
-3. Click "👁️ Preview Slides"
-4. ✅ Verify: Slides are about healthcare/mental health
-5. This should work because the text IS about healthcare
+**Expected Capabilities Response:**
+```json
+{
+  "pdfConversion": false,
+  "environment": "development",
+  "features": {
+    "pptxDownload": true,
+    "pdfDownload": false,
+    "pdfViewer": false,
+    "shareableLinks": true,
+    "onlineViewer": true
+  },
+  "message": "PDF features disabled - LibreOffice not installed (use Docker for full features)"
+}
+```
 
-### 4. Test PowerPoint Generation
+**Test in Browser:**
+1. Open: http://localhost:3000
+2. Generate a presentation
+3. **Verify:**
+   - ✅ PPTX download buttons appear
+   - ❌ PDF buttons are hidden
+   - ℹ️ Warning message shown: "PDF features are currently unavailable"
 
-1. After successful preview from Test 3A (Mars topic):
-2. Click "✨ Generate PowerPoint"
-3. ✅ Verify: File downloads as "AI-Presentation-Pro.pptx"
-4. Open the file in PowerPoint/Google Slides
-5. ✅ CRITICAL CHECK: Slides contain Mars content, not healthcare
-6. ✅ Verify: Theme colors look appropriate
-7. ✅ Verify: Text is readable and well-formatted
+**Browser Console:**
+```javascript
+// Check capabilities
+window.serverCapabilities
+// Should show: pdfConversion: false
+```
 
-### 5. Test Different Providers (If You Have Keys)
+---
 
-#### With Anthropic:
-1. Select Anthropic provider
-2. Enter valid API key: `sk-ant-api03-...`
-3. Click "Save Key"
-4. Enter custom text about "Electric Vehicles"
-5. Generate preview
-6. ✅ Verify: Content is about electric vehicles
+### Test 2: Docker Production (With LibreOffice)
 
-#### With OpenAI:
-1. Select OpenAI provider
-2. Enter valid API key: `sk-...`
-3. Click "Save Key"
-4. Enter custom text about "Coffee Brewing Methods"
-5. Generate preview
-6. ✅ Verify: Content is about coffee brewing
+**Build and Start:**
+```bash
+docker-compose up --build
+```
 
-#### With Gemini:
-1. Select Gemini provider
-2. Enter valid API key: `AIza...`
-3. Click "Save Key"
-4. Enter custom text about "Classical Music Composers"
-5. Generate preview
-6. ✅ Verify: Content is about classical music
+**Expected Docker Console Output:**
+```
+📁 File storage initialized
+📄 PDF conversion: ✅ Available (LibreOffice)
+Server running on port 3000
+```
 
-### 6. Edge Cases
+**Test Endpoints:**
+```bash
+# Health check
+curl http://localhost:3000/api/health
 
-#### Test Empty Input:
-1. Clear text box completely
-2. Click "Preview Slides"
-3. ✅ Verify: Error message: "⚠️ Please enter some text!"
+# Capabilities check
+curl http://localhost:3000/api/capabilities
+```
 
-#### Test No API Key:
-1. Clear localStorage: Open browser console, type `localStorage.clear()`, press Enter
-2. Refresh page
-3. Try to generate preview without entering API key
-4. ✅ Verify: Error message: "⚠️ Please enter your API key first!"
+**Expected Capabilities Response:**
+```json
+{
+  "pdfConversion": true,
+  "environment": "production",
+  "features": {
+    "pptxDownload": true,
+    "pdfDownload": true,
+    "pdfViewer": true,
+    "shareableLinks": true,
+    "onlineViewer": true
+  },
+  "message": "All features available"
+}
+```
 
-#### Test Very Short Input:
-1. Type just: "Dogs"
-2. Generate preview
-3. ✅ Verify: AI creates a brief presentation about dogs
-4. ❌ Should NOT be about healthcare or other unrelated topics
+**Test in Browser:**
+1. Open: http://localhost:3000
+2. Generate a presentation
+3. **Verify:**
+   - ✅ PPTX download buttons appear
+   - ✅ PDF download button appears
+   - ✅ PDF viewer button appears
+   - ❌ No warning message
 
-#### Test Long Input:
-1. Load the "Environment" example (longest one)
-2. Generate preview
-3. ✅ Verify: Creates 4-8 slides about sustainability
-4. ✅ Verify: Slides are concise (not too much text per slide)
+**Browser Console:**
+```javascript
+// Check capabilities
+window.serverCapabilities
+// Should show: pdfConversion: true
+```
 
-## Expected Results Summary
+**Check Generated Files:**
+```bash
+docker exec ai-text2ppt-pro ls -lh /app/workspace/generated/*/
+```
 
-### ✅ PASS Criteria:
-1. API section collapses and remembers state
-2. All 4 providers are selectable
-3. Provider selection persists after refresh
-4. **AI creates presentations based on YOUR input text**
-5. Mars topic creates Mars presentation (not healthcare)
-6. Restaurant topic creates restaurant presentation
-7. Downloaded PPTX file contains YOUR content
-8. All providers work with valid API keys
+**Expected Files:**
+```
+presentation.pptx
+presentation.pdf     ← Should exist in Docker!
+metadata.json
+```
 
-### ❌ FAIL Indicators:
-1. API section doesn't collapse
-2. Provider switching doesn't work
-3. **AI ignores your text and creates healthcare presentations**
-4. **Title slide doesn't match your topic**
-5. **Content slides don't match your input**
-6. PPTX file has wrong content
-7. Errors in browser console
+---
+
+### Test 3: Automated Test Script
+
+**Run the test script:**
+```bash
+# Start server first
+node server.js
+
+# In another terminal
+node test-capabilities.js
+```
+
+**Expected Output:**
+```
+🧪 Testing Server Endpoints...
+
+✅ Health Check Response:
+{
+  "status": "ok",
+  "timestamp": "2025-10-25T..."
+}
+
+✅ Capabilities API Response:
+{
+  "pdfConversion": false,  // or true in Docker
+  "environment": "development",
+  "features": { ... }
+}
+
+📊 Feature Status:
+  PDF Conversion: ❌ Unavailable  // or ✅ Available in Docker
+  Environment: development
+  Message: PDF features disabled - LibreOffice not installed
+
+✅ All tests passed!
+```
+
+---
+
+## UI Behavior Matrix
+
+### Local Dev (No LibreOffice)
+
+| Feature | Visible? | Functional? | Notes |
+|---------|----------|-------------|-------|
+| Download PPTX (blob) | ✅ Yes | ✅ Yes | Works perfectly |
+| Direct PPTX Link | ✅ Yes | ✅ Yes | Works perfectly |
+| View Slides Online | ✅ Yes | ✅ Yes | Works perfectly |
+| View PDF Online | ❌ Hidden | N/A | Not available |
+| Download PDF | ❌ Hidden | N/A | Not available |
+| Warning Message | ✅ Shown | N/A | Explains PDF unavailable |
+
+### Docker Prod (With LibreOffice)
+
+| Feature | Visible? | Functional? | Notes |
+|---------|----------|-------------|-------|
+| Download PPTX (blob) | ✅ Yes | ✅ Yes | Works perfectly |
+| Direct PPTX Link | ✅ Yes | ✅ Yes | Works perfectly |
+| View Slides Online | ✅ Yes | ✅ Yes | Works perfectly |
+| View PDF Online | ✅ Yes | ✅ Yes | Works perfectly |
+| Download PDF | ✅ Yes | ✅ Yes | Works perfectly |
+| Warning Message | ❌ Hidden | N/A | Not shown |
+
+---
+
+## Integration Test Checklist
+
+### Backend Tests
+- [ ] Server starts without errors
+- [ ] `/api/health` returns 200 with JSON
+- [ ] `/api/capabilities` returns correct detection
+- [ ] LibreOffice detection works correctly
+- [ ] LIBREOFFICE_AVAILABLE flag is set properly
+
+### Frontend Tests
+- [ ] `checkServerCapabilities()` runs on page load
+- [ ] `window.serverCapabilities` is populated
+- [ ] PDF buttons hidden when pdfConversion=false
+- [ ] PDF buttons shown when pdfConversion=true
+- [ ] Warning message appears when PDF unavailable
+- [ ] Warning message hidden when PDF available
+
+### End-to-End Tests
+- [ ] Generate presentation in dev (no LibreOffice)
+  - [ ] Only PPTX download works
+  - [ ] Warning message displayed
+- [ ] Generate presentation in Docker (with LibreOffice)
+  - [ ] Both PPTX and PDF downloads work
+  - [ ] No warning message
+  - [ ] PDF file exists in filesystem
+
+---
 
 ## Troubleshooting
 
-### If AI Still Ignores Your Input:
+### Issue: Server won't start
+**Solution:** Check for syntax errors
+```bash
+node -c server.js
+```
 
-**Check these:**
-1. Open browser DevTools (F12)
-2. Go to Network tab
-3. Generate a preview
-4. Click on the `/api/preview` request
-5. Check "Payload" or "Request" tab
-6. ✅ Verify: Your actual text is being sent in the "text" field
-7. Check "Response" tab
-8. ✅ Verify: The returned JSON has slides that match your topic
+### Issue: Capabilities endpoint returns 404
+**Solution:** Make sure you're using the updated server.js file
 
-**Still broken?**
-- Try hard refresh: Ctrl+Shift+R (or Cmd+Shift+R on Mac)
-- Clear localStorage: `localStorage.clear()` in console
-- Check server console for errors
-- Verify you're using the updated files
+### Issue: PDF buttons still showing in dev
+**Solution:** 
+1. Clear browser cache
+2. Hard reload (Ctrl+Shift+R)
+3. Check browser console for `window.serverCapabilities`
 
-### If Provider Switching Broken:
+### Issue: PDF buttons not showing in Docker
+**Solution:**
+1. Check Docker logs for LibreOffice installation
+2. Verify Dockerfile includes LibreOffice
+3. Test LibreOffice in container:
+```bash
+docker exec ai-text2ppt-pro soffice --version
+```
 
-1. Clear localStorage
-2. Refresh page
-3. Select provider again
-4. Enter API key again
-5. Test again
+---
 
-### If Collapsible Section Broken:
+## Success Criteria
 
-1. Check browser console for JavaScript errors
-2. Verify `toggleApiSection()` function exists
-3. Try clearing cache
+✅ **Local Development:**
+- Server starts successfully
+- Console shows "PDF conversion: ⚠️ Unavailable"
+- Capabilities API returns `pdfConversion: false`
+- UI hides PDF buttons
+- Warning message is displayed
 
-## What Changed in the Code
+✅ **Docker Production:**
+- Server starts successfully
+- Console shows "PDF conversion: ✅ Available"
+- Capabilities API returns `pdfConversion: true`
+- UI shows all PDF buttons
+- No warning message
+- PDF files are generated
 
-### Frontend (public/index.html):
-- Added collapsible API section with toggle icon
-- Added 4 provider selection buttons
-- Added separate API key input for each provider
-- Updated all functions to use `getApiKey()` and pass `provider`
-- Provider selection UI with visual feedback
+✅ **Code Quality:**
+- No linting errors
+- Clean console output
+- Proper error handling
+- User-friendly messaging
 
-### Backend (server.js):
-- Created unified `callAI()` function for all providers
-- Updated prompts to emphasize "USER'S ACTUAL CONTENT"
-- Added support for OpenAI, Gemini, OpenRouter APIs
-- All endpoints now accept `provider` parameter
-- Better error handling for different API response formats
+---
 
-## Success Indicators
+## Next Steps
 
-If everything works correctly:
-1. ✅ You can collapse/expand API section
-2. ✅ You can switch between 4 AI providers
-3. ✅ When you type about Mars, you get a Mars presentation
-4. ✅ When you type about restaurants, you get a restaurant presentation
-5. ✅ Downloaded PPTX files match your input topic
-6. ✅ No more mystery healthcare presentations when you didn't ask for them!
+After testing both environments:
 
-The MOST IMPORTANT FIX is #3 - the AI now respects your content instead of generating random topics.
+1. **If everything works:** Deploy to production with confidence
+2. **If issues found:** Review the PDF-FEATURES-ENVIRONMENT-GUIDE.md for troubleshooting
+3. **Optional:** Install LibreOffice locally for full dev experience (see INSTALL-LIBREOFFICE-WINDOWS.md)
+
+---
+
+## Quick Reference
+
+**Start Local Server:**
+```bash
+node server.js
+```
+
+**Start Docker Server:**
+```bash
+docker-compose up --build
+```
+
+**Test Endpoints:**
+```bash
+# Health
+curl http://localhost:3000/api/health
+
+# Capabilities
+curl http://localhost:3000/api/capabilities
+```
+
+**Check Browser Console:**
+```javascript
+window.serverCapabilities
+```
 
