@@ -110,7 +110,7 @@ body {
 .main-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    gap: 1rem;
     margin-bottom: 1.5rem;
     align-items: start;
     height: 800px;
@@ -208,7 +208,7 @@ body {
 
 .header {
     color: #333;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     padding: 1.5rem 2rem;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
     border-radius: 20px;
@@ -217,7 +217,7 @@ body {
     overflow: hidden;
     display: flex;
     align-items: center;
-    gap: 3rem;
+    gap: 2rem;
 }
 
 .header::before {
@@ -1188,6 +1188,11 @@ textarea:focus {
     border-color: #ffd699;
 }
 
+.checkbox-green {
+    background: #f0fff4;
+    border-color: #c6f6d5;
+}
+
 .generation-options {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1746,6 +1751,12 @@ textarea:focus {
     /* File upload section */
     .file-upload-section {
         font-size: 0.9rem;
+    }
+    
+    /* Stack file upload and number input on mobile */
+    .file-upload-section > div:first-child {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem;
     }
     
     .checkbox-label {

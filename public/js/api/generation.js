@@ -4,45 +4,93 @@
  * Generate PowerPoint presentation from current slide data
  */
 async function generatePresentation() {
+    console.log('🎬 generatePresentation called');
+    
     if (!window.currentSlideData) {
+        console.error('❌ No currentSlideData found');
         alert('Please generate a preview first');
         return;
     }
     
-    const apiKey = getApiKey();
+    console.log('📊 Current slide data:', {
+        slides: window.currentSlideData.slides?.length || 0,
+        hasTheme: !!window.currentSlideData.designTheme,
+        hasTemplate: !!window.templateFile
+    });
+    
+    const apiKey = (typeof getApiKey === 'function') ? getApiKey() : null;
     if (!apiKey) {
+        console.error('❌ No API key found');
         alert('Please enter your API key first');
         return;
     }
     
+    console.log('✅ API key found, proceeding with generation');
+    
     // Show loading state
     const generateBtn = document.getElementById('generateBtn');
     const originalText = generateBtn.textContent;
-    generateBtn.textContent = '🔄 Generating PowerPoint...';
+    generateBtn.textContent = window.templateFile ? '🔄 Generating with template...' : '🔄 Generating PowerPoint...';
     generateBtn.disabled = true;
     
     try {
-        const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+        let response;
+        
+        // Check if template file is available
+        if (window.templateFile) {
+            console.log('📄 Using template file:', window.templateFile.name);
+            
+            // Use FormData for template-based generation
+            const formData = new FormData();
+            formData.append('templateFile', window.templateFile);
+            formData.append('slideData', JSON.stringify(window.currentSlideData));
+            formData.append('text', JSON.stringify(window.currentSlideData.slides));
+            formData.append('apiKey', apiKey);
+            formData.append('provider', window.currentProvider || 'anthropic');
+            
+            response = await fetch('/api/generate-with-template', {
+                method: 'POST',
+                body: formData
+            });
+        } else {
+            // Regular generation without template
+            const requestBody = {
                 slideData: window.currentSlideData,
-                apiKey: apiKey
-            })
-        });
+                apiKey: apiKey,
+                provider: window.currentProvider || 'anthropic'
+            };
+            
+            console.log('📤 Sending request to /api/generate:', {
+                slideCount: requestBody.slideData.slides?.length,
+                hasApiKey: !!requestBody.apiKey,
+                provider: requestBody.provider
+            });
+            
+            response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+        }
         
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Server error response:', errorText);
             throw new Error(`Generation failed: ${response.status} ${response.statusText}`);
         }
         
         const result = await response.json();
+        console.log('✅ Generation response received:', result);
         
         if (result.success) {
             // Show download link
             showDownloadLink(result.downloadUrl, result.fileSize, result.storage);
-            showNotification('✅ PowerPoint generated successfully!', 'success');
+            const successMessage = window.templateFile 
+                ? '✅ PowerPoint generated with template successfully!' 
+                : '✅ PowerPoint generated successfully!';
+            showNotification(successMessage, 'success');
         } else {
             throw new Error(result.error || 'Generation failed');
         }
@@ -96,7 +144,7 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
     downloadLink.textContent = `📥 Download PowerPoint (${formatFileSize(fileSize)})`;
     
     // Add to preview container
-    const container = document.getElementById('previewContainer');
+    const container = document.getElementById('preview');
     if (container) {
         // Remove existing download link
         const existingLink = container.querySelector('.download-link');
@@ -118,7 +166,7 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
  * Show presentation viewing options
  */
 function showPresentationOptions(downloadUrl, storage) {
-    const container = document.getElementById('previewContainer');
+    const container = document.getElementById('preview');
     if (!container) return;
     
     const optionsDiv = document.createElement('div');

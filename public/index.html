@@ -140,40 +140,43 @@ Our Products
                 
                 <!-- File Upload -->
                 <div class="file-upload-section" style="margin-top: 1.5rem;">
-                    <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
-                    <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end; margin-bottom: 0.75rem;">
+                        <div>
+                            <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
+                            <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
+                        </div>
+                        <div>
+                            <label class="option-label">Number of slides:</label>
+                            <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
+                        </div>
+                    </div>
                     
                     <!-- Extract Colors Checkbox -->
                     <label class="checkbox-label checkbox-blue">
-                        <input type="checkbox" id="extractColors">
+                        <input type="checkbox" id="extractColors" checked>
                         <span>
                             <strong>🎨 Extract color theme from uploaded files</strong>
-                            <span class="checkbox-desc">AI analyzes file names/types and suggests appropriate color themes (e.g., finance → blue, healthcare → teal)</span>
+                            <span class="checkbox-desc">File content will be incorporated and used together with your idea prompt to create the presentation. AI also suggests color themes based on file names/types (e.g., finance → blue, healthcare → teal)</span>
                         </span>
                     </label>
                     
                     <!-- Use as Template Checkbox -->
                     <label class="checkbox-label checkbox-orange">
-                        <input type="checkbox" id="useAsTemplate">
+                        <input type="checkbox" id="useAsTemplate" checked>
                         <span>
                             <strong>📄 Use uploaded PPTX as template/base</strong>
                             <span class="checkbox-desc">Uses uploaded PowerPoint file as template - preserves formatting, modifies content, or adds new slides</span>
                         </span>
                     </label>
-                </div>
-                
-                <!-- Generation Options -->
-                <div class="generation-options">
-                    <div>
-                        <label class="option-label">Number of slides:</label>
-                        <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
-                    </div>
-                    <div class="checkbox-container">
-                        <label class="checkbox-inline">
-                            <input type="checkbox" id="generateImages">
-                            <span>📸 Include AI-generated image suggestions in content (descriptions only, not actual images)</span>
-                        </label>
-                    </div>
+                    
+                    <!-- AI Image Generation Checkbox -->
+                    <label class="checkbox-label checkbox-green">
+                        <input type="checkbox" id="generateImages" checked>
+                        <span>
+                            <strong>📸 Include AI-generated image suggestions in content</strong>
+                            <span class="checkbox-desc">AI will include image descriptions in the generated content (descriptions only, not actual images)</span>
+                        </span>
+                    </label>
                 </div>
             </div>
 
@@ -188,7 +191,7 @@ Our Products
                 
                 <!-- Output File Type Selection -->
                 <label style="display: block; font-weight: 700; color: #2d8659; margin: 1.5rem 0 0.5rem 0;">📄 Output File Type:</label>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                     <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
                         <input type="radio" name="outputType" value="pptx-direct" checked onchange="window.selectOutputType('pptx-direct')" style="width: 18px; height: 18px; cursor: pointer;">
                         <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📊 PPTX Direct</span>
@@ -259,16 +262,20 @@ Our Products
                                 <li>Create and copy your key</li>
                             </ol>
                         </div>
-                        <div class="input-group">
-                            <input type="password" 
-                                   id="apiKey-anthropic" 
-                                   placeholder="sk-ant-api03-..."
-                                   autocomplete="off"
-                                   data-form-type="other"
-                                   data-lpignore="true"
-                                   spellcheck="false">
-                            <button class="btn-primary" onclick="window.saveApiKey('anthropic')">Save Key</button>
-                        </div>
+                        <form autocomplete="off" onsubmit="return false;">
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="apiKey-anthropic" 
+                                       placeholder="sk-ant-api03-..."
+                                       autocomplete="off"
+                                       data-form-type="other"
+                                       data-lpignore="true"
+                                       name="not-a-password"
+                                       spellcheck="false"
+                                       style="font-family: monospace; letter-spacing: 0.5px;">
+                                <button class="btn-primary" onclick="window.saveApiKey('anthropic'); return false;" type="button">Save Key</button>
+                            </div>
+                        </form>
                     </div>
 
                     <!-- OpenAI Section -->
@@ -283,16 +290,20 @@ Our Products
                                 <li>Create and copy your key</li>
                             </ol>
                         </div>
-                        <div class="input-group">
-                            <input type="password" 
-                                   id="apiKey-openai" 
-                                   placeholder="sk-..."
-                                   autocomplete="off"
-                                   data-form-type="other"
-                                   data-lpignore="true"
-                                   spellcheck="false">
-                            <button class="btn-primary" onclick="window.saveApiKey('openai')">Save Key</button>
-                        </div>
+                        <form autocomplete="off" onsubmit="return false;">
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="apiKey-openai" 
+                                       placeholder="sk-..."
+                                       autocomplete="off"
+                                       data-form-type="other"
+                                       data-lpignore="true"
+                                       name="not-a-password"
+                                       spellcheck="false"
+                                       style="font-family: monospace; letter-spacing: 0.5px;">
+                                <button class="btn-primary" onclick="window.saveApiKey('openai'); return false;" type="button">Save Key</button>
+                            </div>
+                        </form>
                     </div>
 
                     <!-- Gemini Section -->
@@ -307,16 +318,20 @@ Our Products
                                 <li>Copy your key</li>
                             </ol>
                         </div>
-                        <div class="input-group">
-                            <input type="password" 
-                                   id="apiKey-gemini" 
-                                   placeholder="AIza..."
-                                   autocomplete="off"
-                                   data-form-type="other"
-                                   data-lpignore="true"
-                                   spellcheck="false">
-                            <button class="btn-primary" onclick="window.saveApiKey('gemini')">Save Key</button>
-                        </div>
+                        <form autocomplete="off" onsubmit="return false;">
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="apiKey-gemini" 
+                                       placeholder="AIza..."
+                                       autocomplete="off"
+                                       data-form-type="other"
+                                       data-lpignore="true"
+                                       name="not-a-password"
+                                       spellcheck="false"
+                                       style="font-family: monospace; letter-spacing: 0.5px;">
+                                <button class="btn-primary" onclick="window.saveApiKey('gemini'); return false;" type="button">Save Key</button>
+                            </div>
+                        </form>
                     </div>
 
                     <!-- OpenRouter Section -->
@@ -331,16 +346,20 @@ Our Products
                                 <li>Create and copy your key</li>
                             </ol>
                         </div>
-                        <div class="input-group">
-                            <input type="password" 
-                                   id="apiKey-openrouter" 
-                                   placeholder="sk-or-..."
-                                   autocomplete="off"
-                                   data-form-type="other"
-                                   data-lpignore="true"
-                                   spellcheck="false">
-                            <button class="btn-primary" onclick="window.saveApiKey('openrouter')">Save Key</button>
-                        </div>
+                        <form autocomplete="off" onsubmit="return false;">
+                            <div class="input-group">
+                                <input type="text" 
+                                       id="apiKey-openrouter" 
+                                       placeholder="sk-or-..."
+                                       autocomplete="off"
+                                       data-form-type="other"
+                                       data-lpignore="true"
+                                       name="not-a-password"
+                                       spellcheck="false"
+                                       style="font-family: monospace; letter-spacing: 0.5px;">
+                                <button class="btn-primary" onclick="window.saveApiKey('openrouter'); return false;" type="button">Save Key</button>
+                            </div>
+                        </form>
                     </div>
                     </div>
                 </div>

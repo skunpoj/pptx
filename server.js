@@ -518,10 +518,23 @@ app.post('/api/generate', async (req, res) => {
     console.log('POWERPOINT GENERATION REQUEST');
     console.log('='.repeat(80));
     
-    if (!text || !apiKey) {
-        console.log('❌ Missing required fields:', { hasText: !!text, hasApiKey: !!apiKey });
-        return res.status(400).json({ error: 'Text and API key are required' });
+    // Validate: either text OR slideData must be provided, plus apiKey
+    if (!apiKey) {
+        console.log('❌ Missing API key');
+        return res.status(400).json({ error: 'API key is required' });
     }
+    
+    if (!text && !slideData) {
+        console.log('❌ Missing content:', { hasText: !!text, hasSlideData: !!slideData });
+        return res.status(400).json({ error: 'Either text or slideData is required' });
+    }
+    
+    console.log('✅ Request validated:', { 
+        hasText: !!text, 
+        hasSlideData: !!slideData, 
+        hasApiKey: !!apiKey,
+        slideCount: slideData?.slides?.length || 0
+    });
 
     const sessionId = createSessionId();
     const workDir = path.join(__dirname, 'workspace', sessionId);
