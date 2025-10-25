@@ -1,6 +1,62 @@
 // Preview generation and caching functionality
 
 /**
+ * Show preview progress indicator
+ */
+function showPreviewProgress(message) {
+    const previewContainer = document.getElementById('previewContainer');
+    if (!previewContainer) return;
+    
+    // Create or update progress indicator
+    let progressDiv = document.getElementById('previewProgress');
+    if (!progressDiv) {
+        progressDiv = document.createElement('div');
+        progressDiv.id = 'previewProgress';
+        progressDiv.style.cssText = `
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        previewContainer.appendChild(progressDiv);
+    }
+    
+    progressDiv.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div class="spinner" style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <span style="font-weight: 600; font-size: 1.1rem;">${message}</span>
+        </div>
+        <div style="font-size: 0.9rem; opacity: 0.9;">Please wait while we process your content...</div>
+    `;
+    
+    // Add spinner animation
+    if (!document.querySelector('#spinnerStyle')) {
+        const style = document.createElement('style');
+        style.id = 'spinnerStyle';
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+/**
+ * Hide preview progress indicator
+ */
+function hidePreviewProgress() {
+    const progressDiv = document.getElementById('previewProgress');
+    if (progressDiv) {
+        progressDiv.remove();
+    }
+}
+
+/**
  * Generate preview of slides from text content
  */
 async function generatePreview() {
@@ -446,64 +502,3 @@ function displayPreview(slideData) {
 window.generatePreview = generatePreview;
 window.displayPreview = displayPreview;
 window.renderSlidesProgressively = renderSlidesProgressively;
-
-/**
- * Show preview progress indicator
- */
-function showPreviewProgress(message) {
-    const previewContainer = document.getElementById('previewContainer');
-    if (!previewContainer) return;
-    
-    // Create or update progress indicator
-    let progressDiv = document.getElementById('previewProgress');
-    if (!progressDiv) {
-        progressDiv = document.createElement('div');
-        progressDiv.id = 'previewProgress';
-        progressDiv.style.cssText = `
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-        previewContainer.appendChild(progressDiv);
-    }
-    
-    progressDiv.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <div class="spinner" style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <span style="font-weight: 600; font-size: 1.1rem;">${message}</span>
-        </div>
-        <div style="font-size: 0.9rem; opacity: 0.9;">Please wait while we process your content...</div>
-    `;
-    
-    // Add spinner animation
-    if (!document.querySelector('#spinnerStyle')) {
-        const style = document.createElement('style');
-        style.id = 'spinnerStyle';
-        style.textContent = `
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-/**
- * Hide preview progress indicator
- */
-function hidePreviewProgress() {
-    const progressDiv = document.getElementById('previewProgress');
-    if (progressDiv) {
-        progressDiv.remove();
-    }
-}
-
-// Ensure functions are available immediately
-console.log('✅ preview.js loaded - window.generatePreview:', typeof window.generatePreview);
-console.log('✅ preview.js loaded - window.displayPreview:', typeof window.displayPreview);
-}

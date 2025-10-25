@@ -1,7 +1,7 @@
 # AI Text2PPT Pro - Optimized Production Dockerfile
 FROM node:18-bullseye
 
-# Install LibreOffice for PDF conversion (minimal)
+# Install LibreOffice for PDF conversion and Python for skills
 RUN apt-get update && apt-get install -y \
     libreoffice \
     libreoffice-writer \
@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y \
     libreoffice-calc \
     fonts-liberation \
     fonts-noto \
+    python3 \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -30,6 +33,16 @@ RUN npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit 
 
 # Install html2pptx from local .tgz file
 RUN npm install ./skills/pptx/html2pptx.tgz --no-audit --no-fund
+
+# Install Python dependencies for skills
+RUN pip3 install --no-cache-dir \
+    python-docx \
+    openpyxl \
+    reportlab \
+    pypdf \
+    pdfplumber \
+    pandas \
+    defusedxml
 
 # Install Playwright browsers (minimal)
 RUN npx playwright install chromium --with-deps
