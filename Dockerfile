@@ -17,8 +17,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install Node.js dependencies
+# Install Node.js dependencies from npm
 RUN npm install --production
+
+# Install Playwright browsers
+RUN npx playwright install --with-deps chromium
 
 # Copy application files
 COPY . .

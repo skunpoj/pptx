@@ -183,8 +183,12 @@ function saveApiKey(provider) {
 // EXAMPLE TEMPLATES
 // ========================================
 
-// Templates will be loaded from API
-let exampleTemplates = {
+// Templates will be loaded from API (/api/examples)
+// Fallback templates are ONLY used if API fails
+let exampleTemplates = {}; // Empty by default - will be populated from prompts.json
+
+// FALLBACK ONLY - These are loaded from prompts.json via API
+const FALLBACK_exampleTemplates = {
     tech: `The Future of Artificial Intelligence in Healthcare
 
 Introduction to AI in Modern Healthcare
@@ -412,12 +416,15 @@ async function loadExampleTemplates() {
             for (const [key, template] of Object.entries(templates)) {
                 exampleTemplates[key] = template.content;
             }
-            console.log('✓ Example templates loaded from API');
+            console.log('✓ Example templates loaded from prompts.json via API');
+            console.log('  Categories:', Object.keys(exampleTemplates).join(', '));
         } else {
-            console.warn('Failed to load example templates from API, using hardcoded fallback');
+            console.warn('⚠️ Failed to load example templates from API, using fallback');
+            exampleTemplates = FALLBACK_exampleTemplates;
         }
     } catch (error) {
-        console.warn('Error loading example templates:', error.message);
+        console.warn('⚠️ Error loading example templates:', error.message);
+        exampleTemplates = FALLBACK_exampleTemplates;
     }
 }
 

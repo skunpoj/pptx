@@ -89,13 +89,14 @@ async function showPromptEditor() {
 function renderPromptEditors(prompts) {
     const container = document.getElementById('promptsList');
     
-    let html = '';
+    let html = '<h3 style="color: #667eea; margin: 1rem 0 0.5rem 0;">🤖 AI System Prompts</h3>';
     
+    // Render system prompts
     for (const [key, prompt] of Object.entries(prompts.prompts)) {
         html += `
             <div style="background: white; border: 2px solid #e0e7ff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
-                    <div>
+                    <div style="flex: 1;">
                         <h4 style="margin: 0 0 0.25rem 0; color: #667eea; font-size: 1rem;">${prompt.name}</h4>
                         <p style="margin: 0; font-size: 0.8rem; color: #666;">${prompt.description}</p>
                         ${prompt.variables && prompt.variables.length > 0 ? `
@@ -105,18 +106,18 @@ function renderPromptEditors(prompts) {
                         </div>
                         ` : ''}
                     </div>
-                    <button class="btn-secondary" onclick="togglePromptView('${key}')" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
-                        <span id="toggle-${key}">📖 View</span>
+                    <button class="btn-secondary" onclick="togglePromptView('prompt_${key}')" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; white-space: nowrap;">
+                        <span id="toggle-prompt_${key}">📖 View</span>
                     </button>
                 </div>
                 
-                <div id="prompt-${key}" style="display: none;">
-                    <textarea id="editor-${key}" class="prompt-editor" style="width: 100%; min-height: 300px; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.5; resize: vertical;">${escapeHtml(prompt.template)}</textarea>
+                <div id="prompt-prompt_${key}" style="display: none;">
+                    <textarea id="editor-prompt_${key}" class="prompt-editor" data-type="prompt" data-key="${key}" style="width: 100%; min-height: 300px; padding: 0.75rem; border: 2px solid #ddd; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.5; resize: vertical;">${escapeHtml(prompt.template)}</textarea>
                     <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
                         <div style="font-size: 0.75rem; color: #666;">
-                            Characters: <span id="count-${key}">${prompt.template.length}</span>
+                            Characters: <span id="count-prompt_${key}">${prompt.template.length}</span>
                         </div>
-                        <button class="btn-secondary" onclick="formatPrompt('${key}')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                        <button class="btn-secondary" onclick="formatPrompt('prompt_${key}')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
                             ✨ Format
                         </button>
                     </div>
@@ -125,15 +126,81 @@ function renderPromptEditors(prompts) {
         `;
     }
     
+    // Render example templates section
+    if (prompts.exampleTemplates && prompts.exampleTemplates.templates) {
+        html += '<h3 style="color: #667eea; margin: 2rem 0 0.5rem 0;">📚 Example Templates</h3>';
+        html += '<p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">Edit the pre-built examples that appear when users click the example buttons (Tech, Business, etc.)</p>';
+        
+        for (const [key, template] of Object.entries(prompts.exampleTemplates.templates)) {
+            html += `
+                <div style="background: white; border: 2px solid #ffd700; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 0.25rem 0; color: #f59e0b; font-size: 1rem;">
+                                ${template.icon || '📄'} ${template.name}
+                            </h4>
+                            <p style="margin: 0; font-size: 0.8rem; color: #666;">
+                                Category: <code style="background: #fef3c7; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">${key}</code>
+                            </p>
+                        </div>
+                        <button class="btn-secondary" onclick="togglePromptView('example_${key}')" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; white-space: nowrap;">
+                            <span id="toggle-example_${key}">📖 View</span>
+                        </button>
+                    </div>
+                    
+                    <div id="prompt-example_${key}" style="display: none;">
+                        <div style="margin-bottom: 0.5rem;">
+                            <label style="display: block; font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Template Name:</label>
+                            <input type="text" id="editor-example_${key}_name" value="${escapeHtml(template.name)}" 
+                                style="width: 100%; padding: 0.5rem; border: 2px solid #ddd; border-radius: 6px; font-size: 0.9rem;">
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <label style="display: block; font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Icon (emoji):</label>
+                            <input type="text" id="editor-example_${key}_icon" value="${escapeHtml(template.icon || '📄')}" 
+                                style="width: 100px; padding: 0.5rem; border: 2px solid #ddd; border-radius: 6px; font-size: 1.2rem; text-align: center;">
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <label style="display: block; font-size: 0.8rem; color: #666; margin-bottom: 0.25rem;">Content (11 paragraphs for 10-12 slides):</label>
+                            <textarea id="editor-example_${key}_content" class="prompt-editor" data-type="example" data-key="${key}" style="width: 100%; min-height: 400px; padding: 0.75rem; border: 2px solid #fbbf24; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.85rem; line-height: 1.5; resize: vertical;">${escapeHtml(template.content)}</textarea>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                            <div style="font-size: 0.75rem; color: #666;">
+                                Characters: <span id="count-example_${key}">${template.content.length}</span> | 
+                                Paragraphs: <span id="para-example_${key}">${(template.content.match(/\n\n/g) || []).length + 1}</span>
+                            </div>
+                            <button class="btn-secondary" onclick="formatPrompt('example_${key}_content')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                ✨ Format
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
     container.innerHTML = html;
     
-    // Add character count listeners
+    // Add character count listeners for system prompts
     for (const key of Object.keys(prompts.prompts)) {
-        const editor = document.getElementById(`editor-${key}`);
+        const editor = document.getElementById(`editor-prompt_${key}`);
         if (editor) {
             editor.addEventListener('input', () => {
-                document.getElementById(`count-${key}`).textContent = editor.value.length;
+                document.getElementById(`count-prompt_${key}`).textContent = editor.value.length;
             });
+        }
+    }
+    
+    // Add character count listeners for example templates
+    if (prompts.exampleTemplates && prompts.exampleTemplates.templates) {
+        for (const key of Object.keys(prompts.exampleTemplates.templates)) {
+            const editor = document.getElementById(`editor-example_${key}_content`);
+            if (editor) {
+                editor.addEventListener('input', () => {
+                    const content = editor.value;
+                    document.getElementById(`count-example_${key}`).textContent = content.length;
+                    document.getElementById(`para-example_${key}`).textContent = (content.match(/\n\n/g) || []).length + 1;
+                });
+            }
         }
     }
 }
@@ -183,11 +250,30 @@ async function saveCustomPrompts() {
         // Collect all prompt values
         const currentPrompts = await loadAllPrompts();
         
-        // Update templates from editors
+        // Update system prompts from editors
         for (const key of Object.keys(currentPrompts.prompts)) {
-            const editor = document.getElementById(`editor-${key}`);
+            const editor = document.getElementById(`editor-prompt_${key}`);
             if (editor) {
                 currentPrompts.prompts[key].template = editor.value;
+            }
+        }
+        
+        // Update example templates from editors
+        if (currentPrompts.exampleTemplates && currentPrompts.exampleTemplates.templates) {
+            for (const key of Object.keys(currentPrompts.exampleTemplates.templates)) {
+                const nameInput = document.getElementById(`editor-example_${key}_name`);
+                const iconInput = document.getElementById(`editor-example_${key}_icon`);
+                const contentEditor = document.getElementById(`editor-example_${key}_content`);
+                
+                if (nameInput) {
+                    currentPrompts.exampleTemplates.templates[key].name = nameInput.value;
+                }
+                if (iconInput) {
+                    currentPrompts.exampleTemplates.templates[key].icon = iconInput.value;
+                }
+                if (contentEditor) {
+                    currentPrompts.exampleTemplates.templates[key].content = contentEditor.value;
+                }
             }
         }
         
@@ -206,9 +292,14 @@ async function saveCustomPrompts() {
         }
         
         const result = await response.json();
-        window.showStatus('✅ Prompts saved successfully! Backup created.', 'success');
+        window.showStatus('✅ All prompts and examples saved successfully! Backup created.', 'success');
         
-        // Reload to show updated metadata
+        // Reload example templates in the main UI
+        if (window.loadExampleTemplates) {
+            await window.loadExampleTemplates();
+        }
+        
+        // Reload editor to show updated metadata
         setTimeout(() => showPromptEditor(), 500);
         
     } catch (error) {
