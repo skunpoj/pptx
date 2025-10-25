@@ -92,6 +92,18 @@
                     <textarea id="textInput" class="content-textarea" placeholder="Your expanded content will appear here after clicking 'Expand Idea into Full Content' above, or you can type/paste your presentation content directly here..."></textarea>
                 </div>
                 
+                <!-- Color Theme Selector -->
+                <div id="themeSelector" class="theme-selector" style="display: none;">
+                    <div class="theme-selector-inner">
+                        <div class="theme-header">
+                            <h3>🎨 Choose Color Theme</h3>
+                            <span id="suggestedBadge" class="suggested-badge">AI Suggested</span>
+                        </div>
+                        <p class="theme-description">Select a color palette to customize your presentation's look and feel</p>
+                        <div id="themeGrid" class="theme-grid"></div>
+                    </div>
+                </div>
+                
                 <div id="status"></div>
                 
                 <!-- Progress Bar -->
@@ -123,18 +135,6 @@
             <!-- Right Panel: Preview -->
             <div class="card preview-container">
                 <h2>👁️ Slide Preview</h2>
-                
-                <!-- Color Theme Selector -->
-                <div id="themeSelector" class="theme-selector" style="display: none;">
-                    <div class="theme-selector-inner">
-                        <div class="theme-header">
-                            <h3>🎨 Choose Color Theme</h3>
-                            <span id="suggestedBadge" class="suggested-badge">AI Suggested</span>
-                        </div>
-                        <p class="theme-description">Select a color palette to customize your presentation's look and feel</p>
-                        <div id="themeGrid" class="theme-grid"></div>
-                    </div>
-                </div>
                 
                 <!-- View Toggle -->
                 <div class="view-toggle" id="viewToggle" style="display: none;">

@@ -131,6 +131,37 @@ function scrollToSlide(index) {
 }
 
 // ========================================
+// SETTINGS TAB MANAGEMENT
+// ========================================
+
+/**
+ * Switches between API and Prompts settings tabs
+ * @param {string} tab - Tab name: 'api' or 'prompts'
+ */
+function switchSettingsTab(tab) {
+    // Update tab button styles
+    document.querySelectorAll('.settings-tab').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = '#e0e7ff';
+        btn.style.color = '#667eea';
+    });
+    
+    const activeTab = document.getElementById(`tab-${tab}`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+        activeTab.style.background = '#667eea';
+        activeTab.style.color = 'white';
+    }
+    
+    // Show/hide content
+    const apiContent = document.getElementById('apiSettingsContent');
+    const promptsContent = document.getElementById('promptsSettingsContent');
+    
+    if (apiContent) apiContent.style.display = tab === 'api' ? 'block' : 'none';
+    if (promptsContent) promptsContent.style.display = tab === 'prompts' ? 'block' : 'none';
+}
+
+// ========================================
 // EXPORTS
 // ========================================
 
@@ -140,4 +171,5 @@ window.hideProgress = hideProgress;
 window.updateProgress = updateProgress;
 window.switchView = switchView;
 window.scrollToSlide = scrollToSlide;
+window.switchSettingsTab = switchSettingsTab;
 

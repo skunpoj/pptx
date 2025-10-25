@@ -13,6 +13,21 @@
  */
 function displayPreview(slideData) {
     const preview = document.getElementById('preview');
+    
+    // Ensure theme exists - use default if not
+    if (!slideData.designTheme) {
+        const defaultTheme = window.colorThemes?.['vibrant-purple'] || {
+            name: 'Default Theme',
+            description: 'Professional design',
+            colorPrimary: '#667eea',
+            colorSecondary: '#764ba2',
+            colorAccent: '#F39C12',
+            colorBackground: '#FFFFFF',
+            colorText: '#1d1d1d'
+        };
+        slideData.designTheme = defaultTheme;
+    }
+    
     const theme = slideData.designTheme;
     
     // Show view toggle buttons

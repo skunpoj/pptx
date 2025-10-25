@@ -67,18 +67,33 @@ async function generatePreview() {
                 name: window.colorThemes['extracted-custom'].name,
                 description: window.colorThemes['extracted-custom'].description
             };
+        } else if (window.selectedTheme && window.colorThemes[window.selectedTheme]) {
+            // Use user's selected theme
+            window.currentSlideData.designTheme = {
+                ...window.colorThemes[window.selectedTheme],
+                name: window.colorThemes[window.selectedTheme].name,
+                description: window.colorThemes[window.selectedTheme].description
+            };
         } else if (!window.selectedTheme && suggestedTheme && window.colorThemes[suggestedTheme]) {
+            // Use AI suggested theme
             window.currentSlideData.designTheme = {
                 ...window.colorThemes[suggestedTheme],
                 name: window.colorThemes[suggestedTheme].name,
                 description: window.colorThemes[suggestedTheme].description
+            };
+        } else {
+            // Fallback to default theme
+            window.currentSlideData.designTheme = {
+                ...window.colorThemes['vibrant-purple'],
+                name: window.colorThemes['vibrant-purple'].name,
+                description: window.colorThemes['vibrant-purple'].description
             };
         }
         
         window.currentSlideData.suggestedTheme = suggestedTheme;
         
         window.displayThemeSelector(suggestedTheme);
-        window.displayPreview(slideData);
+        window.displayPreview(window.currentSlideData);
         window.updateProgress(100, 'step4');
         
         setTimeout(() => {
