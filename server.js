@@ -255,6 +255,9 @@ app.post('/api/extract-colors', upload.array('files'), async (req, res) => {
 // ========================================
 
 app.post('/api/preview', async (req, res) => {
+    // Set JSON content type immediately to prevent HTML error pages
+    res.setHeader('Content-Type', 'application/json');
+    
     const { text, apiKey, provider = 'anthropic' } = req.body;
     
     if (!text || !apiKey) {
@@ -276,21 +279,28 @@ app.post('/api/preview', async (req, res) => {
         const slideData = parseAIResponse(responseText);
         console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
         
-        // Log chart slides
+        // Log chart slides before validation
         const chartSlides = slideData.slides?.filter(s => s.layout === 'chart' && s.chart) || [];
         if (chartSlides.length > 0) {
-            console.log('  📈 Chart slides found:', chartSlides.length);
+            console.log('  📈 Chart slides found (before validation):', chartSlides.length);
             chartSlides.forEach((slide, i) => {
                 console.log(`    Chart ${i + 1}: ${slide.chart.type} - ${slide.chart.title}`);
             });
         }
         
-        // Validate structure
+        // Validate structure (this will validate and fix chart data)
         validateSlideData(slideData);
-        console.log('✅ Preview validation passed');
         
-        // Ensure Content-Type is set
-        res.setHeader('Content-Type', 'application/json');
+        // Log chart slides after validation
+        const validChartSlides = slideData.slides?.filter(s => s.layout === 'chart' && s.chart) || [];
+        if (validChartSlides.length > 0) {
+            console.log('  ✅ Chart slides validated:', validChartSlides.length);
+            validChartSlides.forEach((slide, i) => {
+                console.log(`    Chart ${i + 1}: ${slide.chart.type} - ${slide.chart.data.labels.length} data points`);
+            });
+        }
+        
+        console.log('✅ Preview validation passed');
         
         // Return slide structure for preview
         res.json(slideData);
@@ -299,10 +309,24 @@ app.post('/api/preview', async (req, res) => {
         console.error('❌ Preview error:', error.message);
         console.error('   Stack:', error.stack);
         
-        // Ensure we send JSON error response
+        // Ensure we send JSON error response with helpful message
         if (!res.headersSent) {
-            res.setHeader('Content-Type', 'application/json');
-            res.status(500).json({ error: error.message });
+            // Provide user-friendly error message
+            let userMessage = error.message;
+            
+            // Check for common error types
+            if (error.message.includes('API key') || error.message.includes('authentication')) {
+                userMessage = 'Invalid API key. Please check your API key and try again.';
+            } else if (error.message.includes('rate limit')) {
+                userMessage = 'API rate limit exceeded. Please wait a moment and try again.';
+            } else if (error.message.includes('timeout')) {
+                userMessage = 'Request timed out. Please try again with shorter content.';
+            }
+            
+            res.status(500).json({ 
+                error: userMessage,
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            });
         }
     }
 });
@@ -603,7 +627,7 @@ app.get('/api/version', (req, res) => {
     }
 });
 
-// Global error handler
+// Global error handler - ensures JSON responses for API routes
 app.use((err, req, res, next) => {
     console.error('\n' + '🔥'.repeat(40));
     console.error('UNHANDLED ERROR');
@@ -615,9 +639,15 @@ app.use((err, req, res, next) => {
     console.error('🔥'.repeat(40) + '\n');
     
     if (!res.headersSent) {
-        res.status(500).json({ 
+        // Always set JSON content type for API routes
+        if (req.path.startsWith('/api/')) {
+            res.setHeader('Content-Type', 'application/json');
+        }
+        
+        res.status(err.status || 500).json({ 
             error: err.message || 'Internal server error',
-            path: req.path
+            path: req.path,
+            timestamp: new Date().toISOString()
         });
     }
 });

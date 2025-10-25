@@ -88,10 +88,106 @@ function validateSlideData(slideData) {
         throw new Error('No slides in slide data');
     }
     
+    // Validate chart slides
+    slideData.slides = validateAndFixChartSlides(slideData.slides);
+    
     // Split oversized slides into multiple slides
     slideData.slides = splitOversizedSlides(slideData.slides);
     
     return slideData;
+}
+
+/**
+ * Validates and fixes chart slides to ensure proper structure
+ * @param {Array} slides - Array of slide objects
+ * @returns {Array} - Validated slides array
+ */
+function validateAndFixChartSlides(slides) {
+    const validChartTypes = ['bar', 'column', 'line', 'pie', 'area'];
+    
+    slides.forEach((slide, index) => {
+        // Only validate chart slides
+        if (slide.layout === 'chart' && slide.chart) {
+            try {
+                // Validate chart type
+                if (!slide.chart.type || !validChartTypes.includes(slide.chart.type.toLowerCase())) {
+                    console.warn(`⚠️ Slide ${index + 1}: Invalid chart type "${slide.chart.type}", defaulting to "column"`);
+                    slide.chart.type = 'column';
+                }
+                
+                // Normalize chart type to lowercase
+                slide.chart.type = slide.chart.type.toLowerCase();
+                
+                // Validate chart title
+                if (!slide.chart.title || typeof slide.chart.title !== 'string') {
+                    console.warn(`⚠️ Slide ${index + 1}: Missing or invalid chart title, using slide title`);
+                    slide.chart.title = slide.title || 'Chart';
+                }
+                
+                // Validate chart data structure
+                if (!slide.chart.data) {
+                    throw new Error(`Slide ${index + 1}: Chart is missing data object`);
+                }
+                
+                if (!Array.isArray(slide.chart.data.labels) || slide.chart.data.labels.length === 0) {
+                    throw new Error(`Slide ${index + 1}: Chart data.labels must be a non-empty array`);
+                }
+                
+                if (!Array.isArray(slide.chart.data.datasets) || slide.chart.data.datasets.length === 0) {
+                    throw new Error(`Slide ${index + 1}: Chart data.datasets must be a non-empty array`);
+                }
+                
+                // Validate each dataset
+                slide.chart.data.datasets.forEach((dataset, dsIndex) => {
+                    if (!dataset.name || typeof dataset.name !== 'string') {
+                        console.warn(`⚠️ Slide ${index + 1}, Dataset ${dsIndex + 1}: Missing or invalid name, using default`);
+                        dataset.name = `Series ${dsIndex + 1}`;
+                    }
+                    
+                    if (!Array.isArray(dataset.values) || dataset.values.length === 0) {
+                        throw new Error(`Slide ${index + 1}, Dataset ${dsIndex + 1}: values must be a non-empty array`);
+                    }
+                    
+                    // Ensure all values are numbers
+                    dataset.values = dataset.values.map((val, valIndex) => {
+                        const num = Number(val);
+                        if (isNaN(num)) {
+                            console.warn(`⚠️ Slide ${index + 1}, Dataset ${dsIndex + 1}, Value ${valIndex + 1}: "${val}" is not a number, using 0`);
+                            return 0;
+                        }
+                        return num;
+                    });
+                    
+                    // Validate values length matches labels length
+                    if (dataset.values.length !== slide.chart.data.labels.length) {
+                        console.warn(`⚠️ Slide ${index + 1}, Dataset ${dsIndex + 1}: values length (${dataset.values.length}) doesn't match labels length (${slide.chart.data.labels.length}), trimming or padding`);
+                        
+                        if (dataset.values.length > slide.chart.data.labels.length) {
+                            dataset.values = dataset.values.slice(0, slide.chart.data.labels.length);
+                        } else {
+                            while (dataset.values.length < slide.chart.data.labels.length) {
+                                dataset.values.push(0);
+                            }
+                        }
+                    }
+                });
+                
+                console.log(`✓ Chart validated: Slide ${index + 1} - ${slide.chart.type} chart with ${slide.chart.data.labels.length} data points`);
+                
+            } catch (chartError) {
+                console.error(`❌ Chart validation failed for slide ${index + 1}:`, chartError.message);
+                // Convert chart slide to regular content slide if validation fails
+                console.log(`  Converting to regular content slide...`);
+                slide.layout = 'bullets';
+                delete slide.chart;
+                if (!slide.content || slide.content.length === 0) {
+                    slide.content = ['Chart data was invalid and could not be displayed'];
+                }
+            }
+        }
+    });
+    
+    return slides;
 }
 
 /**
@@ -161,19 +257,55 @@ function sanitizeSlide(slide) {
  * @throws {Error} - If parsing fails
  */
 function parseAIResponse(responseText) {
+    // Validate input
+    if (!responseText || typeof responseText !== 'string') {
+        console.error('Invalid response text:', typeof responseText);
+        throw new Error('AI returned an empty or invalid response. Please try again.');
+    }
+    
+    // Check if response looks like HTML (common error scenario)
+    if (responseText.trim().startsWith('<')) {
+        console.error('Response appears to be HTML instead of JSON');
+        console.error('Response preview:', responseText.substring(0, 200));
+        throw new Error('AI service returned an error page instead of JSON data. Please check your API key and try again.');
+    }
+    
     // Clean up common AI response formatting
     let cleanedText = responseText
         .replace(/```json\n?/g, "")
         .replace(/```\n?/g, "")
         .trim();
     
+    // Additional validation after cleaning
+    if (!cleanedText) {
+        console.error('Response became empty after cleaning');
+        throw new Error('AI response was empty after formatting cleanup. Please try again.');
+    }
+    
     try {
         const data = JSON.parse(cleanedText);
+        
+        // Validate the parsed data has expected structure
+        if (!data || typeof data !== 'object') {
+            throw new Error('Parsed data is not a valid object');
+        }
+        
         return data;
     } catch (parseError) {
-        console.error('JSON Parse Error:', parseError);
+        console.error('JSON Parse Error:', parseError.message);
+        console.error('Error position:', parseError.message.match(/position (\d+)/)?.[1] || 'unknown');
         console.error('Response text preview:', cleanedText.substring(0, 500));
-        throw new Error('Failed to parse AI response. Please try again.');
+        
+        // Try to provide more helpful error message
+        if (parseError.message.includes('Unexpected token')) {
+            const match = parseError.message.match(/Unexpected token (.+?) in JSON/);
+            const token = match ? match[1] : 'unknown';
+            throw new Error(`AI response contains invalid JSON (unexpected ${token}). This usually means the AI didn't format the response correctly. Please try again.`);
+        } else if (parseError.message.includes('Unexpected end')) {
+            throw new Error('AI response is incomplete. The AI might have been interrupted. Please try again.');
+        } else {
+            throw new Error('Failed to parse AI response as JSON. Please try again or check server logs for details.');
+        }
     }
 }
 
@@ -230,6 +362,7 @@ module.exports = {
     generateCSS,
     escapeHtml,
     validateSlideData,
+    validateAndFixChartSlides,
     splitOversizedSlides,
     sanitizeSlide,
     parseAIResponse,
