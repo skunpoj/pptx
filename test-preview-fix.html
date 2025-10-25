@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #previewContainer { min-height: 200px; border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Preview Functionality Test</h1>
+    
+    <div class="test-section info">
+        <h3>📋 Test Instructions</h3>
+        <p>This page tests if the preview functionality is working after the optimization.</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>🧪 Function Availability Test</h3>
+        <button onclick="testFunctionAvailability()">Test Functions</button>
+        <div id="functionTestResults"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>📝 Preview Test</h3>
+        <textarea id="textInput" placeholder="Enter some text to test preview..." style="width: 100%; height: 100px; margin: 10px 0;">Create a business presentation about our company's quarterly results. Include sections on revenue growth, market expansion, and future strategies.</textarea>
+        <br>
+        <button onclick="testPreviewGeneration()">Test Preview Generation</button>
+        <div id="previewContainer"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>📊 Test Results</h3>
+        <div id="testResults"></div>
+    </div>
+
+    <!-- Load the API modules -->
+    <script src="/js/api/capabilities.js"></script>
+    <script src="/js/api/preview.js"></script>
+    <script src="/js/api/generation.js"></script>
+    <script src="/js/api.js"></script>
+    
+    <script>
+        function testFunctionAvailability() {
+            const results = document.getElementById('functionTestResults');
+            const tests = [
+                { name: 'generatePreview', func: window.generatePreview },
+                { name: 'displayPreview', func: window.displayPreview },
+                { name: 'checkPreviewCache', func: window.checkPreviewCache },
+                { name: 'savePreviewCache', func: window.savePreviewCache },
+                { name: 'getApiKey', func: window.getApiKey },
+                { name: 'showNotification', func: window.showNotification }
+            ];
+            
+            let html = '<h4>Function Availability:</h4><ul>';
+            let allPassed = true;
+            
+            tests.forEach(test => {
+                const available = typeof test.func === 'function';
+                const status = available ? '✅' : '❌';
+                const color = available ? 'green' : 'red';
+                html += `<li style="color: ${color};">${status} ${test.name}: ${available ? 'Available' : 'Missing'}</li>`;
+                if (!available) allPassed = false;
+            });
+            
+            html += '</ul>';
+            
+            if (allPassed) {
+                html += '<p style="color: green; font-weight: bold;">✅ All functions are available!</p>';
+            } else {
+                html += '<p style="color: red; font-weight: bold;">❌ Some functions are missing!</p>';
+            }
+            
+            results.innerHTML = html;
+        }
+        
+        function testPreviewGeneration() {
+            const textInput = document.getElementById('textInput');
+            const text = textInput.value.trim();
+            
+            if (!text) {
+                alert('Please enter some text first');
+                return;
+            }
+            
+            // Mock API key for testing
+            if (!window.getApiKey || window.getApiKey() === '') {
+                // Set a mock API key for testing
+                localStorage.setItem('anthropic_api_key', 'test-key-for-preview-test');
+            }
+            
+            console.log('🧪 Testing preview generation...');
+            
+            if (typeof window.generatePreview === 'function') {
+                try {
+                    window.generatePreview();
+                } catch (error) {
+                    console.error('Preview test failed:', error);
+                    alert('Preview test failed: ' + error.message);
+                }
+            } else {
+                alert('generatePreview function is not available');
+            }
+        }
+        
+        // Override showNotification for testing
+        window.showNotification = function(message, type) {
+            console.log(`📢 ${type.toUpperCase()}: ${message}`);
+            const results = document.getElementById('testResults');
+            const div = document.createElement('div');
+            div.style.cssText = `
+                padding: 10px;
+                margin: 5px 0;
+                border-radius: 4px;
+                background-color: ${type === 'success' ? '#d4edda' : type === 'error' ? '#f8d7da' : '#d1ecf1'};
+                color: ${type === 'success' ? '#155724' : type === 'error' ? '#721c24' : '#0c5460'};
+            `;
+            div.textContent = `${type.toUpperCase()}: ${message}`;
+            results.appendChild(div);
+        };
+        
+        // Run initial test
+        window.addEventListener('load', function() {
+            console.log('🔧 Preview fix test page loaded');
+            testFunctionAvailability();
+        });
+    </script>
+</body>
+</html>

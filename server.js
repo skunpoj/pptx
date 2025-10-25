@@ -49,6 +49,7 @@ const {
 
 // Import routes
 const promptRoutes = require('./server/routes/prompts');
+const skillRoutes = require('./server/routes/skills');
 
 // Initialize Express app
 const app = express();
@@ -89,6 +90,7 @@ const upload = multer({
 
 // Mount routes
 app.use('/api', promptRoutes);
+app.use('/api', skillRoutes);
 
 // ========================================
 // SERVER CAPABILITIES & HEALTH ENDPOINTS

@@ -22,7 +22,7 @@ async function generatePreview() {
     const cachedData = checkPreviewCache(text);
     if (cachedData) {
         console.log('📋 Using cached preview data');
-        await renderSlidesProgressively(cachedData);
+        displayPreview(cachedData);
         return;
     }
     
@@ -33,25 +33,33 @@ async function generatePreview() {
     previewBtn.disabled = true;
     
     try {
-        // Check if server supports streaming
-        const capabilities = await checkServerCapabilities();
-        const useStreaming = capabilities.features?.streamingPreview || false;
+        // Call the preview API
+        const response = await fetch('/api/preview', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text: text,
+                apiKey: apiKey
+            })
+        });
         
-        let slideData;
-        if (useStreaming) {
-            console.log('📡 Using streaming preview');
-            slideData = await handleStreamingPreview(text, apiKey);
-        } else {
-            console.log('📋 Using standard preview');
-            slideData = await handleNonStreamingPreview(text, apiKey);
+        if (!response.ok) {
+            throw new Error(`Preview failed: ${response.status} ${response.statusText}`);
         }
+        
+        const slideData = await response.json();
         
         if (slideData && slideData.slides) {
             // Cache the result
             savePreviewCache(text, slideData);
             
-            // Render the slides
-            await renderSlidesProgressively(slideData);
+            // Store for generation
+            window.currentSlideData = slideData;
+            
+            // Display the preview
+            displayPreview(slideData);
             
             // Show success message
             showNotification('✅ Preview generated successfully!', 'success');
@@ -327,6 +335,90 @@ function createSlideElement(slide, index) {
     return slideDiv;
 }
 
+/**
+ * Display preview of slides
+ */
+function displayPreview(slideData) {
+    const previewContainer = document.getElementById('previewContainer');
+    if (!previewContainer) {
+        console.error('Preview container not found');
+        return;
+    }
+    
+    // Clear existing content
+    previewContainer.innerHTML = '';
+    
+    // Add theme information
+    if (slideData.designTheme) {
+        const themeDiv = document.createElement('div');
+        themeDiv.className = 'theme-info';
+        themeDiv.style.cssText = `
+            background: linear-gradient(135deg, ${slideData.designTheme.colorPrimary}, ${slideData.designTheme.colorSecondary});
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+        `;
+        themeDiv.innerHTML = `
+            <h3 style="margin: 0 0 0.5rem 0; color: white;">${slideData.designTheme.name}</h3>
+            <p style="margin: 0; opacity: 0.9;">${slideData.designTheme.description}</p>
+        `;
+        previewContainer.appendChild(themeDiv);
+    }
+    
+    // Add slides
+    if (slideData.slides && slideData.slides.length > 0) {
+        slideData.slides.forEach((slide, index) => {
+            const slideDiv = document.createElement('div');
+            slideDiv.className = 'slide-preview';
+            slideDiv.style.cssText = `
+                background: white;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                padding: 1.5rem;
+                margin-bottom: 1rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                position: relative;
+            `;
+            
+            // Add slide number
+            const slideNumber = document.createElement('div');
+            slideNumber.style.cssText = `
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: ${slideData.designTheme?.colorAccent || '#F39C12'};
+                color: white;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                font-size: 0.8rem;
+                font-weight: bold;
+            `;
+            slideNumber.textContent = `${index + 1}`;
+            slideDiv.appendChild(slideNumber);
+            
+            // Add slide content
+            if (slide.type === 'title') {
+                slideDiv.innerHTML += `
+                    <h2 style="color: ${slideData.designTheme?.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h2>
+                    <p style="color: ${slideData.designTheme?.colorSecondary || '#2E4053'}; font-size: 1.1rem;">${slide.subtitle || ''}</p>
+                `;
+            } else if (slide.type === 'content') {
+                slideDiv.innerHTML += `
+                    <h3 style="color: ${slideData.designTheme?.colorPrimary || '#1C2833'}; margin-top: 0;">${slide.title}</h3>
+                    <ul style="color: ${slideData.designTheme?.colorText || '#1d1d1d'};">
+                        ${slide.content ? slide.content.map(item => `<li>${item}</li>`).join('') : ''}
+                    </ul>
+                `;
+            }
+            
+            previewContainer.appendChild(slideDiv);
+        });
+    }
+}
+
 // Export functions for use in other modules
 window.generatePreview = generatePreview;
+window.displayPreview = displayPreview;
 window.renderSlidesProgressively = renderSlidesProgressively;
