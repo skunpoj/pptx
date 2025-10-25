@@ -58,7 +58,7 @@ function getIconBadge(slide, theme) {
     const emoji = slide.graphics?.icons?.[0]?.emoji || '📋';
     return `
     <div style="width: 38px; height: 38px; background: linear-gradient(135deg, ${theme.colorAccent} 0%, ${theme.colorPrimary} 50%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-        ${emoji}
+        <p style="margin: 0;">${emoji}</p>
     </div>`;
 }
 
@@ -194,11 +194,11 @@ ${getDecorativeElements(theme, 'content')}
         <div class="fill-height" style="display: flex; gap: 1.5rem; padding-bottom: 1rem;">
             <div style="flex: 1; background: #f8f9fa; border: 2px solid ${theme.colorAccent}; border-radius: 8px; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                 <div style="text-align: center; color: ${theme.colorPrimary}; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">
-                    📊 ${escapeHtml(slide.chart.title || 'Chart')}
+                    <p style="margin: 0;">📊 ${escapeHtml(slide.chart.title || 'Chart')}</p>
                 </div>
                 <div style="background: white; border: 2px dashed ${theme.colorSecondary}; border-radius: 8px; padding: 1rem; width: 100%; text-align: center; color: ${theme.colorSecondary}; font-size: 0.9rem;">
-                    ${slide.chart.type.toUpperCase()} CHART<br/>
-                    ${slide.chart.data.labels.length} data points
+                    <p style="margin: 0;">${slide.chart.type.toUpperCase()} CHART<br/>
+                    ${slide.chart.data.labels.length} data points</p>
                 </div>
             </div>
             ${slide.content && slide.content.length > 0 ? `
