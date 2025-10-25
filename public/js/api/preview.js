@@ -502,3 +502,10 @@ function displayPreview(slideData) {
 window.generatePreview = generatePreview;
 window.displayPreview = displayPreview;
 window.renderSlidesProgressively = renderSlidesProgressively;
+
+// Ensure the function is available immediately
+if (typeof window.generatePreview === 'function') {
+    console.log('✅ generatePreview function loaded successfully');
+} else {
+    console.error('❌ Failed to load generatePreview function');
+}

@@ -8,7 +8,15 @@
 // These will be set by individual modules when they load
 window.generatePreview = window.generatePreview || function() {
     console.error('generatePreview not loaded yet');
-    alert('Preview functionality is loading, please try again in a moment');
+    // Check if the function is available after a short delay
+    setTimeout(() => {
+        if (typeof window.generatePreview === 'function' && window.generatePreview.toString().indexOf('not loaded yet') === -1) {
+            console.log('✅ generatePreview is now available, retrying...');
+            window.generatePreview();
+        } else {
+            alert('Preview functionality is loading, please try again in a moment');
+        }
+    }, 100);
 };
 window.generatePresentation = window.generatePresentation || function() {
     console.error('generatePresentation not loaded yet');
@@ -30,6 +38,16 @@ window.modifyCurrentSlide = window.modifyCurrentSlide || function() {
 // Initialize API on page load
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📡 API modules loaded successfully');
+    
+    // Verify critical functions are loaded
+    const criticalFunctions = ['generatePreview', 'generatePresentation', 'displayPreview'];
+    criticalFunctions.forEach(funcName => {
+        if (typeof window[funcName] === 'function') {
+            console.log(`✅ ${funcName} loaded successfully`);
+        } else {
+            console.warn(`⚠️ ${funcName} not loaded yet`);
+        }
+    });
     
     // Check server capabilities
     if (window.checkServerCapabilities) {

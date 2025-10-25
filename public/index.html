@@ -116,34 +116,6 @@ Our Products
                 <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 AI Idea Generator (Optional)</h3>
                 <p class="section-description" style="color: #555; margin-bottom: 1rem;">Don't have content yet? Let AI expand your simple idea into detailed presentation content</p>
                 
-                <!-- Output File Type Selection -->
-                <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #ff9a56;">
-                    <label style="display: block; font-weight: 700; color: #d35400; margin-bottom: 0.5rem;">📄 Output File Type:</label>
-                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="pptx-direct" checked onchange="window.selectOutputType('pptx-direct')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📊 PowerPoint Direct (.pptx)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="pptx-skill" onchange="window.selectOutputType('pptx-skill')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📊 PowerPoint Skill (.pptx)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="docx" onchange="window.selectOutputType('docx')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📝 Word (.docx)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="pdf" onchange="window.selectOutputType('pdf')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📄 PDF (.pdf)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="xlsx" onchange="window.selectOutputType('xlsx')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📈 Excel (.xlsx)</span>
-                        </label>
-                    </div>
-                    <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #666;">Select the output format for your generated document</p>
-                </div>
-                
                 <!-- Idea Input -->
                 <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
                 
@@ -185,10 +157,39 @@ Our Products
                     </div>
                 </div>
                 
+                <!-- Expand Idea Button - Moved to top priority -->
                 <button class="btn-primary btn-full" onclick="window.generateFromPrompt()" id="promptBtn">
                     🚀 Expand Idea into Full Content
                 </button>
                 <p class="helper-text">This creates detailed text content that you can edit above before generating slides</p>
+                
+                <!-- Output File Type Selection - Moved under slide number input -->
+                <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #ff9a56;">
+                    <label style="display: block; font-weight: 700; color: #d35400; margin-bottom: 0.5rem;">📄 Output File Type:</label>
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pptx-direct" checked onchange="window.selectOutputType('pptx-direct')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333;">📊 PowerPoint Direct (.pptx)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pptx-skill" onchange="window.selectOutputType('pptx-skill')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333;">📊 PowerPoint Skill (.pptx)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="docx" onchange="window.selectOutputType('docx')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333;">📝 Word (.docx)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pdf" onchange="window.selectOutputType('pdf')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333;">📄 PDF (.pdf)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="xlsx" onchange="window.selectOutputType('xlsx')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333;">📈 Excel (.xlsx)</span>
+                        </label>
+                    </div>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #666;">Select the output format for your generated document</p>
+                </div>
             </div>
 
             <!-- Right: Color Theme Selector -->
