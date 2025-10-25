@@ -65,10 +65,11 @@ function escapeHtml(text) {
 }
 
 /**
- * Validates slide data structure
- * @param {Object} slideData - Slide data to validate
+ * Validates and sanitizes slide data to prevent overflow errors
+ * Automatically splits slides with too many bullets into multiple slides
+ * @param {Object} slideData - Slide data to validate and sanitize
  * @throws {Error} - If validation fails
- * @returns {boolean} - True if valid
+ * @returns {Object} - Sanitized slide data with split slides
  */
 function validateSlideData(slideData) {
     if (!slideData) {
@@ -87,7 +88,70 @@ function validateSlideData(slideData) {
         throw new Error('No slides in slide data');
     }
     
-    return true;
+    // Split oversized slides into multiple slides
+    slideData.slides = splitOversizedSlides(slideData.slides);
+    
+    return slideData;
+}
+
+/**
+ * Splits slides with too many bullets into multiple slides
+ * @param {Array} slides - Array of slide objects
+ * @returns {Array} - New slides array with split slides
+ */
+function splitOversizedSlides(slides) {
+    const MAX_BULLETS = 7;
+    const newSlides = [];
+    
+    for (const slide of slides) {
+        // Skip title and chart slides
+        if (slide.type === 'title' || (slide.layout === 'chart' && slide.chart)) {
+            newSlides.push(slide);
+            continue;
+        }
+        
+        // Check if slide has too many bullets
+        if (slide.content && Array.isArray(slide.content) && slide.content.length > MAX_BULLETS) {
+            console.log(`📄 Splitting slide "${slide.title}" (${slide.content.length} bullets) into multiple slides...`);
+            
+            // Calculate how many parts we need
+            const numParts = Math.ceil(slide.content.length / MAX_BULLETS);
+            
+            for (let i = 0; i < numParts; i++) {
+                const start = i * MAX_BULLETS;
+                const end = Math.min(start + MAX_BULLETS, slide.content.length);
+                const partContent = slide.content.slice(start, end);
+                
+                // Create new slide for this part
+                const partSlide = {
+                    ...slide,
+                    title: numParts > 1 ? `${slide.title} - Part ${i + 1}` : slide.title,
+                    content: partContent
+                };
+                
+                newSlides.push(partSlide);
+                console.log(`   ✓ Part ${i + 1}/${numParts}: ${partContent.length} bullets`);
+            }
+        } else {
+            // Slide is fine, keep as is
+            newSlides.push(slide);
+        }
+    }
+    
+    const addedSlides = newSlides.length - slides.length;
+    if (addedSlides > 0) {
+        console.log(`✅ Split complete: ${slides.length} → ${newSlides.length} slides (+${addedSlides} slides)`);
+    }
+    
+    return newSlides;
+}
+
+/**
+ * Legacy function - kept for backwards compatibility
+ * @deprecated Use splitOversizedSlides instead
+ */
+function sanitizeSlide(slide) {
+    return slide;
 }
 
 /**
@@ -166,6 +230,8 @@ module.exports = {
     generateCSS,
     escapeHtml,
     validateSlideData,
+    splitOversizedSlides,
+    sanitizeSlide,
     parseAIResponse,
     createSessionId,
     sendErrorResponse,
