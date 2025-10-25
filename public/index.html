@@ -227,11 +227,13 @@
         }
         
         .preview {
-            min-height: 400px;
-            height: auto;
-            max-height: 100%;
+            height: 400px;
             overflow-y: auto;
             padding: 0.5rem;
+        }
+        
+        .content-textarea {
+            height: 400px;
         }
         
         .preview:empty::before {
@@ -422,7 +424,7 @@
                 <!-- Main Content Editor -->
                 <div style="margin-bottom: 1rem;">
                     <label style="display: block; font-size: 0.9rem; color: #555; margin-bottom: 0.5rem; font-weight: 600;">📝 Presentation Content (edit as needed):</label>
-                    <textarea id="textInput">Digital Transformation Strategy for Modern Enterprises
+                    <textarea id="textInput" class="content-textarea">Digital Transformation Strategy for Modern Enterprises
 
 Digital transformation is no longer optional for businesses seeking to remain competitive in today's fast-paced market. Companies must embrace cloud computing, data analytics, and automation to streamline operations and improve customer experiences.
 

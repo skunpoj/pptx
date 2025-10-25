@@ -453,12 +453,22 @@ ${text}`;
         // Symlink global packages
         const globalModulesPath = '/usr/local/lib/node_modules';
         try {
+            // Check if global modules exist
+            try {
+                await fs.access(globalModulesPath);
+                console.log('Global node_modules found at:', globalModulesPath);
+            } catch (e) {
+                console.error('Global node_modules not found at:', globalModulesPath);
+                throw new Error('Global node_modules directory not found');
+            }
+            
             // Create symlinks for the packages
             await fs.symlink(
                 path.join(globalModulesPath, 'pptxgenjs'),
                 path.join(nodeModulesPath, 'pptxgenjs'),
                 'dir'
             );
+            console.log('✓ Symlinked pptxgenjs');
             
             // Create @ant directory for scoped package
             await fs.mkdir(path.join(nodeModulesPath, '@ant'), { recursive: true });
@@ -467,6 +477,7 @@ ${text}`;
                 path.join(nodeModulesPath, '@ant', 'html2pptx'),
                 'dir'
             );
+            console.log('✓ Symlinked @ant/html2pptx');
             
             // Also symlink dependencies that pptxgenjs needs
             const depsToLink = ['jszip', 'sharp', 'playwright'];
@@ -477,16 +488,27 @@ ${text}`;
                         path.join(nodeModulesPath, dep),
                         'dir'
                     );
+                    console.log(`✓ Symlinked ${dep}`);
                 } catch (e) {
-                    // Dependency might not exist or already linked
+                    console.log(`⚠ Could not symlink ${dep}:`, e.message);
                 }
             }
             
-            console.log('Symlinks created for dependencies');
+            console.log('All symlinks created successfully');
         } catch (symlinkError) {
-            // Fallback: If symlinks fail, try copying
+            // Fallback: If symlinks fail, try npm install
             console.log('Symlink failed, falling back to npm install:', symlinkError.message);
-            await execPromise(`cd ${workDir} && npm install pptxgenjs @ant/html2pptx --no-save --no-audit --no-fund 2>&1`);
+            try {
+                const { stdout, stderr } = await execPromise(
+                    `cd ${workDir} && npm install pptxgenjs @ant/html2pptx jszip sharp playwright --no-save --no-audit --no-fund 2>&1`,
+                    { timeout: 120000 } // 2 minute timeout for npm install
+                );
+                console.log('npm install output:', stdout);
+                if (stderr) console.error('npm install stderr:', stderr);
+            } catch (npmError) {
+                console.error('npm install also failed:', npmError);
+                throw new Error('Failed to install dependencies: ' + npmError.message);
+            }
         }
         
         // Generate CSS file with theme
@@ -501,19 +523,43 @@ ${text}`;
             const filename = `slide${i}.html`;
             await fs.writeFile(path.join(workDir, filename), htmlContent);
             htmlFiles.push(filename);
+            console.log(`Created ${filename} (${htmlContent.length} bytes)`);
         }
+        console.log(`Generated ${htmlFiles.length} HTML slides`);
         
         // Generate conversion script
         const scriptContent = generateConversionScript(htmlFiles, finalSlideData.slides);
         await fs.writeFile(path.join(workDir, 'convert.js'), scriptContent);
+        console.log('Conversion script created');
+        console.log('Script preview:', scriptContent.substring(0, 500));
         
         // Run conversion
         console.log(`Running conversion in ${workDir}`);
-        const { stdout, stderr } = await execPromise(
-            `cd ${workDir} && node convert.js 2>&1`
-        );
-        console.log('Conversion output:', stdout);
-        if (stderr) console.error('Conversion stderr:', stderr);
+        console.log('HTML files:', htmlFiles);
+        console.log('Number of slides:', finalSlideData.slides.length);
+        
+        try {
+            const { stdout, stderr } = await execPromise(
+                `cd ${workDir} && node convert.js 2>&1`,
+                { timeout: 60000 } // 60 second timeout
+            );
+            console.log('Conversion output:', stdout);
+            if (stderr) console.error('Conversion stderr:', stderr);
+        } catch (conversionError) {
+            console.error('Conversion script failed:', conversionError);
+            console.error('stdout:', conversionError.stdout);
+            console.error('stderr:', conversionError.stderr);
+            
+            // List files in workspace for debugging
+            try {
+                const files = await fs.readdir(workDir);
+                console.log('Files in workspace:', files);
+            } catch (e) {
+                console.error('Could not list workspace files:', e);
+            }
+            
+            throw new Error(`Conversion failed: ${conversionError.stderr || conversionError.stdout || conversionError.message}`);
+        }
         
         // Read the generated PowerPoint
         const pptxPath = path.join(workDir, 'presentation.pptx');
@@ -523,7 +569,16 @@ ${text}`;
             await fs.access(pptxPath);
         } catch (error) {
             console.error('PPTX file not found at:', pptxPath);
-            throw new Error(`Failed to create presentation file. Path: ${pptxPath}`);
+            
+            // List files in workspace for debugging
+            try {
+                const files = await fs.readdir(workDir);
+                console.log('Files in workspace after conversion:', files);
+            } catch (e) {
+                console.error('Could not list workspace files:', e);
+            }
+            
+            throw new Error(`Presentation file was not created. Check server logs for details.`);
         }
         
         const pptxBuffer = await fs.readFile(pptxPath);
@@ -757,19 +812,34 @@ const require = createRequire(import.meta.url);
 const pptxgen = require("pptxgenjs");
 
 async function createPresentation() {
-    const pptx = new pptxgen();
-    pptx.layout = "LAYOUT_16x9";
-    
-    ${htmlFiles.map((file, idx) => `
-    // Slide ${idx + 1}: ${slides[idx].title || 'Title'}
-    await html2pptx("${file}", pptx);
-    `).join('\n')}
-    
-    await pptx.writeFile("presentation.pptx");
-    console.log("Presentation created successfully!");
+    try {
+        console.log("Starting presentation creation...");
+        console.log("pptxgen loaded:", typeof pptxgen);
+        console.log("html2pptx loaded:", typeof html2pptx);
+        
+        const pptx = new pptxgen();
+        pptx.layout = "LAYOUT_16x9";
+        console.log("PPTX instance created");
+        
+        ${htmlFiles.map((file, idx) => `
+        // Slide ${idx + 1}: ${slides[idx].title || 'Title'}
+        console.log("Processing ${file}...");
+        await html2pptx("${file}", pptx);
+        console.log("✓ ${file} added");
+        `).join('\n')}
+        
+        console.log("Writing presentation file...");
+        await pptx.writeFile("presentation.pptx");
+        console.log("✓ Presentation created successfully!");
+        process.exit(0);
+    } catch (error) {
+        console.error("ERROR in conversion script:", error);
+        console.error("Stack:", error.stack);
+        process.exit(1);
+    }
 }
 
-createPresentation().catch(console.error);`;
+createPresentation();`;
 }
 
 function escapeHtml(text) {
