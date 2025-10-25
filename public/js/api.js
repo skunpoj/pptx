@@ -403,6 +403,24 @@ async function generatePresentation() {
     console.log('  Slides:', window.currentSlideData.slides.length);
     console.log('  Template:', window.templateFile ? window.templateFile.name : 'None');
     
+    // Show detailed progress steps
+    const slideCount = window.currentSlideData.slides.length;
+    const progressSteps = [
+        `⏳ Step 1/5: Setting up workspace...`,
+        `⏳ Step 2/5: Generating ${slideCount} HTML slides...`,
+        `⏳ Step 3/5: Creating slide designs...`,
+        `⏳ Step 4/5: Converting to PowerPoint format (30-60s)...`,
+        `⏳ Step 5/5: Preparing download...`
+    ];
+    
+    let currentStep = 0;
+    const statusInterval = setInterval(() => {
+        if (currentStep < progressSteps.length) {
+            showStatus(progressSteps[currentStep], 'info');
+            currentStep++;
+        }
+    }, 8000); // Update every 8 seconds
+    
     try {
         let response;
         
@@ -429,6 +447,8 @@ async function generatePresentation() {
                 body: JSON.stringify({ text, apiKey, provider: window.currentProvider, slideData: window.currentSlideData })
             });
         }
+        
+        clearInterval(statusInterval);
         
         console.log('  Response status:', response.status, response.statusText);
         
@@ -474,6 +494,7 @@ async function generatePresentation() {
         console.log('✅ PowerPoint generation complete!');
         showStatus('✅ Professional presentation downloaded successfully!', 'success');
     } catch (error) {
+        clearInterval(statusInterval);
         console.error('❌ PowerPoint generation error:', error);
         
         if (error.message.startsWith('AUTHENTICATION_ERROR:')) {

@@ -418,11 +418,26 @@ app.post('/api/modify-slides', async (req, res) => {
 });
 
 // ========================================
+// GENERATION PROGRESS POLLING ENDPOINT
+// ========================================
+
+app.get('/api/progress/:sessionId', (req, res) => {
+    const { sessionId } = req.params;
+    const progress = global[`progress_${sessionId}`];
+    
+    if (progress) {
+        res.json(progress);
+    } else {
+        res.json({ message: 'No progress data', step: 0, total: 8 });
+    }
+});
+
+// ========================================
 // PRESENTATION GENERATION ENDPOINT
 // ========================================
 
 app.post('/api/generate', async (req, res) => {
-    const { text, apiKey, provider = 'anthropic', slideData } = req.body;
+    const { text, apiKey, provider = 'anthropic', slideData, streamProgress = false } = req.body;
     
     console.log('\n' + '='.repeat(80));
     console.log('POWERPOINT GENERATION REQUEST');
@@ -438,15 +453,25 @@ app.post('/api/generate', async (req, res) => {
     console.log('📁 Session ID:', sessionId);
     console.log('📁 Working directory:', workDir);
     
+    // Helper function to send progress updates
+    const sendProgress = (message, step, total) => {
+        if (streamProgress && !res.headersSent) {
+            // Store progress in global state for polling
+            global[`progress_${sessionId}`] = { message, step, total };
+        }
+    };
+    
     try {
         // Get or generate slide data
         let finalSlideData;
         
         if (slideData) {
             console.log('✓ Using provided slide data');
+            sendProgress('Using cached slide data', 1, 8);
             finalSlideData = slideData;
         } else {
             console.log('⏳ Generating slide data from AI...');
+            sendProgress('Generating slide structure from AI...', 1, 8);
             const userPrompt = await getSlideDesignPrompt(text);
             const responseText = await callAI(provider, apiKey, userPrompt);
             finalSlideData = parseAIResponse(responseText);
@@ -457,45 +482,58 @@ app.post('/api/generate', async (req, res) => {
         
         // Validate
         console.log('⏳ Validating slide data...');
+        sendProgress('Validating slide structure...', 2, 8);
         validateSlideData(finalSlideData);
         console.log('✓ Validation passed');
         
         // Setup workspace
         console.log('⏳ Setting up workspace...');
+        sendProgress('Setting up workspace...', 3, 8);
         await setupWorkspace(workDir);
         console.log('✓ Workspace created');
         
         console.log('⏳ Installing dependencies...');
+        sendProgress('Installing dependencies...', 4, 8);
         await setupDependencies(workDir);
         console.log('✓ Dependencies ready');
         
         // Generate CSS file
         console.log('⏳ Generating CSS...');
+        sendProgress('Generating CSS theme...', 5, 8);
         const cssContent = generateCSS(finalSlideData.designTheme);
         await fs.writeFile(path.join(workDir, 'theme.css'), cssContent);
         console.log('✓ CSS file created');
         
         // Generate HTML slides
         console.log('⏳ Generating HTML slides...');
+        sendProgress(`Generating HTML for ${finalSlideData.slides.length} slides...`, 5, 8);
         const htmlFiles = [];
-        for (let i = 0; i < finalSlideData.slides.length; i++) {
+        const totalSlides = finalSlideData.slides.length;
+        
+        for (let i = 0; i < totalSlides; i++) {
             const slide = finalSlideData.slides[i];
             const htmlContent = generateSlideHTML(slide, finalSlideData.designTheme);
             const filename = `slide${i}.html`;
             await fs.writeFile(path.join(workDir, filename), htmlContent);
             htmlFiles.push(filename);
             console.log(`  ✓ Created ${filename} (${slide.type}): ${slide.title}`);
+            
+            // Send progress for each slide
+            const slideProgress = Math.round(((i + 1) / totalSlides) * 100);
+            sendProgress(`Generating slide ${i + 1}/${totalSlides}: ${slide.title.substring(0, 40)}...`, 5, 8);
         }
         console.log(`✓ Generated ${htmlFiles.length} HTML files`);
         
         // Generate and run conversion script
         console.log('⏳ Generating conversion script...');
+        sendProgress('Generating conversion script...', 6, 8);
         const scriptContent = generateConversionScript(htmlFiles, finalSlideData.slides);
         await fs.writeFile(path.join(workDir, 'convert.js'), scriptContent);
         console.log('✓ Conversion script created');
         
         console.log('⏳ Running conversion script (this may take 30-60 seconds)...');
         console.log('   Launching Playwright/Chromium for HTML rendering...');
+        sendProgress('Converting HTML to PowerPoint (30-60s)...', 7, 8);
         const { stdout, stderr } = await runScript(workDir, 'convert.js');
         console.log('✓ Conversion completed');
         
@@ -513,12 +551,18 @@ app.post('/api/generate', async (req, res) => {
         
         // Read and send PowerPoint file
         console.log('⏳ Reading PowerPoint file...');
+        sendProgress('Preparing download...', 8, 8);
         const pptxPath = path.join(workDir, 'presentation.pptx');
         await fs.access(pptxPath); // Check if file exists
         console.log('✓ PowerPoint file found:', pptxPath);
         
         const pptxBuffer = await fs.readFile(pptxPath);
         console.log('✓ PowerPoint file size:', (pptxBuffer.length / 1024).toFixed(2), 'KB');
+        
+        // Clear progress before sending file
+        if (streamProgress) {
+            delete global[`progress_${sessionId}`];
+        }
         
         sendFileDownload(res, pptxBuffer, 'AI-Presentation.pptx');
         console.log('✓ PowerPoint file sent to client');

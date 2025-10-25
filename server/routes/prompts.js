@@ -124,5 +124,24 @@ router.get('/prompts/:key', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/examples
+ * Returns example templates from prompts.json
+ */
+router.get('/examples', async (req, res) => {
+    try {
+        const prompts = await loadPrompts();
+        
+        if (prompts.exampleTemplates && prompts.exampleTemplates.templates) {
+            res.json(prompts.exampleTemplates.templates);
+        } else {
+            res.status(404).json({ error: 'Example templates not found in prompts.json' });
+        }
+    } catch (error) {
+        console.error('Error loading example templates:', error);
+        res.status(500).json({ error: 'Failed to load example templates: ' + error.message });
+    }
+});
+
 module.exports = router;
 
