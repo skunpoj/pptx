@@ -1061,11 +1061,11 @@ function closePresentationViewer() {
 }
 
 /**
- * View PDF in browser using standard HTML embed tag
+ * View PDF in browser using standard HTML iframe tag
  * @param {string} sessionId - Session identifier
  */
 function viewPDF(sessionId) {
-    // Create full-screen PDF viewer modal
+    // Create simple full-screen PDF viewer with iframe
     const modal = document.createElement('div');
     modal.id = 'pdfViewerModal';
     modal.style.cssText = `
@@ -1082,50 +1082,40 @@ function viewPDF(sessionId) {
     `;
     
     modal.innerHTML = `
-        <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #dc3545; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center;">
             <div>
                 <h2 style="margin: 0; font-size: 1.5rem;">📄 PDF Viewer</h2>
-                <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">AI-Presentation-Pro.pdf</p>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; opacity: 0.9;">Use browser PDF controls to navigate</p>
             </div>
             <button onclick="document.getElementById('pdfViewerModal').remove(); document.body.style.overflow = '';" 
-                style="background: rgba(255,255,255,0.2); border: 2px solid white; color: white; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s ease;">
+                style="background: rgba(255,255,255,0.2); border: 2px solid white; color: white; padding: 0.5rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold;">
                 ✕ Close
             </button>
         </div>
         
-        <div style="flex: 1; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; overflow: hidden;">
-            <!-- PDF Viewer using standard HTML embed tag -->
-            <embed 
+        <div style="flex: 1; padding: 2rem; overflow: hidden;">
+            <!-- Standard HTML iframe for PDF - Simple and effective -->
+            <iframe 
                 src="/view-pdf/${sessionId}" 
                 type="application/pdf" 
                 width="100%" 
                 height="100%" 
-                style="border: none; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-            
-            <!-- Fallback for browsers that don't support embed -->
-            <noscript>
-                <p style="color: white; text-align: center;">Your browser doesn't support PDF viewing. 
-                <a href="/download/${sessionId}/presentation.pdf" style="color: #ffc107;">Download PDF</a></p>
-            </noscript>
+                style="border: none; border-radius: 8px; background: white;">
+            </iframe>
         </div>
         
-        <div style="background: #1a1a1a; padding: 1rem 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-            <a href="/download/${sessionId}/presentation.pdf" download="AI-Presentation-Pro.pdf" class="viewer-btn" style="background: #28a745; text-decoration: none;">
+        <div style="background: #1a1a1a; padding: 1rem; text-align: center;">
+            <a href="/download/${sessionId}/presentation.pdf" download="AI-Presentation-Pro.pdf" 
+                style="background: #28a745; color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold;">
                 ⬇️ Download PDF
             </a>
-            <a href="/download/${sessionId}/presentation.pptx" download="AI-Presentation-Pro.pptx" class="viewer-btn">
-                ⬇️ Download PowerPoint
-            </a>
-            <button onclick="window.print()" class="viewer-btn" style="background: #6c757d;">
-                🖨️ Print PDF
-            </button>
         </div>
     `;
     
     document.body.appendChild(modal);
     document.body.style.overflow = 'hidden';
     
-    showStatus('📄 PDF viewer opened', 'success');
+    showStatus('📄 Opening PDF viewer...', 'info');
 }
 
 /**

@@ -182,6 +182,15 @@
                 </div>
                 
                 <div class="viewer-actions">
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; background: #f0f4ff; padding: 0.5rem; border-radius: 8px;">
+                        <button class="btn btn-primary" onclick="switchViewMode('slides')" id="viewModeSlides" style="flex: 1;">
+                            👁️ View Slides
+                        </button>
+                        <button class="btn btn-secondary" onclick="switchViewMode('pdf')" id="viewModePDF" style="flex: 1;">
+                            📄 View PDF
+                        </button>
+                    </div>
+                    
                     <button class="btn btn-primary" onclick="downloadPresentation()">
                         ⬇️ Download PowerPoint
                     </button>
@@ -197,7 +206,8 @@
                 </div>
             </div>
             
-            <div class="slide-viewer">
+            <!-- Slide Viewer (default) -->
+            <div class="slide-viewer" id="slideViewerContainer">
                 <div class="slide-navigation">
                     <button class="btn btn-primary" onclick="previousSlide()" id="prevBtn">
                         ◀ Previous
@@ -213,6 +223,30 @@
                 <p style="text-align: center; margin-top: 2rem; color: #666; font-size: 0.9rem;">
                     💡 Use arrow keys (← →) to navigate slides • Press Esc to exit fullscreen
                 </p>
+            </div>
+            
+            <!-- PDF Viewer (hidden by default) -->
+            <div class="slide-viewer" id="pdfViewerContainer" style="display: none;">
+                <div style="background: white; border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1rem;">
+                    <p style="margin: 0; color: #666; font-size: 1rem;">
+                        📄 PDF Preview • Use browser's built-in PDF controls to navigate
+                    </p>
+                </div>
+                
+                <!-- Standard HTML iframe for PDF viewing -->
+                <iframe 
+                    id="pdfFrame"
+                    type="application/pdf"
+                    width="100%" 
+                    height="600px"
+                    style="border: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: white;">
+                </iframe>
+                
+                <div style="text-align: center; margin-top: 1rem;">
+                    <a href="#" id="pdfDownloadLink" download="AI-Presentation-Pro.pdf" class="btn btn-primary" style="text-decoration: none;">
+                        ⬇️ Download PDF
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -360,6 +394,33 @@
             }).catch(() => {
                 prompt('Copy this link:', shareUrl);
             });
+        }
+        
+        function switchViewMode(mode) {
+            const slideViewer = document.getElementById('slideViewerContainer');
+            const pdfViewer = document.getElementById('pdfViewerContainer');
+            const slidesBtn = document.getElementById('viewModeSlides');
+            const pdfBtn = document.getElementById('viewModePDF');
+            
+            if (mode === 'slides') {
+                slideViewer.style.display = 'block';
+                pdfViewer.style.display = 'none';
+                slidesBtn.className = 'btn btn-primary';
+                pdfBtn.className = 'btn btn-secondary';
+            } else if (mode === 'pdf') {
+                slideViewer.style.display = 'none';
+                pdfViewer.style.display = 'block';
+                slidesBtn.className = 'btn btn-secondary';
+                pdfBtn.className = 'btn btn-primary';
+                
+                // Load PDF in iframe
+                const pdfFrame = document.getElementById('pdfFrame');
+                const pdfDownloadLink = document.getElementById('pdfDownloadLink');
+                const pdfUrl = `/view-pdf/${shareId}`;
+                
+                pdfFrame.src = pdfUrl;
+                pdfDownloadLink.href = `/download/${shareId}/presentation.pdf`;
+            }
         }
         
         // Load on page load
