@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Preview.js Syntax Test</title>
+</head>
+<body>
+    <h1>Preview.js Syntax Test</h1>
+    <div id="result"></div>
+    
+    <script src="/js/api/capabilities.js"></script>
+    <script src="/js/api/preview.js?v=2"></script>
+    <script>
+        const resultDiv = document.getElementById('result');
+        
+        setTimeout(() => {
+            if (typeof window.generatePreview === 'function') {
+                resultDiv.innerHTML = '<h2 style="color: green;">✅ SUCCESS! generatePreview is loaded</h2>';
+                resultDiv.innerHTML += '<p>Function source:</p><pre>' + window.generatePreview.toString().substring(0, 200) + '...</pre>';
+            } else {
+                resultDiv.innerHTML = '<h2 style="color: red;">❌ FAILED! generatePreview is ' + typeof window.generatePreview + '</h2>';
+            }
+            
+            if (typeof window.getApiKey === 'function') {
+                resultDiv.innerHTML += '<p style="color: green;">✅ getApiKey is loaded</p>';
+            } else {
+                resultDiv.innerHTML += '<p style="color: red;">❌ getApiKey is NOT loaded</p>';
+            }
+        }, 500);
+    </script>
+</body>
+</html>
+

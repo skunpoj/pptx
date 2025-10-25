@@ -73,7 +73,8 @@ async function generatePreview() {
     
     console.log(`📝 Processing ${text.length} characters of content`);
     
-    const apiKey = getApiKey();
+    // Get API key with safety check
+    const apiKey = (typeof getApiKey === 'function') ? getApiKey() : null;
     if (!apiKey) {
         console.warn('⚠️ No API key configured');
         alert('Please enter your API key first in Advanced Configuration section');
@@ -148,7 +149,9 @@ async function generatePreview() {
             hidePreviewProgress();
             
             // Show success message
-            showNotification('✅ Preview generated successfully!', 'success');
+            if (typeof showNotification === 'function') {
+                showNotification('✅ Preview generated successfully!', 'success');
+            }
         } else {
             console.error('❌ Invalid slide data:', slideData);
             throw new Error('Invalid preview data received');
@@ -157,7 +160,9 @@ async function generatePreview() {
     } catch (error) {
         console.error('Preview generation failed:', error);
         hidePreviewProgress();
-        showNotification('❌ Preview generation failed: ' + error.message, 'error');
+        if (typeof showNotification === 'function') {
+            showNotification('❌ Preview generation failed: ' + error.message, 'error');
+        }
     } finally {
         // Restore button state
         previewBtn.textContent = originalText;

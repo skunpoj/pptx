@@ -157,6 +157,52 @@ body {
 }
 
 /* ==========================================================================
+   FLOATING FREE BADGE
+   ========================================================================== */
+
+.floating-badge {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 20px rgba(40, 167, 69, 0.4);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: floatBadge 3s ease-in-out infinite;
+    cursor: default;
+}
+
+@keyframes floatBadge {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+.badge-icon {
+    font-size: 1.2rem;
+    animation: rotate 4s linear infinite;
+}
+
+@keyframes rotate {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(10deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(-10deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.badge-text {
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
    HEADER
    ========================================================================== */
 
@@ -164,9 +210,9 @@ body {
     text-align: center;
     color: #333;
     margin-bottom: 2rem;
-    padding: 2.5rem 1rem;
+    padding: 1.5rem 1rem;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-    border-radius: 24px;
+    border-radius: 20px;
     border: 2px solid rgba(102, 126, 234, 0.15);
     position: relative;
     overflow: hidden;
@@ -177,9 +223,9 @@ body {
     position: absolute;
     top: -50%;
     right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, transparent 70%);
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.12) 0%, transparent 70%);
     border-radius: 50%;
     animation: float 6s ease-in-out infinite;
 }
@@ -189,59 +235,38 @@ body {
     position: absolute;
     bottom: -50%;
     left: -10%;
-    width: 250px;
-    height: 250px;
-    background: radial-gradient(circle, rgba(118, 75, 162, 0.12) 0%, transparent 70%);
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(118, 75, 162, 0.1) 0%, transparent 70%);
     border-radius: 50%;
     animation: float 8s ease-in-out infinite reverse;
 }
 
 @keyframes float {
     0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
-}
-
-.header-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    padding: 0.5rem 1.25rem;
-    border-radius: 50px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-    animation: pulse 2s ease-in-out infinite;
-    position: relative;
-    z-index: 1;
-}
-
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+    50% { transform: translateY(-15px); }
 }
 
 .brand-name {
-    font-size: 4rem;
+    font-size: 3.2rem;
     margin: 0;
     font-weight: 900;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    letter-spacing: -3px;
+    letter-spacing: -2px;
     line-height: 1;
     position: relative;
     z-index: 1;
-    text-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
 }
 
 .brand-tagline {
-    font-size: 1.3rem;
-    margin: 1rem 0 1.5rem 0;
+    font-size: 1.1rem;
+    margin: 0.75rem 0 1rem 0;
     color: #555;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
     position: relative;
     z-index: 1;
 }
@@ -249,18 +274,18 @@ body {
 .header-features {
     display: flex;
     justify-content: center;
-    gap: 1.5rem;
+    gap: 1rem;
     flex-wrap: wrap;
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     position: relative;
     z-index: 1;
 }
 
 .header-feature {
     background: white;
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 0.9rem;
     border-radius: 50px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: #667eea;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
@@ -276,17 +301,32 @@ body {
 
 /* Responsive header */
 @media (max-width: 768px) {
+    .floating-badge {
+        top: 15px;
+        right: 15px;
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
+    
+    .badge-icon {
+        font-size: 1rem;
+    }
+    
+    .badge-text {
+        font-size: 0.85rem;
+    }
+    
     .header {
-        padding: 2rem 1rem;
+        padding: 1.25rem 1rem;
     }
     
     .brand-name {
-        font-size: 2.8rem;
-        letter-spacing: -2px;
+        font-size: 2.5rem;
+        letter-spacing: -1.5px;
     }
     
     .brand-tagline {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
     
     .header-features {
@@ -295,27 +335,37 @@ body {
     
     .header-feature {
         font-size: 0.75rem;
-        padding: 0.4rem 0.8rem;
+        padding: 0.35rem 0.75rem;
     }
 }
 
 @media (max-width: 480px) {
+    .floating-badge {
+        top: 10px;
+        right: 10px;
+        padding: 0.5rem 0.85rem;
+        font-size: 0.75rem;
+    }
+    
+    .badge-icon {
+        font-size: 0.9rem;
+    }
+    
+    .badge-text {
+        font-size: 0.75rem;
+    }
+    
     .header {
-        padding: 1.5rem 0.75rem;
+        padding: 1rem 0.75rem;
     }
     
     .brand-name {
-        font-size: 2.2rem;
+        font-size: 2rem;
         letter-spacing: -1px;
     }
     
     .brand-tagline {
-        font-size: 1rem;
-    }
-    
-    .header-badge {
-        font-size: 0.85rem;
-        padding: 0.4rem 1rem;
+        font-size: 0.95rem;
     }
     
     .header-features {
@@ -324,7 +374,7 @@ body {
     
     .header-feature {
         font-size: 0.7rem;
-        padding: 0.35rem 0.7rem;
+        padding: 0.3rem 0.65rem;
     }
 }
 

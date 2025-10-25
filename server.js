@@ -69,13 +69,16 @@ app.get('/landing', (req, res) => {
 // Global state for LibreOffice availability
 let LIBREOFFICE_AVAILABLE = false;
 
-// Initialize storage on startup
+// Initialize storage on startup (silent - will log in server listen callback)
+let STORAGE_INITIALIZED = false;
+let PDF_AVAILABLE = false;
+
 (async () => {
     try {
         await initializeStorage();
         LIBREOFFICE_AVAILABLE = await checkLibreOffice();
-        console.log(`📁 File storage initialized`);
-        console.log(`📄 PDF conversion: ${LIBREOFFICE_AVAILABLE ? '✅ Available (LibreOffice)' : '⚠️ Unavailable (install LibreOffice)'}`);
+        PDF_AVAILABLE = LIBREOFFICE_AVAILABLE;
+        STORAGE_INITIALIZED = true;
         
         // Start auto-cleanup scheduler
         startAutoCleanup();
@@ -883,20 +886,45 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`\n${'='.repeat(80)}`);
-    console.log(`🚀 genis.ai - AI Presentation Generator v2.0.0`);
-    console.log(`${'='.repeat(80)}`);
-    console.log(`📍 Server: Railway deployment`);
-    console.log(`🔗 Base URL (for sharing): ${SERVER_CONFIG.BASE_URL}`);
-    console.log(`✨ Features: Adaptive sizing, Progressive rendering, Detailed logging`);
-    console.log('');
-    console.log(`🔍 Health check: /api/health`);
-    console.log(`📋 API version: /api/version`);
-    console.log('');
-    console.log(`✅ Share links will use: ${SERVER_CONFIG.BASE_URL}/view/{id}`);
-    console.log(`   📝 Example: https://genis.ai/view/abc123`);
-    console.log(`   🎯 All shareable links will use genis.ai domain`);
-    console.log(`${'='.repeat(80)}\n`);
+    // Wait for async initialization to complete before logging
+    setTimeout(() => {
+        console.log(`\n${'='.repeat(80)}`);
+        console.log(`🚀 genis.ai - AI Presentation Generator v2.0.0`);
+        console.log(`${'='.repeat(80)}`);
+        
+        // Server info
+        console.log(`📍 Server: Railway deployment (Port ${PORT})`);
+        console.log(`🔗 Base URL: ${SERVER_CONFIG.BASE_URL}`);
+        console.log(`✨ Features: Adaptive sizing, Progressive rendering, Detailed logging`);
+        console.log('');
+        
+        // Storage status
+        if (STORAGE_INITIALIZED) {
+            console.log(`✅ File storage initialized`);
+            console.log(`✅ PDF conversion: ${PDF_AVAILABLE ? 'Available (LibreOffice)' : 'Unavailable'}`);
+            console.log(`✅ Auto-cleanup scheduler started (runs every hour)`);
+        } else {
+            console.log(`⏳ File storage initializing...`);
+        }
+        console.log('');
+        
+        // API endpoints
+        console.log(`📋 API Endpoints:`);
+        console.log(`   • Health: /api/health`);
+        console.log(`   • Version: /api/version`);
+        console.log(`   • Capabilities: /api/capabilities`);
+        console.log('');
+        
+        // Share links configuration
+        console.log(`🔗 Shareable Links Configuration:`);
+        console.log(`   • Domain: ${SERVER_CONFIG.BASE_URL}`);
+        console.log(`   • Format: ${SERVER_CONFIG.BASE_URL}/view/{id}`);
+        console.log(`   • Example: https://genis.ai/view/abc123`);
+        
+        console.log(`${'='.repeat(80)}`);
+        console.log(`✅ Server ready and listening on port ${PORT}`);
+        console.log(`${'='.repeat(80)}\n`);
+    }, 100); // Small delay to let async initialization complete
 });
 
 // ========================================

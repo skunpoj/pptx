@@ -1,6 +1,10 @@
 # genis.ai - AI Presentation Generator
-# Optimized Production Dockerfile for Railway deployment
+# Optimized Production Dockerfile for Railway deployment with layer caching
 FROM node:18-bullseye
+
+# ============================================================================
+# STAGE 1: System Dependencies (rarely changes - cached longest)
+# ============================================================================
 
 # Install LibreOffice for PDF conversion and Python for skills
 RUN apt-get update && apt-get install -y \
@@ -16,31 +20,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Set working directory
-WORKDIR /app
-
-# Environment variables
-# BASE_URL: Hardcoded to genis.ai for all shareable links
-ENV BASE_URL="https://genis.ai"
-
-# Copy only production-essential files
-COPY package.json package-lock.json ./
-COPY server.js ./
-COPY server/ ./server/
-COPY public/ ./public/
-COPY config/ ./config/
-
-# Copy skills folder structure (needed for skill manager)
-COPY skills/ ./skills/
-
-# Install Node.js dependencies (production only)
-# Try npm ci first, fallback to npm install if it fails
-RUN npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund
-
-# Install html2pptx from local .tgz file
-RUN npm install ./skills/pptx/html2pptx.tgz --no-audit --no-fund
+# ============================================================================
+# STAGE 2: Python Dependencies (changes occasionally)
+# ============================================================================
 
 # Install Python dependencies for skills
+# This layer will only rebuild if Python packages change
 RUN pip3 install --no-cache-dir \
     python-docx \
     openpyxl \
@@ -50,8 +35,66 @@ RUN pip3 install --no-cache-dir \
     pandas \
     defusedxml
 
+# ============================================================================
+# STAGE 3: Node.js Dependencies (changes occasionally)
+# ============================================================================
+
+# Set working directory
+WORKDIR /app
+
+# Environment variables
+# BASE_URL: Hardcoded to genis.ai for all shareable links
+ENV BASE_URL="https://genis.ai"
+
+# Copy ONLY package files first for better caching
+# This layer will only rebuild if package.json or package-lock.json changes
+COPY package.json package-lock.json ./
+
+# Install Node.js dependencies (production only)
+# This layer is cached as long as package files don't change
+RUN npm ci --omit=dev --no-audit --no-fund || npm install --omit=dev --no-audit --no-fund
+
+# ============================================================================
+# STAGE 4: Skills Package (changes occasionally)
+# ============================================================================
+
+# Copy ONLY the html2pptx package for installation
+# This minimizes cache invalidation
+COPY skills/pptx/html2pptx.tgz ./temp-html2pptx.tgz
+
+# Install html2pptx from local .tgz file
+RUN npm install ./temp-html2pptx.tgz --no-audit --no-fund && rm ./temp-html2pptx.tgz
+
+# ============================================================================
+# STAGE 5: Playwright (heavy, but rarely changes)
+# ============================================================================
+
 # Install Playwright browsers (minimal)
+# This layer is cached as long as package.json doesn't change
 RUN npx playwright install chromium --with-deps
+
+# ============================================================================
+# STAGE 6: Application Code (changes frequently - copied LAST)
+# ============================================================================
+
+# Copy application code AFTER all dependencies are installed
+# Each folder is a separate layer for maximum cache efficiency
+# Order: least frequently changed → most frequently changed
+
+# Config files (rarely change)
+COPY config/ ./config/
+
+# Skills folder (rarely changes - mostly static)
+COPY skills/ ./skills/
+
+# Server code (changes occasionally)
+COPY server/ ./server/
+
+# Public frontend code (changes frequently)
+COPY public/ ./public/
+
+# Main server file (changes occasionally)
+COPY server.js ./
 
 # Create directories for file storage
 RUN mkdir -p /app/workspace/generated \

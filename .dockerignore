@@ -1,89 +1,87 @@
-# Documentation (not needed in production)
-doc/
-*.md
-!README.md
+# Docker ignore file - excludes unnecessary files from Docker build context
+# This speeds up Docker builds by reducing context size
 
-# Test files (not needed in production)
-test/
-test-*.html
-test-*.js
-test-*.sh
-test-*.bat
-test-*.txt
+# Node modules (will be installed in container)
+node_modules/
+npm-debug.log
 
-# Development files
+# Workspace files (generated at runtime)
+workspace/
+*.pptx
+*.pdf
+*.docx
+*.xlsx
+
+# Git files
 .git/
 .gitignore
 .gitattributes
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# IDE files
+# Development files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+
+# Test files
+test/
+*.test.js
+*.spec.js
+
+# Documentation (not needed in production)
+doc/
+*.md
+!README.md
+FIXES_APPLIED.md
+RAILWAY_DEPLOYMENT.md
+DOCKER.md
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Environment files
+.env
+.env.*
+!.env.example
 
 # OS files
 .DS_Store
 Thumbs.db
-
-# Build artifacts
-dist/
-build/
+desktop.ini
 
 # Logs
 logs/
 *.log
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Backup files
-BKP/
-*.backup
-*.bak
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Temporary files
 tmp/
 temp/
 *.tmp
 
-# Documentation files
-*.txt
-!package.json
-!package-lock.json
+# Build artifacts
+dist/
+build/
+out/
 
-# Skills documentation (exclude heavy files but keep essential structure)
-skills/*/ooxml/
-skills/*/scripts/
-skills/*/check_*.py
-skills/*/convert_*.py
-skills/*/create_*.py
-skills/*/extract_*.py
-skills/*/fill_*.py
+# Scripts (not needed in production container)
+scripts/test-*.sh
+scripts/validate-*.js
+scripts/verify-*.sh
+scripts/verify-*.bat
 
-# Keep essential skills files for skill manager
-!skills/pptx/html2pptx.tgz
-!skills/*/SKILL.md
-!skills/*/LICENSE.txt
-!skills/*/FORMS.md
-!skills/*/REFERENCE.md
-!skills/*/recalc.py
+# Backup files
+backup/
+*.backup
+*-backup.js
+*-old*.js
 
-# Docker files
-Dockerfile.optimized
+# Docker files themselves
+Dockerfile*
 docker-compose.yml
-docker-compose.override.yml
-
-# Deployment files
-verify-deployment.*
-*.deploy
+.dockerignore
