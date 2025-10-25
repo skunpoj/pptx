@@ -13,6 +13,9 @@ const SERVER_CONFIG = {
     FILE_SIZE_LIMIT: 50 * 1024 * 1024, // 50MB
     WORKSPACE_DIR: 'workspace',
     CLEANUP_DELAY: 5000, // 5 seconds
+    // Base URL for shareable links - uses environment variable or auto-detects from request
+    // Set BASE_URL environment variable to override (e.g., BASE_URL=https://genis.ai)
+    BASE_URL: process.env.BASE_URL || null, // null = auto-detect from request
     TIMEOUT: {
         NPM_INSTALL: 120000, // 2 minutes
         CONVERSION: 60000,   // 1 minute

@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>AI Text2PPT Pro</title>
+    <title>genis.ai - AI Presentation Generator</title>
     <link rel="stylesheet" href="/css/styles.css?v=<?php echo time(); ?>">
 </head>
 <body>
@@ -14,9 +14,13 @@
         <!-- Header -->
         <div class="header">
             <div class="header-content">
-                <h1>🎨 AI Text2PPT Pro</h1>
-                <button onclick="showWelcomeModal()" class="user-manual-btn" title="User Manual & Features">
-                    📖
+                <div class="brand-section">
+                    <h1 class="brand-name">genis.ai</h1>
+                    <p class="brand-tagline">Professional Presentations Powered by AI</p>
+                </div>
+                <button onclick="showWelcomeModal()" class="help-button" title="Features & User Guide">
+                    <span class="help-icon">?</span>
+                    <span class="help-text">Help</span>
                 </button>
             </div>
         </div>
@@ -113,14 +117,20 @@ Our Products
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
             <!-- Left: AI Idea Generator -->
             <div class="card idea-generator-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border: 3px solid #ff9a56;">
-                <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 AI Idea Generator (Optional)</h3>
+                <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 AI Idea Generator</h3>
                 <p class="section-description" style="color: #555; margin-bottom: 1rem;">Don't have content yet? Let AI expand your simple idea into detailed presentation content</p>
                 
                 <!-- Idea Input -->
                 <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
                 
+                <!-- Expand Idea Button - Right after textarea -->
+                <button class="btn-primary btn-full" onclick="window.generateFromPrompt()" id="promptBtn" style="margin-top: 1rem;">
+                    🚀 Expand Idea into Full Content
+                </button>
+                <p class="helper-text" style="margin-top: 0.5rem;">This creates detailed text content that you can edit above before generating slides</p>
+                
                 <!-- File Upload -->
-                <div class="file-upload-section">
+                <div class="file-upload-section" style="margin-top: 1.5rem;">
                     <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
                     <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
                     
@@ -157,13 +167,7 @@ Our Products
                     </div>
                 </div>
                 
-                <!-- Expand Idea Button - Moved to top priority -->
-                <button class="btn-primary btn-full" onclick="window.generateFromPrompt()" id="promptBtn">
-                    🚀 Expand Idea into Full Content
-                </button>
-                <p class="helper-text">This creates detailed text content that you can edit above before generating slides</p>
-                
-                <!-- Output File Type Selection - Moved under slide number input -->
+                <!-- Output File Type Selection -->
                 <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #ff9a56;">
                     <label style="display: block; font-weight: 700; color: #d35400; margin-bottom: 0.5rem;">📄 Output File Type:</label>
                     <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
@@ -326,22 +330,26 @@ Our Products
 
         <!-- Footer -->
         <div class="footer">
-            <p>Professional presentations powered by Claude AI • Using html2pptx + PptxGenJS</p>
-            <p class="footer-note">All processing happens on your server • Your API key is stored locally</p>
-            <button onclick="showWelcomeModal()" style="background: rgba(102, 126, 234, 0.1); color: #667eea; border: 1px solid rgba(102, 126, 234, 0.3); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 500; margin-top: 1rem; font-size: 0.9rem; transition: all 0.3s ease;" onmouseover="this.style.background='rgba(102, 126, 234, 0.2)'; this.style.color='#667eea';" onmouseout="this.style.background='rgba(102, 126, 234, 0.1)'; this.style.color='#667eea';">
-                📖 User Manual
-            </button>
+            <p class="footer-text">
+                <span class="footer-highlight">genis.ai</span> • Powered by Claude AI, html2pptx + PptxGenJS
+            </p>
+            <p class="footer-note">🔒 All processing on your server • Your API key stays local & secure</p>
         </div>
     </div>
 
     <!-- Welcome Modal / User Manual -->
     <div id="welcomeModal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeWelcomeModal()">✕</button>
+            <button class="modal-close" onclick="closeWelcomeModal()" aria-label="Close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
             
             <div class="modal-header">
-                <h2>🎉 Welcome to AI Text2PPT Pro!</h2>
-                <p>Transform Your Ideas into Stunning Presentations</p>
+                <h2>🚀 Welcome to genis.ai!</h2>
+                <p>Transform Your Ideas into Stunning Presentations with AI</p>
             </div>
             
             <div class="modal-body">
@@ -449,7 +457,7 @@ Our Products
                         🚀 Let's Create Amazing Presentations!
                     </button>
                     <p style="margin-top: 1rem; color: #999; font-size: 0.9rem;">
-                        Click anywhere outside to close • This manual is always available in the footer
+                        Click anywhere outside to close • Access this guide anytime via the Help button
                     </p>
                 </div>
             </div>
@@ -509,24 +517,31 @@ Our Products
         
         .modal-close {
             position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(255,255,255,0.2);
-            border: 2px solid white;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255,255,255,0.25);
+            border: none;
             color: white;
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
-            font-size: 1.5rem;
             cursor: pointer;
             transition: all 0.3s ease;
-            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            z-index: 10;
         }
         
         .modal-close:hover {
             background: white;
             color: #667eea;
-            transform: rotate(90deg);
+            transform: rotate(90deg) scale(1.1);
+        }
+        
+        .modal-close:active {
+            transform: rotate(90deg) scale(0.95);
         }
         
         .feature-highlight {
@@ -644,7 +659,7 @@ Our Products
         // Run diagnostics on page load
         window.addEventListener('load', function() {
             console.log('═══════════════════════════════════════════════════');
-            console.log('🔍 AI TEXT2PPT PRO - INTEGRATION DIAGNOSTICS');
+            console.log('🔍 GENIS.AI - INTEGRATION DIAGNOSTICS');
             console.log('═══════════════════════════════════════════════════');
             console.log('');
             
@@ -863,7 +878,7 @@ Our Products
                 modal.style.display = 'none';
                 document.body.style.overflow = '';
                 // Save to localStorage so it doesn't show again
-                localStorage.setItem('welcomeModalSeen', 'true');
+                localStorage.setItem('genisWelcomeModalSeen', 'true');
             }, 300);
         }
         
@@ -874,13 +889,13 @@ Our Products
             }
         });
         
-        // Show modal on first visit
+        // Show modal on page load
         window.addEventListener('DOMContentLoaded', () => {
-            const hasSeenModal = localStorage.getItem('welcomeModalSeen');
+            const hasSeenModal = localStorage.getItem('genisWelcomeModalSeen');
             if (!hasSeenModal) {
                 setTimeout(() => {
                     showWelcomeModal();
-                }, 1000); // Show after 1 second
+                }, 800); // Show after 0.8 seconds
             }
         });
     </script>

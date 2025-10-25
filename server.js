@@ -10,6 +10,7 @@ const fs = require('fs').promises;
 const multer = require('multer');
 
 // Import utilities
+const { SERVER_CONFIG } = require('./server/config/constants');
 const { callAI } = require('./server/utils/ai');
 const { 
     validateSlideData, 
@@ -927,9 +928,11 @@ app.post('/api/share-presentation', async (req, res) => {
             console.log(`🗑️ Cleaned up shared presentation: ${shareId}`);
         }, 7 * 24 * 60 * 60 * 1000); // 7 days
         
-        const shareUrl = `${req.protocol}://${req.get('host')}/view/${shareId}`;
+        // Use BASE_URL from config if set, otherwise auto-detect from request
+        const baseUrl = SERVER_CONFIG.BASE_URL || `${req.protocol}://${req.get('host')}`;
+        const shareUrl = `${baseUrl}/view/${shareId}`;
         
-        console.log(`✅ Created shareable presentation: ${shareId}`);
+        console.log(`✅ Created shareable presentation: ${shareId} (Base URL: ${baseUrl})`);
         res.json({ 
             shareId, 
             shareUrl,

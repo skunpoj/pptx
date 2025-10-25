@@ -4,7 +4,7 @@
  * Show preview progress indicator
  */
 function showPreviewProgress(message) {
-    const previewContainer = document.getElementById('previewContainer');
+    const previewContainer = document.getElementById('preview');
     if (!previewContainer) return;
     
     // Create or update progress indicator
@@ -321,7 +321,7 @@ async function handleNonStreamingPreview(text, apiKey) {
  * Render slides progressively with animation
  */
 async function renderSlidesProgressively(slideData) {
-    const container = document.getElementById('previewContainer');
+    const container = document.getElementById('preview');
     if (!container) {
         console.error('Preview container not found');
         return;
@@ -419,7 +419,7 @@ function createSlideElement(slide, index) {
  * Display preview of slides
  */
 function displayPreview(slideData) {
-    const previewContainer = document.getElementById('previewContainer');
+    const previewContainer = document.getElementById('preview');
     if (!previewContainer) {
         console.error('Preview container not found');
         return;
@@ -496,6 +496,12 @@ function displayPreview(slideData) {
             previewContainer.appendChild(slideDiv);
         });
     }
+    
+    // Show action buttons
+    const modificationSection = document.getElementById('modificationSection');
+    const generatePptSection = document.getElementById('generatePptSection');
+    if (modificationSection) modificationSection.style.display = 'block';
+    if (generatePptSection) generatePptSection.style.display = 'block';
 }
 
 // Export functions for use in other modules

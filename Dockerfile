@@ -1,4 +1,5 @@
-# AI Text2PPT Pro - Optimized Production Dockerfile
+# genis.ai - AI Presentation Generator
+# Optimized Production Dockerfile for Railway deployment
 FROM node:18-bullseye
 
 # Install LibreOffice for PDF conversion and Python for skills
@@ -17,6 +18,12 @@ RUN apt-get update && apt-get install -y \
 
 # Set working directory
 WORKDIR /app
+
+# Environment variables
+# BASE_URL: Set the base URL for shareable links
+# Default: https://genis.ai
+# Override in Railway dashboard Variables if using different domain
+ENV BASE_URL="https://genis.ai"
 
 # Copy only production-essential files
 COPY package.json package-lock.json ./
