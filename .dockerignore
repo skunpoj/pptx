@@ -1,8 +1,79 @@
-node_modules
-npm-debug.log
-workspace
+# Documentation (not needed in production)
+doc/
 *.md
-.git
+!README.md
+
+# Test files (not needed in production)
+test/
+test-*.html
+test-*.js
+test-*.sh
+test-*.bat
+
+# Development files
+.git/
 .gitignore
+.gitattributes
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
 .DS_Store
-*.tar.gz
+Thumbs.db
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Backup files
+BKP/
+*.backup
+*.bak
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Documentation files
+*.txt
+!package.json
+!package-lock.json
+
+# Skills documentation (keep only the tgz file)
+skills/*/SKILL.md
+skills/*/LICENSE.txt
+skills/*/scripts/
+skills/*/ooxml/
+skills/*/recalc.py
+skills/*/FORMS.md
+skills/*/REFERENCE.md
+skills/*/check_*.py
+skills/*/convert_*.py
+skills/*/create_*.py
+skills/*/extract_*.py
+skills/*/fill_*.py
+
+# Keep only essential skills files
+!skills/pptx/html2pptx.tgz

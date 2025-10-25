@@ -426,3 +426,4 @@ window.renderSlidesProgressively = renderSlidesProgressively;
 // Ensure functions are available immediately
 console.log('✅ preview.js loaded - window.generatePreview:', typeof window.generatePreview);
 console.log('✅ preview.js loaded - window.displayPreview:', typeof window.displayPreview);
+}
