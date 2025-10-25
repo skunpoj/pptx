@@ -13,8 +13,15 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
+            <div class="header-badge">100% FREE FOREVER 🎁</div>
             <h1 class="brand-name">genis.ai</h1>
-            <p class="brand-tagline">Professional Presentations Powered by AI</p>
+            <p class="brand-tagline">Transform Your Ideas into Stunning Presentations with AI</p>
+            <div class="header-features">
+                <span class="header-feature">🤖 AI-Powered</span>
+                <span class="header-feature">📊 Native Charts</span>
+                <span class="header-feature">🎨 8+ Themes</span>
+                <span class="header-feature">🔗 Share Links</span>
+            </div>
         </div>
 
         <!-- Main Content Grid -->
@@ -158,37 +165,9 @@ Our Products
                         </label>
                     </div>
                 </div>
-                
-                <!-- Output File Type Selection -->
-                <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 2px solid #ff9a56;">
-                    <label style="display: block; font-weight: 700; color: #d35400; margin-bottom: 0.5rem;">📄 Output File Type:</label>
-                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="pptx-direct" checked onchange="window.selectOutputType('pptx-direct')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📊 PowerPoint Direct (.pptx)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="pptx-skill" onchange="window.selectOutputType('pptx-skill')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📊 PowerPoint Skill (.pptx)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="docx" onchange="window.selectOutputType('docx')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📝 Word (.docx)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="pdf" onchange="window.selectOutputType('pdf')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📄 PDF (.pdf)</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
-                            <input type="radio" name="outputType" value="xlsx" onchange="window.selectOutputType('xlsx')" style="width: 18px; height: 18px; cursor: pointer;">
-                            <span style="font-weight: 600; color: #333;">📈 Excel (.xlsx)</span>
-                        </label>
-                    </div>
-                    <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #666;">Select the output format for your generated document</p>
-                </div>
             </div>
 
-            <!-- Right: Color Theme Selector -->
+            <!-- Right: Color Theme & Output Format -->
             <div class="card" id="themeSelector" style="background: #f0fff4; border: 2px solid #82C341;">
                 <div class="theme-header">
                     <h3>🎨 Choose Color Theme</h3>
@@ -196,6 +175,34 @@ Our Products
                 </div>
                 <p class="theme-description">Select a color palette for your presentation (AI may suggest one based on your content)</p>
                 <div id="themeGrid" class="theme-grid"></div>
+                
+                <!-- Output File Type Selection -->
+                <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px; margin-top: 1.5rem; border: 2px solid #82C341;">
+                    <label style="display: block; font-weight: 700; color: #2d8659; margin-bottom: 0.5rem;">📄 Output File Type:</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pptx-direct" checked onchange="window.selectOutputType('pptx-direct')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📊 PPTX Direct</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pptx-skill" onchange="window.selectOutputType('pptx-skill')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📊 PPTX Skill</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="docx" onchange="window.selectOutputType('docx')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📝 Word</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="pdf" onchange="window.selectOutputType('pdf')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📄 PDF</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: background 0.2s;" class="file-type-option">
+                            <input type="radio" name="outputType" value="xlsx" onchange="window.selectOutputType('xlsx')" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span style="font-weight: 600; color: #333; font-size: 0.85rem;">📈 Excel</span>
+                        </label>
+                    </div>
+                    <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: #666;">Select the output format for your generated document</p>
+                </div>
             </div>
         </div>
 
@@ -320,54 +327,57 @@ Our Products
             </div>
         </div>
 
-        <!-- Footer -->
+        <!-- Footer - Features & Guide Section -->
         <div class="footer">
-            <div class="footer-header">
-                <h2 class="footer-brand">genis.ai</h2>
-                <p class="footer-subtitle">Transform Your Ideas into Stunning Presentations with AI</p>
-            </div>
-            
             <div class="footer-content">
-                <!-- Quick Info -->
-                <div class="footer-section footer-quick-info">
-                    <span class="footer-badge">100% FREE FOREVER 🎁</span>
-                    <p class="footer-security">🔒 All processing on your server • Your API key stays local & secure</p>
+                <!-- Security Banner -->
+                <div class="footer-security-banner">
+                    <span class="security-icon">🔒</span>
+                    <p>All processing on your server • Your API key stays local & secure</p>
                 </div>
                 
                 <!-- Features Grid -->
-                <div class="footer-features">
+                <div class="footer-section">
                     <h3 class="footer-section-title">✨ Powerful Features</h3>
                     <div class="footer-features-grid">
-                        <div class="footer-feature-item">
-                            <strong>🤖 AI-Powered</strong>
+                        <div class="footer-feature-card">
+                            <div class="feature-icon">🤖</div>
+                            <strong>AI-Powered</strong>
                             <span>Claude, GPT-4, Gemini, or FREE Bedrock</span>
                         </div>
-                        <div class="footer-feature-item">
-                            <strong>📊 Native Charts</strong>
+                        <div class="footer-feature-card">
+                            <div class="feature-icon">📊</div>
+                            <strong>Native Charts</strong>
                             <span>Bar, Pie, Line, Area - fully editable</span>
                         </div>
-                        <div class="footer-feature-item">
-                            <strong>🎨 8+ Themes</strong>
+                        <div class="footer-feature-card">
+                            <div class="feature-icon">🎨</div>
+                            <strong>8+ Themes</strong>
                             <span>Professional color schemes</span>
                         </div>
-                        <div class="footer-feature-item">
-                            <strong>📄 Auto PDF</strong>
+                        <div class="footer-feature-card">
+                            <div class="feature-icon">📄</div>
+                            <strong>Auto PDF</strong>
                             <span>PPTX + PDF generated together</span>
                         </div>
-                        <div class="footer-feature-item">
-                            <strong>🔗 Share Links</strong>
+                        <div class="footer-feature-card">
+                            <div class="feature-icon">🔗</div>
+                            <strong>Share Links</strong>
                             <span>One link, unlimited views</span>
                         </div>
-                        <div class="footer-feature-item">
-                            <strong>✏️ Edit Online</strong>
+                        <div class="footer-feature-card">
+                            <div class="feature-icon">✏️</div>
+                            <strong>Edit Online</strong>
                             <span>Modify slides in browser</span>
                         </div>
-                        <div class="footer-feature-item">
-                            <strong>👁️ Live Preview</strong>
+                        <div class="footer-feature-card">
+                            <div class="feature-icon">👁️</div>
+                            <strong>Live Preview</strong>
                             <span>See before you download</span>
                         </div>
-                        <div class="footer-feature-item">
-                            <strong>🎯 Smart Design</strong>
+                        <div class="footer-feature-card">
+                            <div class="feature-icon">🎯</div>
+                            <strong>Smart Design</strong>
                             <span>Decorative shapes & graphics</span>
                         </div>
                     </div>
@@ -376,29 +386,49 @@ Our Products
                 <!-- API Options -->
                 <div class="footer-section">
                     <h3 class="footer-section-title">🔑 Flexible API Options</h3>
-                    <div class="footer-api-options">
-                        <div class="footer-api-option">
-                            <strong>Option 1: Bring Your Own Key (BYOK)</strong>
+                    <div class="footer-api-grid">
+                        <div class="footer-api-card">
+                            <div class="api-badge">Option 1</div>
+                            <h4>Bring Your Own Key (BYOK)</h4>
                             <p>Use your own Anthropic, OpenAI, Google Gemini, or OpenRouter API key. You control costs and usage.</p>
                         </div>
-                        <div class="footer-api-option footer-api-highlight">
-                            <strong>💎 Option 2: Use Our FREE Amazon Bedrock!</strong>
+                        <div class="footer-api-card footer-api-featured">
+                            <div class="api-badge featured">💎 Option 2</div>
+                            <h4>Use Our FREE Amazon Bedrock!</h4>
                             <p>Don't have an API key? No problem! We provide <strong>FREE unlimited access</strong> to Amazon Bedrock (Claude 3.5 Sonnet) - no credit card, no sign up, no catch!</p>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Quick Start -->
+                <!-- Quick Start Guide -->
                 <div class="footer-section">
                     <h3 class="footer-section-title">🎯 Quick Start Guide</h3>
-                    <ol class="footer-steps">
-                        <li>Enter your API key (or skip to use FREE Bedrock)</li>
-                        <li>Type your content or use AI Idea Generator</li>
-                        <li>Click "Generate Preview" to see slides</li>
-                        <li>Modify slides if needed with AI assistance</li>
-                        <li>Click "Generate PowerPoint" to download</li>
-                        <li>View online, share links, or download PDF!</li>
-                    </ol>
+                    <div class="footer-steps-grid">
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <p>Enter your API key (or skip to use FREE Bedrock)</p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <p>Type your content or use AI Idea Generator</p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <p>Click "Generate Preview" to see slides</p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">4</div>
+                            <p>Modify slides if needed with AI assistance</p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">5</div>
+                            <p>Click "Generate PowerPoint" to download</p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">6</div>
+                            <p>View online, share links, or download PDF!</p>
+                        </div>
+                    </div>
                 </div>
                 
                 <p class="footer-credits">Powered by Claude AI, html2pptx + PptxGenJS</p>
