@@ -23,22 +23,118 @@ async function generatePreview() {
     previewBtn.disabled = true;
     previewBtn.innerHTML = '<span class="spinner"></span> Generating preview...';
     
-    // Show initial loading state in preview
+    // Show initial loading state in preview with detailed explanation
     const preview = document.getElementById('preview');
+    const wordCount = text.split(/\s+/).length;
+    const estimatedTime = Math.max(5, Math.min(20, Math.ceil(wordCount / 100)));
+    
     showStatus('🤖 AI is analyzing your content and designing slides...', 'info');
     preview.innerHTML = `
-        <div id="streamingStatus" style="text-align: center; padding: 2rem;">
-            <span class="spinner" style="width: 2rem; height: 2rem; border-width: 3px;"></span>
-            <p style="margin-top: 1rem; color: #666; font-size: 1.1rem; font-weight: 600;">AI is designing your slides...</p>
-            <p id="slideCount" style="margin-top: 0.5rem; color: #999; font-size: 0.9rem;">Waiting for slides...</p>
+        <div id="streamingStatus" style="text-align: center; padding: 2rem; max-width: 600px; margin: 0 auto;">
+            <div style="position: relative; width: 80px; height: 80px; margin: 0 auto;">
+                <span class="spinner" style="width: 80px; height: 80px; border-width: 4px; border-color: #667eea; border-top-color: transparent;"></span>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem;">🤖</div>
+            </div>
+            
+            <p style="margin-top: 1.5rem; color: #333; font-size: 1.2rem; font-weight: 700;">AI is Processing Your Content</p>
+            <p id="aiStatus" style="margin-top: 0.5rem; color: #667eea; font-size: 1rem; font-weight: 600;">
+                Analyzing ${wordCount} words...
+            </p>
+            
+            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #667eea; padding: 1rem; border-radius: 8px; margin: 1.5rem 0; text-align: left;">
+                <p style="margin: 0; font-size: 0.95rem; color: #555; line-height: 1.6;">
+                    <strong style="color: #667eea;">⏱️ What's happening:</strong><br>
+                    <span id="currentStep">1️⃣ Sending content to AI for analysis</span>
+                </p>
+                <div id="progressSteps" style="margin-top: 1rem; font-size: 0.85rem; color: #777; line-height: 1.8;">
+                    <div id="step1" style="opacity: 0.5;">⏳ Analyzing content structure & themes</div>
+                    <div id="step2" style="opacity: 0.5;">⏳ Determining optimal slide count (${estimatedTime}s)</div>
+                    <div id="step3" style="opacity: 0.5;">⏳ Creating slide layout & design</div>
+                    <div id="step4" style="opacity: 0.5;">⏳ Extracting data for charts & visuals</div>
+                    <div id="step5" style="opacity: 0.5;">⏳ Rendering slide previews</div>
+                </div>
+            </div>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 0.75rem; margin-top: 1rem;">
+                <p style="margin: 0; font-size: 0.85rem; color: #856404;">
+                    <strong>💡 First-time notice:</strong> AI analysis typically takes ${estimatedTime}-${estimatedTime + 5} seconds. 
+                    Subsequent generations with similar content will be faster.
+                </p>
+            </div>
+            
+            <p id="slideCount" style="margin-top: 1rem; color: #999; font-size: 0.9rem;">
+                Estimated completion: <span id="countdown">${estimatedTime}</span> seconds
+            </p>
         </div>
     `;
+    
+    // Start countdown timer
+    let remainingTime = estimatedTime;
+    const countdownEl = document.getElementById('countdown');
+    const countdownInterval = setInterval(() => {
+        remainingTime--;
+        if (remainingTime > 0 && countdownEl) {
+            countdownEl.textContent = remainingTime;
+        } else {
+            clearInterval(countdownInterval);
+            if (countdownEl) {
+                countdownEl.textContent = 'Finalizing...';
+            }
+        }
+    }, 1000);
+    
+    // Simulate progress steps
+    const steps = [
+        { id: 'step1', time: 1000, status: '1️⃣ AI is analyzing your content structure...', stepEl: 'step1' },
+        { id: 'step2', time: 3000, status: '2️⃣ AI is determining optimal slide layout...', stepEl: 'step2' },
+        { id: 'step3', time: 5000, status: '3️⃣ AI is creating slide designs...', stepEl: 'step3' },
+        { id: 'step4', time: 7000, status: '4️⃣ AI is extracting data for visualizations...', stepEl: 'step4' }
+    ];
+    
+    const progressInterval = [];
+    steps.forEach(step => {
+        const timeout = setTimeout(() => {
+            const currentStepEl = document.getElementById('currentStep');
+            const stepEl = document.getElementById(step.stepEl);
+            if (currentStepEl) currentStepEl.textContent = step.status;
+            if (stepEl) {
+                stepEl.style.opacity = '1';
+                stepEl.style.color = '#667eea';
+                stepEl.style.fontWeight = '600';
+                stepEl.innerHTML = stepEl.innerHTML.replace('⏳', '✅');
+            }
+        }, step.time);
+        progressInterval.push(timeout);
+    });
+    
+    // Store cleanup function
+    window.cleanupPreviewProgress = () => {
+        clearInterval(countdownInterval);
+        progressInterval.forEach(t => clearTimeout(t));
+    };
     
     // Show view toggle
     document.getElementById('viewToggle').style.display = 'flex';
     
     try {
         const useStreaming = window.currentProvider === 'anthropic';
+        
+        // Check cache first (if content hasn't changed much)
+        const cached = checkPreviewCache(text);
+        if (cached) {
+            console.log('✅ Using cached preview data');
+            if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
+            const step5 = document.getElementById('step5');
+            if (step5) {
+                step5.style.opacity = '1';
+                step5.style.color = '#28a745';
+                step5.innerHTML = '✅ Loading from cache (instant)';
+            }
+            await new Promise(resolve => setTimeout(resolve, 500)); // Brief pause for UX
+            window.displayPreview(cached);
+            showStatus('✅ Preview loaded from cache instantly!', 'success');
+            return;
+        }
         
         if (useStreaming) {
             // STREAMING MODE: Handle incremental slide generation
@@ -50,6 +146,7 @@ async function generatePreview() {
         
     } catch (error) {
         console.error('Preview Error:', error);
+        if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
         document.getElementById('preview').innerHTML = '';
         document.getElementById('viewToggle').style.display = 'none';
         document.getElementById('generatePptSection').style.display = 'none';
@@ -62,8 +159,95 @@ async function generatePreview() {
             showStatus('❌ Error: ' + error.message, 'error');
         }
     } finally {
+        if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
         previewBtn.disabled = false;
         previewBtn.innerHTML = '👁️ Generate Preview';
+    }
+}
+
+/**
+ * Check if we have a cached preview for similar content
+ * @param {string} text - Input text
+ * @returns {Object|null} - Cached slide data or null
+ */
+function checkPreviewCache(text) {
+    if (!window.localStorage) return null;
+    
+    try {
+        // Create a simple hash of the text
+        const textHash = simpleHash(text.substring(0, 500)); // Use first 500 chars
+        const cacheKey = `preview_cache_${textHash}`;
+        const cached = localStorage.getItem(cacheKey);
+        
+        if (cached) {
+            const data = JSON.parse(cached);
+            // Check if cache is less than 1 hour old
+            if (Date.now() - data.timestamp < 60 * 60 * 1000) {
+                return data.slideData;
+            } else {
+                // Remove stale cache
+                localStorage.removeItem(cacheKey);
+            }
+        }
+    } catch (e) {
+        console.warn('Cache check error:', e);
+    }
+    
+    return null;
+}
+
+/**
+ * Save preview to cache
+ * @param {string} text - Input text
+ * @param {Object} slideData - Slide data to cache
+ */
+function savePreviewCache(text, slideData) {
+    if (!window.localStorage) return;
+    
+    try {
+        const textHash = simpleHash(text.substring(0, 500));
+        const cacheKey = `preview_cache_${textHash}`;
+        const data = {
+            timestamp: Date.now(),
+            slideData: slideData
+        };
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+        console.log('✅ Preview cached for future use');
+    } catch (e) {
+        console.warn('Cache save error:', e);
+        // Quota exceeded - clear old caches
+        clearOldCaches();
+    }
+}
+
+/**
+ * Simple hash function for text
+ * @param {string} str - String to hash
+ * @returns {string} - Hash
+ */
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+}
+
+/**
+ * Clear old preview caches
+ */
+function clearOldCaches() {
+    try {
+        const keys = Object.keys(localStorage);
+        const cacheKeys = keys.filter(k => k.startsWith('preview_cache_'));
+        // Keep only the 5 most recent
+        if (cacheKeys.length > 5) {
+            cacheKeys.slice(0, -5).forEach(k => localStorage.removeItem(k));
+        }
+    } catch (e) {
+        console.warn('Cache cleanup error:', e);
     }
 }
 
@@ -175,6 +359,24 @@ async function handleStreamingPreview(text, apiKey) {
                         // All slides received
                         window.currentSlideData = message.data;
                         
+                        // Cleanup progress UI
+                        if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
+                        
+                        // Mark final step complete
+                        const step5 = document.getElementById('step5');
+                        if (step5) {
+                            step5.style.opacity = '1';
+                            step5.style.color = '#28a745';
+                            step5.style.fontWeight = '600';
+                            step5.innerHTML = '✅ Slide previews rendered successfully';
+                        }
+                        
+                        // Save to cache for faster future access
+                        const textInput = document.getElementById('textInput');
+                        if (textInput) {
+                            savePreviewCache(textInput.value, message.data);
+                        }
+                        
                         // Remove progress indicator
                         const progressDiv = preview.querySelector('[id*="slideProgress"]');
                         if (progressDiv && progressDiv.parentElement) {
@@ -198,9 +400,9 @@ async function handleStreamingPreview(text, apiKey) {
                         document.getElementById('generatePptSection').style.display = 'block';
                         
                         if (window.templateFile) {
-                            showStatus(`✅ ${receivedSlides.length} slides ready! Using ${window.templateFile.name} as template.`, 'success');
+                            showStatus(`✅ ${receivedSlides.length} slides ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
                         } else {
-                            showStatus(`✅ ${receivedSlides.length} slides ready! You can modify slides or generate PowerPoint.`, 'success');
+                            showStatus(`✅ ${receivedSlides.length} slides ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
                         }
                         
                         console.log('✅ Incremental generation complete:', receivedSlides.length, 'slides');
@@ -301,6 +503,21 @@ async function handleNonStreamingPreview(text, apiKey) {
     
     window.currentSlideData.suggestedTheme = suggestedTheme;
     
+    // Cleanup progress UI
+    if (window.cleanupPreviewProgress) window.cleanupPreviewProgress();
+    
+    // Mark final step complete
+    const step5 = document.getElementById('step5');
+    if (step5) {
+        step5.style.opacity = '1';
+        step5.style.color = '#28a745';
+        step5.style.fontWeight = '600';
+        step5.innerHTML = '✅ Slide previews rendered successfully';
+    }
+    
+    // Save to cache for faster future access
+    savePreviewCache(text, slideData);
+    
     // Update theme selector to show AI suggestion (if different from user's choice)
     if (window.displayThemeSelector) {
         window.displayThemeSelector(suggestedTheme);
@@ -314,9 +531,9 @@ async function handleNonStreamingPreview(text, apiKey) {
     document.getElementById('generatePptSection').style.display = 'block';
     
     if (window.templateFile) {
-        showStatus(`✅ Preview ready! Using ${window.templateFile.name} as template.`, 'success');
+        showStatus(`✅ Preview ready! Using ${window.templateFile.name} as template. (Cached for instant reload)`, 'success');
     } else {
-        showStatus('✅ Preview ready! You can modify slides or generate PowerPoint.', 'success');
+        showStatus('✅ Preview ready! You can modify slides or generate PowerPoint. (Cached for instant reload)`, 'success');
     }
 }
 
