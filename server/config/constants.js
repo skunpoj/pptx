@@ -29,12 +29,8 @@ const SERVER_CONFIG = {
 const AI_PROVIDERS = {
     BEDROCK: {
         name: 'bedrock',
-        // Try different region prefixes as fallback
-        models: [
-            'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-            'eu.anthropic.claude-sonnet-4-5-20250929-v1:0', 
-            'apac.anthropic.claude-sonnet-4-5-20250929-v1:0'
-        ],
+        // Use global model ID (no region prefix)
+        model: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
         endpoint: 'https://bedrock-runtime.us-east-1.amazonaws.com/model',
         maxTokens: 8192,
         envVar: 'bedrock' // Uses environment variable instead of user-provided key

@@ -9,63 +9,50 @@ async function callAI(provider, apiKey, userPrompt) {
             throw new Error('Bedrock API key not found in environment variable "bedrock"');
         }
         
-        // Try different model IDs with region prefixes as fallback
-        const modelIds = [
-            'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-            'eu.anthropic.claude-sonnet-4-5-20250929-v1:0',
-            'apac.anthropic.claude-sonnet-4-5-20250929-v1:0'
-        ];
+        // Use global model ID (no region prefix)
+        const modelId = 'anthropic.claude-sonnet-4-5-20250929-v1:0';
         
-        let lastError = null;
-        
-        for (const modelId of modelIds) {
-            try {
-                console.log(`🔄 Trying Bedrock model: ${modelId}`);
-                
-                const response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${bedrockApiKey.trim()}`
-                    },
-                    body: JSON.stringify({
-                        messages: [{
-                            role: "user",
-                            content: [{ text: userPrompt }]
-                        }]
-                    })
-                });
+        try {
+            console.log(`🔄 Calling Bedrock model: ${modelId}`);
+            
+            const response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${bedrockApiKey.trim()}`
+                },
+                body: JSON.stringify({
+                    messages: [{
+                        role: "user",
+                        content: [{ text: userPrompt }]
+                    }]
+                })
+            });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
-                    console.log(`❌ Model ${modelId} failed: ${errorMsg}`);
-                    lastError = new Error(errorMsg);
-                    continue; // Try next model
-                }
-
-                const data = await response.json();
-                
-                // Parse Bedrock response format
-                if (data.output && data.output.message && data.output.message.content) {
-                    const content = data.output.message.content;
-                    if (Array.isArray(content) && content.length > 0 && content[0].text) {
-                        console.log(`✅ Success with model: ${modelId}`);
-                        return content[0].text.trim();
-                    }
-                }
-                
-                throw new Error('Unexpected Bedrock response format');
-                
-            } catch (error) {
-                console.log(`❌ Error with ${modelId}: ${error.message}`);
-                lastError = error;
-                continue; // Try next model
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+                console.log(`❌ Bedrock API error: ${errorMsg}`);
+                throw new Error(`Bedrock API error: ${errorMsg}`);
             }
+
+            const data = await response.json();
+            
+            // Parse Bedrock response format
+            if (data.output && data.output.message && data.output.message.content) {
+                const content = data.output.message.content;
+                if (Array.isArray(content) && content.length > 0 && content[0].text) {
+                    console.log(`✅ Success with Bedrock model`);
+                    return content[0].text.trim();
+                }
+            }
+            
+            throw new Error('Unexpected Bedrock response format');
+            
+        } catch (error) {
+            console.log(`❌ Bedrock error: ${error.message}`);
+            throw error; // Propagate the error with details
         }
-        
-        // All models failed
-        throw new Error(`All Bedrock models failed. Last error: ${lastError?.message || 'Unknown error'}`);
     }
     else if (provider === 'anthropic') {
         const response = await fetch("https://api.anthropic.com/v1/messages", {

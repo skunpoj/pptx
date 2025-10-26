@@ -161,53 +161,31 @@ app.post('/api/generate-content', async (req, res) => {
             res.setHeader('Connection', 'keep-alive');
             
             if (provider === 'bedrock') {
-                // Bedrock ConverseStream API with fallback
+                // Bedrock ConverseStream API - use global model
                 const bedrockApiKey = process.env.bedrock || apiKey;
+                const modelId = 'anthropic.claude-sonnet-4-5-20250929-v1:0';
                 
-                const modelIds = [
-                    'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-                    'eu.anthropic.claude-sonnet-4-5-20250929-v1:0',
-                    'apac.anthropic.claude-sonnet-4-5-20250929-v1:0'
-                ];
+                console.log(`🔄 Calling Bedrock stream model: ${modelId}`);
                 
-                let response = null;
-                let lastError = null;
-                
-                for (const modelId of modelIds) {
-                    try {
-                        console.log(`🔄 Trying Bedrock stream model: ${modelId}`);
-                        
-                        response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse-stream`, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                "Authorization": `Bearer ${bedrockApiKey.trim()}`
-                            },
-                            body: JSON.stringify({
-                                messages: [{
-                                    role: "user",
-                                    content: [{ text: userPrompt }]
-                                }]
-                            })
-                        });
+                const response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse-stream`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${bedrockApiKey.trim()}`
+                    },
+                    body: JSON.stringify({
+                        messages: [{
+                            role: "user",
+                            content: [{ text: userPrompt }]
+                        }]
+                    })
+                });
 
-                        if (response.ok) {
-                            console.log(`✅ Stream success with model: ${modelId}`);
-                            break; // Success, exit loop
-                        } else {
-                            const errorData = await response.json().catch(() => ({}));
-                            const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
-                            console.log(`❌ Stream model ${modelId} failed: ${errorMsg}`);
-                            lastError = new Error(errorMsg);
-                        }
-                    } catch (error) {
-                        console.log(`❌ Stream error with ${modelId}: ${error.message}`);
-                        lastError = error;
-                    }
-                }
-
-                if (!response || !response.ok) {
-                    throw new Error(`All Bedrock stream models failed. Last error: ${lastError?.message || 'Unknown error'}`);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+                    console.log(`❌ Bedrock stream error: ${errorMsg}`);
+                    throw new Error(`Bedrock API error: ${errorMsg}`);
                 }
 
                 const reader = response.body.getReader();
@@ -301,9 +279,21 @@ app.post('/api/generate-content', async (req, res) => {
         }
         
     } catch (error) {
-        console.error('Content generation error:', error);
+        console.error('❌ Content generation error:', error.message);
+        console.error('   Stack:', error.stack);
         if (!res.headersSent) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ 
+                error: error.message,
+                provider: provider,
+                details: error.stack
+            });
+        } else {
+            // If headers already sent (streaming), send error event
+            res.write(`data: ${JSON.stringify({ 
+                type: 'error',
+                error: error.message
+            })}\n\n`);
+            res.end();
         }
     }
 });
@@ -535,20 +525,19 @@ app.post('/api/preview', async (req, res) => {
         console.error('   Stack:', error.stack);
         
         if (!res.headersSent) {
-            let userMessage = error.message;
-            
-            if (error.message.includes('API key') || error.message.includes('authentication')) {
-                userMessage = 'Invalid API key. Please check your API key and try again.';
-            } else if (error.message.includes('rate limit')) {
-                userMessage = 'API rate limit exceeded. Please wait a moment and try again.';
-            } else if (error.message.includes('timeout')) {
-                userMessage = 'Request timed out. Please try again with shorter content.';
-            }
-            
+            // Always show the actual error message to help with debugging
             res.status(500).json({ 
-                error: userMessage,
-                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+                error: error.message,
+                provider: provider,
+                details: error.stack
             });
+        } else {
+            // If headers already sent (streaming), send error event
+            res.write(`data: ${JSON.stringify({ 
+                type: 'error',
+                error: error.message
+            })}\n\n`);
+            res.end();
         }
     }
 });
