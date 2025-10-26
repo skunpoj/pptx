@@ -625,7 +625,7 @@ app.get('/api/progress/:sessionId', (req, res) => {
 // ========================================
 
 app.post('/api/generate', async (req, res) => {
-    const { text, apiKey, provider = 'anthropic', slideData, streamProgress = false } = req.body;
+    let { text, apiKey, provider = 'anthropic', slideData, streamProgress = false } = req.body;
     
     console.log('\n' + '='.repeat(80));
     console.log('POWERPOINT GENERATION REQUEST');

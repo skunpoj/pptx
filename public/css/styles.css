@@ -162,9 +162,9 @@ body {
 
 .floating-badge {
     position: fixed;
-    top: 100px; /* Moved down to be below header */
-    right: 50%; /* Center horizontally */
-    transform: translateX(600px); /* Offset to the right */
+    top: 80px; /* Start from top, stacked below Product Hunt */
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%); /* Perfect center */
     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     color: white;
     padding: 0.75rem 1.25rem;
@@ -172,7 +172,7 @@ body {
     font-weight: 700;
     font-size: 0.9rem;
     box-shadow: 0 4px 20px rgba(40, 167, 69, 0.4);
-    z-index: 1000;
+    z-index: 999; /* Below Product Hunt */
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -209,15 +209,15 @@ body {
 
 .floating-product-hunt {
     position: fixed;
-    top: 100px; /* Moved down to be below header */
+    top: 20px; /* At the top, centered */
     left: 50%; /* Center horizontally */
-    transform: translateX(-600px); /* Offset to the left */
-    z-index: 1000;
+    transform: translateX(-50%); /* Perfect center */
+    z-index: 1000; /* On top of Free badge */
     transition: all 0.3s ease;
 }
 
 .floating-product-hunt:hover {
-    transform: translateX(-600px) translateY(-3px);
+    transform: translateX(-50%) translateY(-3px); /* Maintain center on hover */
 }
 
 .floating-product-hunt img {
