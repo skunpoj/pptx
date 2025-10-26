@@ -12,7 +12,7 @@ const path = require('path');
  * Body: { descriptions: [{ id, description }], apiKey, provider }
  */
 router.post('/generate', async (req, res) => {
-    const { descriptions, apiKey, provider = 'dalle' } = req.body;
+    const { descriptions, apiKey, provider = 'dalle', stream = true } = req.body;
     
     if (!descriptions || !Array.isArray(descriptions)) {
         return res.status(400).json({ error: 'descriptions array is required' });
@@ -22,66 +22,155 @@ router.post('/generate', async (req, res) => {
         return res.status(400).json({ error: 'API key is required' });
     }
     
-    console.log(`🖼️  Image generation request: ${descriptions.length} images`);
+    console.log(`🖼️  Image generation request: ${descriptions.length} images (streaming: ${stream})`);
     
-    try {
-        const generatedImages = [];
+    // STREAMING MODE: Send images as they're generated!
+    if (stream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
         
-        for (const desc of descriptions) {
-            console.log(`  Generating image: ${desc.description.substring(0, 50)}...`);
-            
-            try {
-                let imageUrl = null;
-                let imageData = null;
+        let successCount = 0;
+        let failedCount = 0;
+        
+        try {
+            for (let i = 0; i < descriptions.length; i++) {
+                const desc = descriptions[i];
+                console.log(`  [${i + 1}/${descriptions.length}] Generating: ${desc.description.substring(0, 50)}...`);
                 
-                // Route to different image generation providers
-                if (provider === 'huggingface') {
-                    // Hugging Face (FREE - Default)
-                    imageData = await generateWithHuggingFace(desc.description, apiKey);
-                } else if (provider === 'dalle' || provider === 'openai') {
-                    // OpenAI DALL-E 3
-                    imageData = await generateWithDALLE(desc.description, apiKey);
-                } else if (provider === 'stability') {
-                    // Stability AI
-                    imageData = await generateWithStability(desc.description, apiKey);
-                } else if (provider === 'gemini') {
-                    // Google Gemini (Imagen)
-                    imageData = await generateWithGemini(desc.description, apiKey);
-                } else {
-                    throw new Error(`Unsupported provider: ${provider}`);
+                try {
+                    let imageData = null;
+                    
+                    // Route to different image generation providers
+                    if (provider === 'huggingface') {
+                        imageData = await generateWithHuggingFace(desc.description, apiKey);
+                    } else if (provider === 'dalle' || provider === 'openai') {
+                        imageData = await generateWithDALLE(desc.description, apiKey);
+                    } else if (provider === 'stability') {
+                        imageData = await generateWithStability(desc.description, apiKey);
+                    } else if (provider === 'gemini') {
+                        imageData = await generateWithGemini(desc.description, apiKey);
+                    } else {
+                        throw new Error(`Unsupported provider: ${provider}`);
+                    }
+                    
+                    successCount++;
+                    
+                    // Send this image immediately!
+                    res.write(`data: ${JSON.stringify({
+                        type: 'image',
+                        image: {
+                            id: desc.id,
+                            slideIndex: desc.slideIndex,
+                            slideTitle: desc.slideTitle,
+                            description: desc.description,
+                            url: imageData.url,
+                            thumbnail: imageData.thumbnail || imageData.url,
+                            provider: provider,
+                            timestamp: Date.now()
+                        },
+                        current: i + 1,
+                        total: descriptions.length
+                    })}\n\n`);
+                    
+                    console.log(`  ✅ [${i + 1}/${descriptions.length}] Sent to client: ${desc.id}`);
+                    
+                } catch (error) {
+                    failedCount++;
+                    console.error(`  ❌ [${i + 1}/${descriptions.length}] Failed: ${desc.id}:`, error.message);
+                    
+                    // Send error event
+                    res.write(`data: ${JSON.stringify({
+                        type: 'error',
+                        error: {
+                            id: desc.id,
+                            slideIndex: desc.slideIndex,
+                            description: desc.description,
+                            error: error.message,
+                            timestamp: Date.now()
+                        },
+                        current: i + 1,
+                        total: descriptions.length
+                    })}\n\n`);
                 }
-                
-                generatedImages.push({
-                    id: desc.id,
-                    description: desc.description,
-                    url: imageData.url,
-                    thumbnail: imageData.thumbnail || imageData.url,
-                    provider: provider,
-                    timestamp: Date.now()
-                });
-                
-                console.log(`  ✅ Image generated for: ${desc.id}`);
-                
-            } catch (error) {
-                console.error(`  ❌ Failed to generate image for ${desc.id}:`, error.message);
-                generatedImages.push({
-                    id: desc.id,
-                    description: desc.description,
-                    error: error.message,
-                    timestamp: Date.now()
-                });
+            }
+            
+            // Send completion event
+            res.write(`data: ${JSON.stringify({
+                type: 'complete',
+                success: successCount,
+                failed: failedCount,
+                total: descriptions.length
+            })}\n\n`);
+            
+            res.write('data: [DONE]\n\n');
+            res.end();
+            
+            console.log(`✅ Streaming complete: ${successCount} success, ${failedCount} failed`);
+            
+        } catch (error) {
+            console.error('Streaming error:', error);
+            if (!res.headersSent) {
+                res.status(500).json({ error: error.message });
             }
         }
         
-        res.json({ 
-            images: generatedImages,
-            success: generatedImages.filter(img => !img.error).length,
-            failed: generatedImages.filter(img => img.error).length
-        });
-        
-    } catch (error) {
-        console.error('Image generation error:', error);
-        res.status(500).json({ error: error.message });
+    } else {
+        // NON-STREAMING MODE (fallback)
+        try {
+            const generatedImages = [];
+            
+            for (const desc of descriptions) {
+                console.log(`  Generating image: ${desc.description.substring(0, 50)}...`);
+                
+                try {
+                    let imageData = null;
+                    
+                    // Route to different image generation providers
+                    if (provider === 'huggingface') {
+                        imageData = await generateWithHuggingFace(desc.description, apiKey);
+                    } else if (provider === 'dalle' || provider === 'openai') {
+                        imageData = await generateWithDALLE(desc.description, apiKey);
+                    } else if (provider === 'stability') {
+                        imageData = await generateWithStability(desc.description, apiKey);
+                    } else if (provider === 'gemini') {
+                        imageData = await generateWithGemini(desc.description, apiKey);
+                    } else {
+                        throw new Error(`Unsupported provider: ${provider}`);
+                    }
+                    
+                    generatedImages.push({
+                        id: desc.id,
+                        description: desc.description,
+                        url: imageData.url,
+                        thumbnail: imageData.thumbnail || imageData.url,
+                        provider: provider,
+                        timestamp: Date.now()
+                    });
+                    
+                    console.log(`  ✅ Image generated for: ${desc.id}`);
+                    
+                } catch (error) {
+                    console.error(`  ❌ Failed to generate image for ${desc.id}:`, error.message);
+                    generatedImages.push({
+                        id: desc.id,
+                        description: desc.description,
+                        error: error.message,
+                        timestamp: Date.now()
+                    });
+                }
+            }
+            
+            res.json({ 
+                images: generatedImages,
+                success: generatedImages.filter(img => !img.error).length,
+                failed: generatedImages.filter(img => img.error).length
+            });
+            
+        } catch (error) {
+            console.error('Image generation error:', error);
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 
