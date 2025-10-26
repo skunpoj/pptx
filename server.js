@@ -809,13 +809,19 @@ app.post('/api/generate', async (req, res) => {
         });
         console.log('✓ Saved to storage');
         
-        // Auto-convert to PDF (async, don't wait)
+        // Auto-convert to PDF (wait for completion to ensure PDF is immediately accessible)
         const libreOfficeAvailable = await checkLibreOffice();
         if (libreOfficeAvailable) {
-            console.log('⏳ Auto-converting to PDF...');
-            convertToPDF(storageResult.pptxPath)
-                .then(() => console.log('✅ PDF conversion complete'))
-                .catch(err => console.log('⚠️ PDF conversion failed:', err.message));
+            console.log('⏳ Auto-converting to PDF (waiting for completion)...');
+            try {
+                await convertToPDF(storageResult.pptxPath);
+                console.log('✅ PDF conversion complete - PDF is now accessible at /view-pdf/' + sessionId);
+            } catch (err) {
+                console.log('⚠️ PDF conversion failed:', err.message);
+                console.log('   PowerPoint will still be available, but PDF access may fail');
+            }
+        } else {
+            console.log('⚠️ LibreOffice not available - PDF conversion skipped');
         }
         
         // Clear progress before sending file
@@ -1112,7 +1118,7 @@ const sharedPresentations = new Map();
  */
 app.post('/api/share-presentation', async (req, res) => {
     try {
-        const { slideData, title } = req.body;
+        const { slideData, title, sessionId } = req.body;
         
         if (!slideData || !slideData.slides) {
             return res.status(400).json({ error: 'Invalid slide data' });
@@ -1121,10 +1127,11 @@ app.post('/api/share-presentation', async (req, res) => {
         // Generate unique share ID
         const shareId = generateShareId();
         
-        // Store presentation data
+        // Store presentation data (including sessionId for PDF access)
         sharedPresentations.set(shareId, {
             slideData,
             title: title || 'AI Presentation',
+            sessionId: sessionId || null,  // Store sessionId to link to PDF
             createdAt: new Date(),
             views: 0
         });
@@ -1173,6 +1180,7 @@ app.get('/api/shared-presentation/:shareId', async (req, res) => {
         res.json({
             slideData: presentation.slideData,
             title: presentation.title,
+            sessionId: presentation.sessionId,  // Include sessionId for PDF access
             views: presentation.views,
             createdAt: presentation.createdAt
         });

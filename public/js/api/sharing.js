@@ -24,7 +24,8 @@ async function sharePresentation() {
             },
             body: JSON.stringify({
                 slideData: window.currentSlideData,
-                title: window.currentSlideData?.slides[0]?.title || 'AI Presentation'
+                title: window.currentSlideData?.slides[0]?.title || 'AI Presentation',
+                sessionId: window.currentSessionId  // Include sessionId for PDF access
             })
         });
         
@@ -61,7 +62,7 @@ async function sharePresentation() {
 }
 
 /**
- * Show share link INLINE next to share button
+ * Show share link as the main result interface
  */
 function showShareLinkInline(shareUrl, expiresIn) {
     // Find the presentation options container
@@ -71,49 +72,116 @@ function showShareLinkInline(shareUrl, expiresIn) {
         return;
     }
     
+    // Remove loading message
+    const loadingMsg = document.getElementById('shareLoadingMessage');
+    if (loadingMsg) loadingMsg.remove();
+    
     // Remove any existing share link display
     const existing = document.getElementById('shareLinkDisplay');
     if (existing) existing.remove();
     
-    // Create inline share display
+    // Create main result display
     const shareDisplay = document.createElement('div');
     shareDisplay.id = 'shareLinkDisplay';
-    shareDisplay.style.cssText = `
-        margin-top: 1rem;
-        padding: 1rem;
-        background: linear-gradient(135deg, #667eea15, #764ba215);
-        border: 2px solid #667eea;
-        border-radius: 8px;
-    `;
     
-    shareDisplay.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.5rem;">🔗</span>
-            <strong style="color: #667eea; font-size: 1.1rem;">Share Link Created!</strong>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <input 
-                type="text" 
-                value="${shareUrl}" 
-                readonly 
-                id="shareLinkInput"
-                style="flex: 1; padding: 0.5rem; border: 1px solid #667eea; border-radius: 4px; font-size: 0.9rem; font-family: monospace;"
-            />
-            <button 
-                onclick="window.copyShareLink()" 
-                style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
-            >📋 Copy</button>
-            <button 
-                onclick="window.open('${shareUrl}', '_blank')" 
-                style="padding: 0.5rem 1rem; background: #764ba2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
-            >🔗 Open</button>
-        </div>
-        <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
-            ⏱️ Link expires in ${expiresIn}
+    // Build the content
+    let contentHTML = `
+        <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                <span style="font-size: 1.5rem;">🔗</span>
+                <strong style="color: #667eea; font-size: 1.1rem;">Shareable Link</strong>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <input 
+                    type="text" 
+                    value="${shareUrl}" 
+                    readonly 
+                    id="shareLinkInput"
+                    style="flex: 1; min-width: 300px; padding: 0.5rem; border: 1px solid #667eea; border-radius: 4px; font-size: 0.9rem; font-family: monospace; background: white;"
+                />
+                <button 
+                    onclick="window.copyShareLink()" 
+                    style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                >📋 Copy Link</button>
+                <button 
+                    onclick="window.open('${shareUrl}', '_blank')" 
+                    style="padding: 0.5rem 1rem; background: #764ba2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                >👁️ View Online</button>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
+                ⏱️ Link expires in ${expiresIn} • Share with anyone!
+            </div>
         </div>
     `;
     
+    // Add download section
+    if (window.currentDownloadUrl && window.currentFileSize) {
+        contentHTML += `
+            <div style="padding-top: 1rem; border-top: 1px solid #ddd;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <span style="font-size: 1.5rem;">📥</span>
+                    <strong style="color: #4CAF50; font-size: 1.1rem;">Download</strong>
+                </div>
+                <div id="downloadButtonContainer"></div>
+            </div>
+        `;
+    }
+    
+    // Add PDF info section if sessionId is available
+    if (window.currentSessionId) {
+        contentHTML += `
+            <div style="padding-top: 1rem; border-top: 1px solid #ddd; margin-top: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.5rem;">📄</span>
+                    <strong style="color: #e67e22; font-size: 1.1rem;">PDF Version</strong>
+                </div>
+                <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
+                    PDF is automatically generated and accessible via:
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <a 
+                        href="/view-pdf/${window.currentSessionId}" 
+                        target="_blank"
+                        style="padding: 0.5rem 1rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; white-space: nowrap;"
+                    >👁️ View PDF</a>
+                    <a 
+                        href="/download/${window.currentSessionId}/presentation.pdf" 
+                        download="presentation.pdf"
+                        style="padding: 0.5rem 1rem; background: #d35400; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; white-space: nowrap;"
+                    >📥 Download PDF</a>
+                </div>
+            </div>
+        `;
+    }
+    
+    shareDisplay.innerHTML = contentHTML;
     optionsDiv.appendChild(shareDisplay);
+    
+    // Add the download button
+    if (window.currentDownloadUrl && window.currentFileSize) {
+        const downloadContainer = document.getElementById('downloadButtonContainer');
+        if (downloadContainer) {
+            const downloadBtn = document.createElement('a');
+            downloadBtn.href = window.currentDownloadUrl;
+            downloadBtn.download = 'presentation.pptx';
+            downloadBtn.className = 'download-link';
+            downloadBtn.style.cssText = `
+                display: inline-block;
+                padding: 0.75rem 1.5rem;
+                background-color: #4CAF50;
+                color: white;
+                text-decoration: none;
+                border-radius: 4px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            `;
+            downloadBtn.onmouseover = () => downloadBtn.style.backgroundColor = '#45a049';
+            downloadBtn.onmouseout = () => downloadBtn.style.backgroundColor = '#4CAF50';
+            downloadBtn.textContent = `📥 Download PowerPoint (${formatFileSize(window.currentFileSize)})`;
+            downloadContainer.appendChild(downloadBtn);
+        }
+    }
     
     // Store URL for copy function
     window.currentShareUrl = shareUrl;
@@ -122,6 +190,17 @@ function showShareLinkInline(shareUrl, expiresIn) {
     setTimeout(() => {
         shareDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
+}
+
+/**
+ * Format file size for display (helper function for sharing.js)
+ */
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 /**

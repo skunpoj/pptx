@@ -161,9 +161,10 @@ body {
    ========================================================================== */
 
 .product-hunt-badge {
-    margin-left: 1rem;
+    margin-left: 0.75rem;
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .product-hunt-badge a {
@@ -178,7 +179,7 @@ body {
 
 .product-hunt-badge img {
     display: block;
-    width: 160px !important;
+    width: 120px !important;
     height: auto !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     border-radius: 6px;
@@ -289,7 +290,8 @@ body {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
 }
 
 .header-right {
@@ -312,7 +314,7 @@ body {
 }
 
 .brand-name {
-    font-size: 2rem;
+    font-size: 1.6rem;
     margin: 0;
     font-weight: 900;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -321,6 +323,7 @@ body {
     background-clip: text;
     letter-spacing: -1.5px;
     line-height: 1;
+    white-space: nowrap;
 }
 
 .brand-tagline {
@@ -378,11 +381,11 @@ body {
     }
     
     .product-hunt-badge {
-        margin-left: 0.5rem;
+        margin-left: 0.35rem;
     }
     
     .product-hunt-badge img {
-        width: 120px !important;
+        width: 90px !important;
         height: auto !important;
     }
     

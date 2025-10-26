@@ -261,6 +261,7 @@
         const shareId = window.location.pathname.split('/').pop();
         let currentSlideIndex = 0;
         let presentationData = null;
+        let sessionId = null;  // Store sessionId for PDF and download access
         
         // Load shared presentation
         async function loadSharedPresentation() {
@@ -273,6 +274,7 @@
                 
                 const data = await response.json();
                 presentationData = data;
+                sessionId = data.sessionId;  // Store sessionId for PDF access
                 
                 // Display presentation
                 displayPresentation(data);
@@ -354,7 +356,12 @@
         }
         
         async function downloadPresentation() {
-            alert('Download feature: This will regenerate the PowerPoint from the slide data. Feature coming soon!');
+            if (sessionId) {
+                // Use sessionId to download the original PPTX file
+                window.location.href = `/download/${sessionId}/presentation.pptx`;
+            } else {
+                alert('Download not available for this presentation.');
+            }
         }
         
         function openModifyModal() {
@@ -413,13 +420,17 @@
                 slidesBtn.className = 'btn btn-secondary';
                 pdfBtn.className = 'btn btn-primary';
                 
-                // Load PDF in iframe
+                // Load PDF in iframe using sessionId (not shareId)
                 const pdfFrame = document.getElementById('pdfFrame');
                 const pdfDownloadLink = document.getElementById('pdfDownloadLink');
-                const pdfUrl = `/view-pdf/${shareId}`;
                 
-                pdfFrame.src = pdfUrl;
-                pdfDownloadLink.href = `/download/${shareId}/presentation.pdf`;
+                if (sessionId) {
+                    const pdfUrl = `/view-pdf/${sessionId}`;
+                    pdfFrame.src = pdfUrl;
+                    pdfDownloadLink.href = `/download/${sessionId}/presentation.pdf`;
+                } else {
+                    pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">PDF not available for this presentation.</p>';
+                }
             }
         }
         

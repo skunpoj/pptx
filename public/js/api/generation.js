@@ -109,6 +109,7 @@ async function generatePresentation() {
         }
         window.currentDownloadUrl = blobUrl;
         window.currentSessionId = sessionId;
+        window.currentFileSize = blob.size;  // Store file size for later use
         
         console.log('✅ PowerPoint generation complete!');
         console.log('  Session ID:', sessionId);
@@ -157,195 +158,49 @@ async function modifySlides() {
 }
 
 /**
- * Show download link with file information
+ * Show share and download section
  */
 function showDownloadLink(downloadUrl, fileSize, storage = {}) {
-    // Create download link element
-    const downloadLink = document.createElement('a');
-    downloadLink.href = downloadUrl;
-    downloadLink.download = 'presentation.pptx';
-    downloadLink.className = 'download-link';
-    downloadLink.style.display = 'inline-block';
-    downloadLink.style.marginTop = '1rem';
-    downloadLink.style.padding = '0.75rem 1.5rem';
-    downloadLink.style.backgroundColor = '#4CAF50';
-    downloadLink.style.color = 'white';
-    downloadLink.style.textDecoration = 'none';
-    downloadLink.style.borderRadius = '4px';
-    downloadLink.style.fontWeight = 'bold';
-    downloadLink.textContent = `📥 Download PowerPoint (${formatFileSize(fileSize)})`;
-    
-    // Add to generatePptSection instead of preview container
-    const container = document.getElementById('generatePptSection');
-    if (container) {
-        // Remove existing download link and options
-        const existingLink = container.querySelector('.download-link');
-        const existingOptions = container.querySelector('.presentation-options');
-        if (existingLink) existingLink.remove();
-        if (existingOptions) existingOptions.remove();
-        
-        container.appendChild(downloadLink);
-    }
-    
-    // Auto-click to start download
-    downloadLink.click();
-    
-    // Show additional options
-    showPresentationOptions(downloadUrl, storage);
-}
-
-/**
- * Show presentation viewing options
- */
-function showPresentationOptions(downloadUrl, storage) {
     const container = document.getElementById('generatePptSection');
     if (!container) return;
     
-    const optionsDiv = document.createElement('div');
-    optionsDiv.className = 'presentation-options';
-    optionsDiv.style.marginTop = '1rem';
-    optionsDiv.style.padding = '1rem';
-    optionsDiv.style.backgroundColor = '#f5f5f5';
-    optionsDiv.style.borderRadius = '4px';
-    optionsDiv.style.border = '1px solid #ddd';
+    // Remove any existing sections
+    const existingLink = container.querySelector('.download-link');
+    const existingOptions = container.querySelector('.presentation-options');
+    if (existingLink) existingLink.remove();
+    if (existingOptions) existingOptions.remove();
     
-    const title = document.createElement('h4');
-    title.textContent = '📋 Presentation Options';
-    title.style.margin = '0 0 0.5rem 0';
+    // Create share link section (this will be the main interface)
+    const shareSection = document.createElement('div');
+    shareSection.className = 'presentation-options';
+    shareSection.style.marginTop = '1rem';
+    shareSection.style.padding = '1.5rem';
+    shareSection.style.backgroundColor = '#f8f9fa';
+    shareSection.style.borderRadius = '8px';
+    shareSection.style.border = '2px solid #667eea';
+    
+    const title = document.createElement('h3');
+    title.textContent = '🎉 Presentation Generated Successfully!';
+    title.style.margin = '0 0 1rem 0';
     title.style.color = '#333';
-    optionsDiv.appendChild(title);
+    title.style.fontSize = '1.3rem';
+    shareSection.appendChild(title);
     
-    // View in browser button - OPENS IN NEW TAB IMMEDIATELY
-    const viewBtn = document.createElement('button');
-    viewBtn.textContent = '👁️ View in Browser';
-    viewBtn.className = 'btn btn-secondary';
-    viewBtn.style.marginRight = '0.5rem';
-    viewBtn.onclick = () => {
-        // Open viewer page with blob URL
-        const viewerUrl = `/viewer.html?url=${encodeURIComponent(downloadUrl)}`;
-        window.open(viewerUrl, '_blank');
-        console.log('🔗 Opened viewer in new tab');
-    };
-    optionsDiv.appendChild(viewBtn);
+    const loadingMessage = document.createElement('div');
+    loadingMessage.textContent = '⏳ Creating shareable link...';
+    loadingMessage.style.padding = '0.5rem';
+    loadingMessage.style.color = '#666';
+    loadingMessage.style.fontSize = '0.95rem';
+    loadingMessage.id = 'shareLoadingMessage';
+    shareSection.appendChild(loadingMessage);
     
-    // PDF conversion (if available)
-    if (storage.sessionId) {
-        const pdfBtn = document.createElement('button');
-        pdfBtn.textContent = '📄 View PDF';
-        pdfBtn.className = 'btn btn-secondary';
-        pdfBtn.style.marginRight = '0.5rem';
-        pdfBtn.id = 'pdfViewBtn';
-        pdfBtn.onclick = () => convertAndViewPDF(storage.sessionId, pdfBtn);
-        optionsDiv.appendChild(pdfBtn);
-    }
+    container.appendChild(shareSection);
     
-    // Share button
-    const shareBtn = document.createElement('button');
-    shareBtn.textContent = '🔗 Share Link';
-    shareBtn.className = 'btn btn-secondary';
-    shareBtn.onclick = () => sharePresentation();
-    optionsDiv.appendChild(shareBtn);
-    
-    container.appendChild(optionsDiv);
+    // Auto-create share link (which will contain the download button)
+    sharePresentation();
 }
 
-/**
- * Convert to PDF and view/download
- */
-async function convertAndViewPDF(sessionId, button) {
-    if (!sessionId) {
-        if (typeof showNotification === 'function') {
-            showNotification('❌ Session ID not available', 'error');
-        }
-        return;
-    }
-    
-    const originalText = button.textContent;
-    button.textContent = '⏳ Converting to PDF...';
-    button.disabled = true;
-    
-    try {
-        const response = await fetch(`/api/convert-to-pdf/${sessionId}`, {
-            method: 'POST'
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'PDF conversion failed');
-        }
-        
-        const result = await response.json();
-        console.log('✅ PDF conversion successful:', result);
-        
-        // Show PDF link inline
-        showPDFLinkInline(result.pdfUrl, result.viewUrl);
-        
-        // Auto-open PDF in new tab
-        window.open(result.viewUrl, '_blank');
-        
-        button.textContent = '✅ PDF Ready';
-        button.disabled = false;
-        
-        if (typeof showNotification === 'function') {
-            showNotification('✅ PDF ready! Link shown below', 'success');
-        }
-        
-    } catch (error) {
-        console.error('PDF conversion error:', error);
-        button.textContent = originalText;
-        button.disabled = false;
-        
-        if (typeof showNotification === 'function') {
-            showNotification('❌ PDF conversion failed: ' + error.message, 'error');
-        }
-    }
-}
-
-/**
- * Show PDF link inline
- */
-function showPDFLinkInline(pdfUrl, viewUrl) {
-    const optionsDiv = document.querySelector('.presentation-options');
-    if (!optionsDiv) return;
-    
-    // Remove existing PDF link if present
-    const existing = document.getElementById('pdfLinkDisplay');
-    if (existing) existing.remove();
-    
-    const pdfDisplay = document.createElement('div');
-    pdfDisplay.id = 'pdfLinkDisplay';
-    pdfDisplay.style.cssText = `
-        margin-top: 1rem;
-        padding: 1rem;
-        background: linear-gradient(135deg, #ff9a5615, #f39c1215);
-        border: 2px solid #f39c12;
-        border-radius: 8px;
-    `;
-    
-    pdfDisplay.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-            <span style="font-size: 1.5rem;">📄</span>
-            <strong style="color: #e67e22; font-size: 1.1rem;">PDF Generated!</strong>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-            <a 
-                href="${viewUrl}" 
-                target="_blank"
-                style="padding: 0.5rem 1rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; white-space: nowrap;"
-            >👁️ View PDF</a>
-            <a 
-                href="${pdfUrl}" 
-                download="presentation.pdf"
-                style="padding: 0.5rem 1rem; background: #d35400; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; white-space: nowrap;"
-            >📥 Download PDF</a>
-        </div>
-        <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
-            Direct link: <a href="${viewUrl}" target="_blank" style="color: #e67e22; word-break: break-all;">${viewUrl}</a>
-        </div>
-    `;
-    
-    optionsDiv.appendChild(pdfDisplay);
-}
+// PDF conversion functions removed - PDFs are now auto-generated on the server
 
 /**
  * Format file size for display
@@ -362,4 +217,3 @@ function formatFileSize(bytes) {
 window.generatePresentation = generatePresentation;
 window.modifySlides = modifySlides;
 window.showDownloadLink = showDownloadLink;
-window.convertAndViewPDF = convertAndViewPDF;
