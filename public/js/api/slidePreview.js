@@ -247,14 +247,18 @@ async function generatePreview() {
             window.cleanupPreviewProgress();
         }
         
+        // Get detailed error message
+        let errorMessage = error.message || 'Unknown error';
+        console.log('Full error details:', error);
+        
         // Show error in preview area
         preview.innerHTML = `
             <div style="text-align: center; padding: 2rem; color: #721c24; background: #f8d7da; border: 2px solid #f5c6cb; border-radius: 8px;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
                 <h3 style="margin: 0 0 0.5rem 0;">Preview Generation Failed</h3>
-                <p style="margin: 0; font-size: 0.9rem;">${error.message}</p>
+                <p style="margin: 0; font-size: 0.9rem; white-space: pre-wrap; max-width: 600px; margin-left: auto; margin-right: auto;">${errorMessage}</p>
                 <p style="margin-top: 1rem; font-size: 0.85rem; color: #856404;">
-                    Please check your API key and try again.
+                    Check browser console (F12) for more details.
                 </p>
             </div>
         `;

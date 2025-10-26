@@ -145,8 +145,14 @@ function showImageProviderSection(provider) {
  * Restores settings section collapsed/expanded state
  */
 function initializeAPISectionState() {
-    const isCollapsed = localStorage.getItem('settings_section_collapsed') === 'true';
-    if (isCollapsed) {
+    // Keep settings collapsed by default on first load
+    const isCollapsed = localStorage.getItem('settings_section_collapsed');
+    
+    // If not set (first time), collapse it
+    if (isCollapsed === null) {
+        localStorage.setItem('settings_section_collapsed', 'true');
+        toggleSettingsSection();
+    } else if (isCollapsed === 'true') {
         toggleSettingsSection();
     }
 }

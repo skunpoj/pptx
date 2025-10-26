@@ -161,26 +161,53 @@ app.post('/api/generate-content', async (req, res) => {
             res.setHeader('Connection', 'keep-alive');
             
             if (provider === 'bedrock') {
-                // Bedrock ConverseStream API
+                // Bedrock ConverseStream API with fallback
                 const bedrockApiKey = process.env.bedrock || apiKey;
                 
-                const response = await fetch("https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-sonnet-4-5-20250929-v1:0/converse-stream", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${bedrockApiKey.trim()}`
-                    },
-                    body: JSON.stringify({
-                        messages: [{
-                            role: "user",
-                            content: [{ text: userPrompt }]
-                        }]
-                    })
-                });
+                const modelIds = [
+                    'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+                    'eu.anthropic.claude-sonnet-4-5-20250929-v1:0',
+                    'apac.anthropic.claude-sonnet-4-5-20250929-v1:0'
+                ];
+                
+                let response = null;
+                let lastError = null;
+                
+                for (const modelId of modelIds) {
+                    try {
+                        console.log(`🔄 Trying Bedrock stream model: ${modelId}`);
+                        
+                        response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse-stream`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${bedrockApiKey.trim()}`
+                            },
+                            body: JSON.stringify({
+                                messages: [{
+                                    role: "user",
+                                    content: [{ text: userPrompt }]
+                                }]
+                            })
+                        });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error?.message || errorData.message || `Bedrock API Error: ${response.status}`);
+                        if (response.ok) {
+                            console.log(`✅ Stream success with model: ${modelId}`);
+                            break; // Success, exit loop
+                        } else {
+                            const errorData = await response.json().catch(() => ({}));
+                            const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
+                            console.log(`❌ Stream model ${modelId} failed: ${errorMsg}`);
+                            lastError = new Error(errorMsg);
+                        }
+                    } catch (error) {
+                        console.log(`❌ Stream error with ${modelId}: ${error.message}`);
+                        lastError = error;
+                    }
+                }
+
+                if (!response || !response.ok) {
+                    throw new Error(`All Bedrock stream models failed. Last error: ${lastError?.message || 'Unknown error'}`);
                 }
 
                 const reader = response.body.getReader();
