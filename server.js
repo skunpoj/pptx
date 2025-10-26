@@ -446,6 +446,14 @@ app.post('/api/preview', async (req, res) => {
         return res.status(400).json({ error: 'Text content is required' });
     }
     
+    // Safety limit to prevent Cloudflare 524 timeouts (100 second limit)
+    // Each slide takes ~2-4 seconds, so 30 slides = ~90 seconds max
+    const MAX_SLIDES = 30;
+    if (numSlides > MAX_SLIDES) {
+        console.log(`⚠️ Requested ${numSlides} slides, limiting to ${MAX_SLIDES} to prevent timeout`);
+        numSlides = MAX_SLIDES;
+    }
+    
     // If no API key provided, use default backend provider
     if (!apiKey) {
         console.log('ℹ️ No user API key provided, using default backend provider');
@@ -467,6 +475,7 @@ app.post('/api/preview', async (req, res) => {
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering for SSE
             
             // Get theme suggestion first - pass numSlides
             const themePrompt = await getSlideDesignPrompt(text, numSlides);
@@ -488,6 +497,9 @@ app.post('/api/preview', async (req, res) => {
                 totalSlides: totalSlides
             })}\n\n`);
             
+            // Flush immediately to prevent buffering issues
+            if (res.flush) res.flush();
+            
             // Generate and send each slide one by one
             for (let i = 0; i < totalSlides; i++) {
                 const slide = fullData.slides[i];
@@ -506,8 +518,11 @@ app.post('/api/preview', async (req, res) => {
                         total: totalSlides
                     })}\n\n`);
                     
-                    // Small delay between slides for visual effect
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    // Flush after each slide to prevent buffering
+                    if (res.flush) res.flush();
+                    
+                    // Small delay between slides for visual effect (reduced for performance)
+                    await new Promise(resolve => setTimeout(resolve, 50));
                     
                 } catch (validateError) {
                     console.error(`  ❌ Slide ${i + 1} validation failed:`, validateError.message);

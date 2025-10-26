@@ -176,6 +176,11 @@ async function generatePreview() {
     
     try {
         const currentProvider = window.currentProvider || 'anthropic';
+        
+        // Create AbortController for timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+        
         const response = await fetch('/api/preview', {
             method: 'POST',
             headers: {
@@ -186,8 +191,9 @@ async function generatePreview() {
                 apiKey: apiKey,
                 provider: currentProvider,
                 incremental: true  // Enable real-time streaming
-            })
-        });
+            }),
+            signal: controller.signal
+        }).finally(() => clearTimeout(timeoutId));
         
         if (!response.ok) {
             // Try to get the actual error message from backend
@@ -263,6 +269,16 @@ async function generatePreview() {
         
         // Get detailed error message
         let errorMessage = error.message || 'Unknown error';
+        
+        // Better error messages for common issues
+        if (error.name === 'AbortError') {
+            errorMessage = 'Request timed out. The presentation is taking longer than expected. Try reducing the content length or number of slides.';
+        } else if (errorMessage.includes('524')) {
+            errorMessage = 'Server timeout (524). The presentation generation is taking too long. This can happen with very large presentations (20+ slides). Try:\n\n• Reducing the amount of content\n• Splitting into smaller presentations\n• Removing complex charts or images\n\nThe server is working but needs more time than allowed.';
+        } else if (errorMessage.includes('Failed to fetch')) {
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+        }
+        
         console.log('Full error details:', error);
         
         // Show error in preview area
