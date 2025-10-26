@@ -29,8 +29,8 @@ const SERVER_CONFIG = {
 const AI_PROVIDERS = {
     BEDROCK: {
         name: 'bedrock',
-        endpoint: 'https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-5-20250929-v1:0/converse',
-        model: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+        endpoint: 'https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-sonnet-4-5-20250929-v1:0/converse',
+        model: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
         maxTokens: 8192,
         envVar: 'bedrock' // Uses environment variable instead of user-provided key
     },

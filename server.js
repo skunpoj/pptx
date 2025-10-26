@@ -144,9 +144,9 @@ app.post('/api/generate-content', async (req, res) => {
         return res.status(400).json({ error: 'Prompt is required' });
     }
     
-    // If no API key provided, default to Bedrock with environment variable
+    // If no API key provided, use default backend provider
     if (!apiKey) {
-        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        console.log('ℹ️ No user API key provided, using default backend provider');
         provider = 'bedrock';
         apiKey = ''; // Will use environment variable in callAI
     }
@@ -236,9 +236,9 @@ app.post('/api/process-files', async (req, res) => {
         return res.status(400).json({ error: 'Files are required' });
     }
     
-    // If no API key provided, default to Bedrock with environment variable
+    // If no API key provided, use default backend provider
     if (!apiKey) {
-        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        console.log('ℹ️ No user API key provided, using default backend provider');
         provider = 'bedrock';
         apiKey = ''; // Will use environment variable in callAI
     }
@@ -353,9 +353,9 @@ app.post('/api/preview', async (req, res) => {
         return res.status(400).json({ error: 'Text content is required' });
     }
     
-    // If no API key provided, default to Bedrock with environment variable
+    // If no API key provided, use default backend provider
     if (!apiKey) {
-        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        console.log('ℹ️ No user API key provided, using default backend provider');
         provider = 'bedrock';
         apiKey = ''; // Will use environment variable in callAI
     }
@@ -481,9 +481,9 @@ app.post('/api/modify-slides', async (req, res) => {
         return res.status(400).json({ error: 'Current slides and modification request are required' });
     }
     
-    // If no API key provided, default to Bedrock with environment variable
+    // If no API key provided, use default backend provider
     if (!apiKey) {
-        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        console.log('ℹ️ No user API key provided, using default backend provider');
         provider = 'bedrock';
         apiKey = ''; // Will use environment variable in callAI
     }
@@ -553,9 +553,9 @@ app.post('/api/generate', async (req, res) => {
         return res.status(400).json({ error: 'Either text or slideData is required' });
     }
     
-    // If no API key provided, default to Bedrock with environment variable
+    // If no API key provided, use default backend provider
     if (!apiKey) {
-        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        console.log('ℹ️ No user API key provided, using default backend provider');
         provider = 'bedrock';
         apiKey = ''; // Will use environment variable in callAI
     }
@@ -775,9 +775,9 @@ app.post('/api/generate-with-template', upload.single('templateFile'), async (re
         return res.status(400).json({ error: 'Text and template file are required' });
     }
     
-    // If no API key provided, default to Bedrock with environment variable
+    // If no API key provided, use default backend provider
     if (!apiKey) {
-        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        console.log('ℹ️ No user API key provided, using default backend provider');
         provider = 'bedrock';
         apiKey = ''; // Will use environment variable in callAI
     }

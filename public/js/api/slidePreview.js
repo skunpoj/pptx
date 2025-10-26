@@ -176,7 +176,7 @@ async function generatePreview() {
     };
     
     try {
-        const currentProvider = window.currentProvider || 'bedrock';
+        const currentProvider = window.currentProvider || 'anthropic';
         const response = await fetch('/api/preview', {
             method: 'POST',
             headers: {

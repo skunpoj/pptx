@@ -265,11 +265,7 @@ Our Products
                         <h3>📝 Content Generation Provider</h3>
                         <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Select which AI to use for writing presentation content and slide structure</p>
                         <div class="provider-buttons">
-                            <button class="provider-btn" onclick="window.selectProvider('bedrock')" id="provider-bedrock">
-                                🔒 AWS Bedrock
-                                <span style="display: block; font-size: 0.7rem; opacity: 0.8;">FREE • Default</span>
-                            </button>
-                            <button class="provider-btn" onclick="window.selectProvider('anthropic')" id="provider-anthropic">Anthropic</button>
+                            <button class="provider-btn active" onclick="window.selectProvider('anthropic')" id="provider-anthropic">Anthropic</button>
                             <button class="provider-btn" onclick="window.selectProvider('openai')" id="provider-openai">OpenAI</button>
                             <button class="provider-btn" onclick="window.selectProvider('gemini')" id="provider-gemini">Gemini</button>
                             <button class="provider-btn" onclick="window.selectProvider('openrouter')" id="provider-openrouter">OpenRouter</button>
@@ -333,31 +329,8 @@ Our Products
                         </form>
                     </div>
 
-                    <!-- Bedrock Section (DEFAULT) -->
-                    <div class="api-section provider-section" id="section-bedrock" style="margin-top: 1.5rem; border-top: 3px solid #2ecc71; padding-top: 1.5rem;">
-                        <h3>🔒 AWS Bedrock (Default - FREE!)</h3>
-                        <div class="info-box" style="background: linear-gradient(135deg, #d5f4e6 0%, #b2ebf2 100%); border-left: 4px solid #2ecc71;">
-                            <strong style="color: #27ae60;">✨ No API Key Required!</strong>
-                            <p style="margin-top: 0.5rem; color: #666;">AWS Bedrock is configured via server environment variable and available for FREE use.</p>
-                            <p style="margin-top: 0.5rem; color: #666;">This is the default provider when no API key is provided for other services.</p>
-                            <strong style="margin-top: 1rem; display: block;">Features:</strong>
-                            <ul style="margin-top: 0.5rem;">
-                                <li>✅ Claude Sonnet 4.5 - Latest Model</li>
-                                <li>✅ No user configuration needed</li>
-                                <li>✅ Automatically used when no other API key is set</li>
-                                <li>✅ Enterprise-grade security via AWS</li>
-                            </ul>
-                            <p style="margin-top: 1rem; padding: 0.75rem; background: #fff; border-radius: 4px; font-size: 0.85rem;">
-                                <strong>📌 Note:</strong> If you want to use your own AWS Bedrock credentials, ask the administrator to set the <code>bedrock</code> environment variable on the server.
-                            </p>
-                        </div>
-                        <div style="padding: 1rem; background: #f0f9ff; border-radius: 4px; margin-top: 1rem; text-align: center;">
-                            <p style="margin: 0; color: #2ecc71; font-weight: 600; font-size: 1rem;">🎉 Ready to use! No configuration needed.</p>
-                        </div>
-                    </div>
-
                     <!-- Anthropic Section -->
-                    <div class="api-section provider-section" id="section-anthropic" style="display: none;">
+                    <div class="api-section provider-section" id="section-anthropic">
                         <h3>Anthropic Claude API</h3>
                         <div class="info-box">
                             <strong>To get your API key:</strong>

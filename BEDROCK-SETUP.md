@@ -2,7 +2,7 @@
 
 ## Quick Start
 
-AWS Bedrock is now the **default LLM provider** for this application. Follow these steps to configure it:
+AWS Bedrock is the **invisible default fallback** for this application. When users don't provide API keys for other providers, the system automatically uses Bedrock behind the scenes. Users never see Bedrock in the UI.
 
 ### 1. Create Environment File
 
@@ -15,12 +15,14 @@ bedrock=your-aws-bedrock-api-key-here
 
 ### 2. Get Your AWS Bedrock API Key
 
-You can obtain your Bedrock API key from AWS. The application uses the Bedrock Converse API with Claude Sonnet 4.5.
+You can obtain your Bedrock API key from AWS. The application uses the Bedrock Converse API with Claude Sonnet 4.5 (global model).
 
 **API Endpoint:**
 ```
-https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-5-20250929-v1:0/converse
+https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-sonnet-4-5-20250929-v1:0/converse
 ```
+
+**Model ID:** `anthropic.claude-sonnet-4-5-20250929-v1:0` (global, not region-specific)
 
 ### 3. Test the Setup
 
@@ -56,10 +58,13 @@ npm start
 ### 4. Verify It's Working
 
 1. Open the application in your browser
-2. Go to "Advanced Configuration"
-3. You should see "AWS Bedrock" button with "FREE • Default" badge
-4. Try generating a presentation without configuring any API keys
-5. Check browser console - should show: "Using Bedrock provider (server-side authentication)"
+2. **Don't configure any API keys** (leave all provider keys empty)
+3. Try generating a presentation
+4. It should work automatically using Bedrock in the background
+5. Check browser console - should show: "No API key found for provider: anthropic, using default backend provider"
+6. Check server logs - should show: "No user API key provided, using default backend provider"
+
+**Note:** Users won't see "Bedrock" anywhere in the UI - it works invisibly in the background.
 
 ## Configuration for Different Environments
 
@@ -103,20 +108,21 @@ stringData:
 
 ## How It Works
 
-1. **Default Behavior:**
-   - When users open the app for the first time, Bedrock is automatically selected
-   - No API key configuration required from users
-   - All requests use the server-side `bedrock` environment variable
+1. **Invisible Default:**
+   - Bedrock is **NOT shown in the UI** - users only see: Anthropic, OpenAI, Gemini, OpenRouter
+   - When users don't provide API keys, the backend automatically uses Bedrock
+   - No configuration required from users
 
-2. **Fallback Behavior:**
-   - If a user selects another provider (Anthropic, OpenAI, etc.) but doesn't provide an API key
-   - System automatically falls back to Bedrock
-   - Ensures the application always works
+2. **Automatic Fallback:**
+   - User selects any provider (e.g., Anthropic) but doesn't enter an API key
+   - Frontend sends empty API key to backend
+   - Backend detects empty API key and switches to Bedrock automatically
+   - User never knows Bedrock is being used - it just works
 
 3. **User Choice:**
-   - Users can still configure their own API keys for other providers
-   - When they do, those providers will be used instead of Bedrock
-   - Gives users flexibility while maintaining zero-config default
+   - Users can configure their own API keys for Anthropic, OpenAI, Gemini, or OpenRouter
+   - When they do, those providers are used instead of Bedrock
+   - Seamless experience - if their key expires or is invalid, falls back to Bedrock
 
 ## Testing Without Bedrock
 

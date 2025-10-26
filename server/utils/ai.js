@@ -9,7 +9,7 @@ async function callAI(provider, apiKey, userPrompt) {
             throw new Error('Bedrock API key not found in environment variable "bedrock"');
         }
         
-        const response = await fetch("https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-5-20250929-v1:0/converse", {
+        const response = await fetch("https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-sonnet-4-5-20250929-v1:0/converse", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
