@@ -288,6 +288,14 @@ body {
     text-align: right;
 }
 
+.header-top-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    justify-content: flex-end;
+}
+
 .brand-name {
     font-size: 2rem;
     margin: 0;
@@ -376,6 +384,12 @@ body {
         width: 100%;
         align-items: center;
         text-align: center;
+    }
+    
+    .header-top-row {
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.5rem;
     }
     
     .brand-name {
