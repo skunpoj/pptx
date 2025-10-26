@@ -163,7 +163,7 @@ body {
 .floating-product-hunt {
     display: flex;
     justify-content: center;
-    margin: 0 auto 1rem auto;
+    margin: 0.5rem auto 0.5rem auto;
     max-width: 1400px;
     animation: floatBounce 3s ease-in-out infinite;
     transition: all 0.3s ease;
@@ -366,20 +366,21 @@ body {
     }
     
     .free-badge {
-        padding: 0.5rem 0.85rem;
-        font-size: 0.8rem;
+        padding: 0.35rem 0.65rem;
+        font-size: 0.65rem;
     }
     
     .badge-icon {
-        font-size: 1rem;
+        font-size: 0.85rem;
     }
     
     .badge-text {
-        font-size: 0.8rem;
+        font-size: 0.65rem;
+        letter-spacing: 0.3px;
     }
     
     .floating-product-hunt {
-        margin-bottom: 0.75rem;
+        margin: 0.35rem auto 0.35rem auto;
     }
     
     .floating-product-hunt img {
@@ -440,21 +441,21 @@ body {
     }
     
     .free-badge {
-        padding: 0.4rem 0.7rem;
-        font-size: 0.7rem;
+        padding: 0.3rem 0.55rem;
+        font-size: 0.6rem;
     }
     
     .badge-icon {
-        font-size: 0.9rem;
+        font-size: 0.75rem;
     }
     
     .badge-text {
-        font-size: 0.7rem;
-        letter-spacing: 0.3px;
+        font-size: 0.6rem;
+        letter-spacing: 0.2px;
     }
     
     .floating-product-hunt {
-        margin-bottom: 0.5rem;
+        margin: 0.25rem auto 0.25rem auto;
     }
     
     .floating-product-hunt img {

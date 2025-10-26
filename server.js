@@ -161,31 +161,51 @@ app.post('/api/generate-content', async (req, res) => {
             res.setHeader('Connection', 'keep-alive');
             
             if (provider === 'bedrock') {
-                // Bedrock ConverseStream API - use global inference profile
+                // Bedrock ConverseStream API - try global then us prefix
                 const bedrockApiKey = process.env.bedrock || apiKey;
-                const modelId = 'global.anthropic.claude-sonnet-4-5-20250929-v1:0';
+                const modelIds = [
+                    'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+                    'us.anthropic.claude-sonnet-4-5-20250929-v1:0'
+                ];
                 
-                console.log(`🔄 Calling Bedrock stream model: ${modelId}`);
+                let response = null;
+                let lastError = null;
                 
-                const response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse-stream`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${bedrockApiKey.trim()}`
-                    },
-                    body: JSON.stringify({
-                        messages: [{
-                            role: "user",
-                            content: [{ text: userPrompt }]
-                        }]
-                    })
-                });
+                for (const modelId of modelIds) {
+                    try {
+                        console.log(`🔄 Calling Bedrock stream model: ${modelId}`);
+                        
+                        response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse-stream`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Authorization": `Bearer ${bedrockApiKey.trim()}`
+                            },
+                            body: JSON.stringify({
+                                messages: [{
+                                    role: "user",
+                                    content: [{ text: userPrompt }]
+                                }]
+                            })
+                        });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-                    console.log(`❌ Bedrock stream error: ${errorMsg}`);
-                    throw new Error(`Bedrock API error: ${errorMsg}`);
+                        if (response.ok) {
+                            console.log(`✅ Stream success with model: ${modelId}`);
+                            break; // Success, exit loop
+                        } else {
+                            const errorData = await response.json().catch(() => ({}));
+                            const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+                            console.log(`❌ Stream model ${modelId} failed: ${errorMsg}`);
+                            lastError = new Error(errorMsg);
+                        }
+                    } catch (error) {
+                        console.log(`❌ Stream error with ${modelId}: ${error.message}`);
+                        lastError = error;
+                    }
+                }
+                
+                if (!response || !response.ok) {
+                    throw new Error(`Bedrock API error: ${lastError?.message || 'All model prefixes failed'}`);
                 }
 
                 const reader = response.body.getReader();
