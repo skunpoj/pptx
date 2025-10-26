@@ -9,8 +9,8 @@ async function callAI(provider, apiKey, userPrompt) {
             throw new Error('Bedrock API key not found in environment variable "bedrock"');
         }
         
-        // Use global model ID (no region prefix)
-        const modelId = 'anthropic.claude-sonnet-4-5-20250929-v1:0';
+        // Use global inference profile prefix
+        const modelId = 'global.anthropic.claude-sonnet-4-5-20250929-v1:0';
         
         try {
             console.log(`🔄 Calling Bedrock model: ${modelId}`);

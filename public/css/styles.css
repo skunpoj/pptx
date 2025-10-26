@@ -157,31 +157,30 @@ body {
 }
 
 /* ==========================================================================
-   FLOATING PRODUCT HUNT BADGE WITH ANIMATION
+   PRODUCT HUNT BADGE - BELOW HEADER
    ========================================================================== */
 
 .floating-product-hunt {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 1rem auto;
+    max-width: 1400px;
     animation: floatBounce 3s ease-in-out infinite;
     transition: all 0.3s ease;
 }
 
 @keyframes floatBounce {
     0%, 100% {
-        transform: translateX(-50%) translateY(0px);
+        transform: translateY(0px);
     }
     50% {
-        transform: translateX(-50%) translateY(-10px);
+        transform: translateY(-8px);
     }
 }
 
 .floating-product-hunt:hover {
     animation-play-state: paused;
-    transform: translateX(-50%) translateY(-5px) scale(1.05);
+    transform: translateY(-5px) scale(1.05);
 }
 
 .floating-product-hunt img {
@@ -363,12 +362,24 @@ body {
 /* Responsive header */
 @media (max-width: 768px) {
     .header-badge {
-        display: none; /* Hide on mobile to save space */
+        margin-left: 0.5rem; /* Reduce spacing on mobile */
+    }
+    
+    .free-badge {
+        padding: 0.5rem 0.85rem;
+        font-size: 0.8rem;
+    }
+    
+    .badge-icon {
+        font-size: 1rem;
+    }
+    
+    .badge-text {
+        font-size: 0.8rem;
     }
     
     .floating-product-hunt {
-        top: 15px;
-        left: 15px;
+        margin-bottom: 0.75rem;
     }
     
     .floating-product-hunt img {
@@ -425,12 +436,25 @@ body {
 
 @media (max-width: 480px) {
     .header-badge {
-        display: none; /* Hide on small mobile */
+        margin-left: 0.25rem; /* Minimal spacing on small mobile */
+    }
+    
+    .free-badge {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.7rem;
+    }
+    
+    .badge-icon {
+        font-size: 0.9rem;
+    }
+    
+    .badge-text {
+        font-size: 0.7rem;
+        letter-spacing: 0.3px;
     }
     
     .floating-product-hunt {
-        top: 10px;
-        left: 10px;
+        margin-bottom: 0.5rem;
     }
     
     .floating-product-hunt img {

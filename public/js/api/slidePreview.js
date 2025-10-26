@@ -190,7 +190,21 @@ async function generatePreview() {
         });
         
         if (!response.ok) {
-            throw new Error(`Preview failed: ${response.status} ${response.statusText}`);
+            // Try to get the actual error message from backend
+            let errorDetails = `Preview failed: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.error) {
+                    errorDetails = errorData.error;
+                }
+                if (errorData.provider) {
+                    errorDetails += ` (Provider: ${errorData.provider})`;
+                }
+            } catch (e) {
+                // If parsing fails, use status text
+                errorDetails = `Preview failed: ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorDetails);
         }
         
         // Check if it's SSE streaming response

@@ -161,9 +161,9 @@ app.post('/api/generate-content', async (req, res) => {
             res.setHeader('Connection', 'keep-alive');
             
             if (provider === 'bedrock') {
-                // Bedrock ConverseStream API - use global model
+                // Bedrock ConverseStream API - use global inference profile
                 const bedrockApiKey = process.env.bedrock || apiKey;
-                const modelId = 'anthropic.claude-sonnet-4-5-20250929-v1:0';
+                const modelId = 'global.anthropic.claude-sonnet-4-5-20250929-v1:0';
                 
                 console.log(`🔄 Calling Bedrock stream model: ${modelId}`);
                 
