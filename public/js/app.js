@@ -9,7 +9,7 @@
 
 // Slide data and generation state
 window.currentSlideData = null;
-window.currentProvider = 'anthropic';
+window.currentProvider = 'bedrock'; // Default to Bedrock (FREE)
 window.currentView = 'list';
 window.selectedTheme = null;
 window.templateFile = null;
@@ -39,7 +39,7 @@ window.addEventListener('load', () => {
  * Loads saved API keys from localStorage
  */
 function initializeAPIKeys() {
-    const providers = ['huggingface', 'anthropic', 'openai', 'gemini', 'openrouter', 'stability'];
+    const providers = ['bedrock', 'huggingface', 'anthropic', 'openai', 'gemini', 'openrouter', 'stability'];
     
     providers.forEach(provider => {
         const savedKey = localStorage.getItem(`${provider}_api_key`);
@@ -56,7 +56,20 @@ function initializeAPIKeys() {
  * Loads saved provider selection
  */
 function initializeProviderSelection() {
-    const savedProvider = localStorage.getItem('ai_provider') || 'anthropic';
+    // Check if any provider has a saved API key
+    const hasAnthropicKey = !!localStorage.getItem('anthropic_api_key');
+    const hasOpenAIKey = !!localStorage.getItem('openai_api_key');
+    const hasGeminiKey = !!localStorage.getItem('gemini_api_key');
+    const hasOpenRouterKey = !!localStorage.getItem('openrouter_api_key');
+    
+    let savedProvider = localStorage.getItem('ai_provider');
+    
+    // If no provider saved or no API keys available, default to Bedrock
+    if (!savedProvider || (!hasAnthropicKey && !hasOpenAIKey && !hasGeminiKey && !hasOpenRouterKey)) {
+        savedProvider = 'bedrock';
+        console.log('💡 No API keys found, defaulting to Bedrock (FREE)');
+    }
+    
     window.currentProvider = savedProvider;
     selectProvider(savedProvider);
 }

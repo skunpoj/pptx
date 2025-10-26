@@ -138,10 +138,17 @@ app.get('/api/capabilities', (req, res) => {
 // ========================================
 
 app.post('/api/generate-content', async (req, res) => {
-    const { prompt, apiKey, provider = 'anthropic', numSlides = 6, generateImages = false, stream = false } = req.body;
+    let { prompt, apiKey, provider = 'anthropic', numSlides = 6, generateImages = false, stream = false } = req.body;
     
-    if (!prompt || !apiKey) {
-        return res.status(400).json({ error: 'Prompt and API key are required' });
+    if (!prompt) {
+        return res.status(400).json({ error: 'Prompt is required' });
+    }
+    
+    // If no API key provided, default to Bedrock with environment variable
+    if (!apiKey) {
+        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        provider = 'bedrock';
+        apiKey = ''; // Will use environment variable in callAI
     }
     
     try {
@@ -223,10 +230,17 @@ app.post('/api/generate-content', async (req, res) => {
 // ========================================
 
 app.post('/api/process-files', async (req, res) => {
-    const { files, apiKey, provider = 'anthropic' } = req.body;
+    let { files, apiKey, provider = 'anthropic' } = req.body;
     
-    if (!files || !Array.isArray(files) || files.length === 0 || !apiKey) {
-        return res.status(400).json({ error: 'Files and API key are required' });
+    if (!files || !Array.isArray(files) || files.length === 0) {
+        return res.status(400).json({ error: 'Files are required' });
+    }
+    
+    // If no API key provided, default to Bedrock with environment variable
+    if (!apiKey) {
+        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        provider = 'bedrock';
+        apiKey = ''; // Will use environment variable in callAI
     }
     
     try {
@@ -333,10 +347,17 @@ app.post('/api/extract-colors', upload.array('files'), async (req, res) => {
 // ========================================
 
 app.post('/api/preview', async (req, res) => {
-    const { text, apiKey, provider = 'anthropic', incremental = true, numSlides = 0 } = req.body;
+    let { text, apiKey, provider = 'anthropic', incremental = true, numSlides = 0 } = req.body;
     
-    if (!text || !apiKey) {
-        return res.status(400).json({ error: 'Text and API key are required' });
+    if (!text) {
+        return res.status(400).json({ error: 'Text content is required' });
+    }
+    
+    // If no API key provided, default to Bedrock with environment variable
+    if (!apiKey) {
+        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        provider = 'bedrock';
+        apiKey = ''; // Will use environment variable in callAI
     }
     
     try {
@@ -347,7 +368,7 @@ app.post('/api/preview', async (req, res) => {
         console.log('  Requested slides:', numSlides || 'AI decides');
         
         // INCREMENTAL MODE: Generate slides ONE BY ONE
-        if (incremental && provider === 'anthropic') {
+        if (incremental && (provider === 'anthropic' || provider === 'bedrock')) {
             console.log('🔄 Starting incremental slide generation...');
             
             res.setHeader('Content-Type', 'text/event-stream');
@@ -454,10 +475,17 @@ app.post('/api/preview', async (req, res) => {
 // ========================================
 
 app.post('/api/modify-slides', async (req, res) => {
-    const { currentSlides, modificationRequest, apiKey, provider = 'anthropic' } = req.body;
+    let { currentSlides, modificationRequest, apiKey, provider = 'anthropic' } = req.body;
     
-    if (!currentSlides || !modificationRequest || !apiKey) {
-        return res.status(400).json({ error: 'Current slides, modification request, and API key are required' });
+    if (!currentSlides || !modificationRequest) {
+        return res.status(400).json({ error: 'Current slides and modification request are required' });
+    }
+    
+    // If no API key provided, default to Bedrock with environment variable
+    if (!apiKey) {
+        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        provider = 'bedrock';
+        apiKey = ''; // Will use environment variable in callAI
     }
     
     try {
@@ -520,21 +548,23 @@ app.post('/api/generate', async (req, res) => {
     console.log('POWERPOINT GENERATION REQUEST');
     console.log('='.repeat(80));
     
-    // Validate: either text OR slideData must be provided, plus apiKey
-    if (!apiKey) {
-        console.log('❌ Missing API key');
-        return res.status(400).json({ error: 'API key is required' });
-    }
-    
     if (!text && !slideData) {
         console.log('❌ Missing content:', { hasText: !!text, hasSlideData: !!slideData });
         return res.status(400).json({ error: 'Either text or slideData is required' });
+    }
+    
+    // If no API key provided, default to Bedrock with environment variable
+    if (!apiKey) {
+        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        provider = 'bedrock';
+        apiKey = ''; // Will use environment variable in callAI
     }
     
     console.log('✅ Request validated:', { 
         hasText: !!text, 
         hasSlideData: !!slideData, 
         hasApiKey: !!apiKey,
+        provider: provider,
         slideCount: slideData?.slides?.length || 0
     });
 
@@ -738,11 +768,18 @@ app.post('/api/generate', async (req, res) => {
 // ========================================
 
 app.post('/api/generate-with-template', upload.single('templateFile'), async (req, res) => {
-    const { text, apiKey, provider = 'anthropic', slideData: slideDataStr } = req.body;
+    let { text, apiKey, provider = 'anthropic', slideData: slideDataStr } = req.body;
     const templateFile = req.file;
     
-    if (!text || !apiKey || !templateFile) {
-        return res.status(400).json({ error: 'Text, API key, and template file are required' });
+    if (!text || !templateFile) {
+        return res.status(400).json({ error: 'Text and template file are required' });
+    }
+    
+    // If no API key provided, default to Bedrock with environment variable
+    if (!apiKey) {
+        console.log('⚠️ No API key provided, defaulting to Bedrock provider');
+        provider = 'bedrock';
+        apiKey = ''; // Will use environment variable in callAI
     }
 
     const sessionId = createSessionId();

@@ -1,7 +1,47 @@
 // AI API utility functions
 
 async function callAI(provider, apiKey, userPrompt) {
-    if (provider === 'anthropic') {
+    if (provider === 'bedrock') {
+        // Use environment variable for Bedrock authentication
+        const bedrockApiKey = process.env.bedrock || apiKey;
+        
+        if (!bedrockApiKey) {
+            throw new Error('Bedrock API key not found in environment variable "bedrock"');
+        }
+        
+        const response = await fetch("https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-5-20250929-v1:0/converse", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${bedrockApiKey.trim()}`
+            },
+            body: JSON.stringify({
+                messages: [{
+                    role: "user",
+                    content: [{ text: userPrompt }]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || errorData.message || `Bedrock API Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        // Parse Bedrock response format
+        if (data.output && data.output.message && data.output.message.content) {
+            // Extract text from the response
+            const content = data.output.message.content;
+            if (Array.isArray(content) && content.length > 0 && content[0].text) {
+                return content[0].text.trim();
+            }
+        }
+        
+        throw new Error('Unexpected Bedrock response format');
+    }
+    else if (provider === 'anthropic') {
         const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: {

@@ -53,11 +53,22 @@ if (document.readyState === 'loading') {
  * Get API key from localStorage based on current provider
  */
 function getApiKey() {
-    const currentProvider = window.currentProvider || localStorage.getItem('ai_provider') || 'anthropic';
+    const currentProvider = window.currentProvider || localStorage.getItem('ai_provider') || 'bedrock';
+    
+    // Bedrock doesn't require an API key (uses server environment variable)
+    if (currentProvider === 'bedrock') {
+        console.log(`✅ Using Bedrock provider (server-side authentication)`);
+        return ''; // Empty string - server will use environment variable
+    }
+    
     const apiKey = localStorage.getItem(`${currentProvider}_api_key`) || '';
     
     if (!apiKey) {
-        console.warn(`⚠️ No API key found for provider: ${currentProvider}`);
+        console.warn(`⚠️ No API key found for provider: ${currentProvider}, falling back to Bedrock`);
+        // If no API key found, switch to Bedrock
+        window.currentProvider = 'bedrock';
+        localStorage.setItem('ai_provider', 'bedrock');
+        return '';
     } else {
         console.log(`✅ API key loaded for provider: ${currentProvider}`);
     }

@@ -176,6 +176,7 @@ async function generatePreview() {
     };
     
     try {
+        const currentProvider = window.currentProvider || 'bedrock';
         const response = await fetch('/api/preview', {
             method: 'POST',
             headers: {
@@ -184,6 +185,7 @@ async function generatePreview() {
             body: JSON.stringify({
                 text: text,
                 apiKey: apiKey,
+                provider: currentProvider,
                 incremental: true  // Enable real-time streaming
             })
         });
