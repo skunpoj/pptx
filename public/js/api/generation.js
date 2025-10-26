@@ -18,14 +18,13 @@ async function generatePresentation() {
         hasTemplate: !!window.templateFile
     });
     
-    const apiKey = (typeof getApiKey === 'function') ? getApiKey() : null;
-    if (!apiKey) {
-        console.error('❌ No API key found');
-        alert('Please enter your API key first');
-        return;
-    }
+    const apiKey = (typeof getApiKey === 'function') ? getApiKey() : '';
     
-    console.log('✅ API key found, proceeding with generation');
+    if (!apiKey) {
+        console.log('ℹ️ No API key configured, using default backend provider');
+    } else {
+        console.log('✅ API key found, proceeding with generation');
+    }
     
     // Show loading state
     const generateBtn = document.getElementById('generateBtn');
@@ -148,9 +147,9 @@ async function modifySlides() {
     }
     
     const apiKey = getApiKey();
+    
     if (!apiKey) {
-        alert('Please enter your API key first');
-        return;
+        console.log('ℹ️ No API key configured, using default backend provider');
     }
     
     // Show modification modal

@@ -109,8 +109,7 @@ async function generateFromPrompt() {
     
     // Validation
     if (!apiKey) {
-        window.showStatus('⚠️ Please enter your API key first!', 'error');
-        return;
+        console.log('ℹ️ No API key configured, using default backend provider');
     }
     
     if (!prompt && files.length === 0) {

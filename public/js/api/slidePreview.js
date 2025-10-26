@@ -72,14 +72,13 @@ async function generatePreview() {
     
     console.log(`📝 Processing ${text.length} characters of content`);
     
-    const apiKey = (typeof getApiKey === 'function') ? getApiKey() : null;
-    if (!apiKey) {
-        console.warn('⚠️ No API key configured');
-        alert('Please enter your API key first in Advanced Configuration section');
-        return;
-    }
+    const apiKey = (typeof getApiKey === 'function') ? getApiKey() : '';
     
-    console.log('✅ API key found, proceeding with preview generation');
+    if (!apiKey) {
+        console.log('ℹ️ No API key configured, using default backend provider');
+    } else {
+        console.log('✅ API key found, proceeding with preview generation');
+    }
     
     const cachedData = checkPreviewCache(text);
     if (cachedData) {

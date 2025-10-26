@@ -162,7 +162,7 @@ body {
 
 .floating-badge {
     position: fixed;
-    top: 20px;
+    top: 100px; /* Moved down to be below header */
     right: 20px;
     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     color: white;
@@ -208,7 +208,7 @@ body {
 
 .floating-product-hunt {
     position: fixed;
-    top: 20px;
+    top: 100px; /* Moved down to be below header */
     left: 20px;
     z-index: 1000;
     transition: all 0.3s ease;

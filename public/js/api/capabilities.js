@@ -78,7 +78,7 @@ function showNotification(message, type = 'info') {
         // Create a simple notification
         const notification = document.createElement('div');
         notification.style.position = 'fixed';
-        notification.style.top = '20px';
+        notification.style.top = '100px'; // Moved down to be below header
         notification.style.right = '20px';
         notification.style.padding = '1rem';
         notification.style.borderRadius = '4px';

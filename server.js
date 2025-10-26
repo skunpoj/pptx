@@ -154,62 +154,118 @@ app.post('/api/generate-content', async (req, res) => {
     try {
         const userPrompt = await getContentGenerationPrompt(prompt, numSlides, generateImages);
 
-        // Streaming for Anthropic
-        if (stream && provider === 'anthropic') {
+        // Streaming for Anthropic and Bedrock
+        if (stream && (provider === 'anthropic' || provider === 'bedrock')) {
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
             
-            const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": apiKey.trim(),
-                    "anthropic-version": "2023-06-01"
-                },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 4000,
-                    stream: true,
-                    messages: [{ role: "user", content: userPrompt }]
-                })
-            });
+            if (provider === 'bedrock') {
+                // Bedrock ConverseStream API
+                const bedrockApiKey = process.env.bedrock || apiKey;
+                
+                const response = await fetch("https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-sonnet-4-5-20250929-v1:0/converse-stream", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${bedrockApiKey.trim()}`
+                    },
+                    body: JSON.stringify({
+                        messages: [{
+                            role: "user",
+                            content: [{ text: userPrompt }]
+                        }]
+                    })
+                });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
-            }
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || errorData.message || `Bedrock API Error: ${response.status}`);
+                }
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
 
-            try {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
 
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
 
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6);
-                            if (data === '[DONE]') continue;
+                        for (const line of lines) {
+                            if (line.trim() === '') continue;
                             
                             try {
-                                const parsed = JSON.parse(data);
-                                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                                    res.write(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`);
+                                const parsed = JSON.parse(line);
+                                
+                                // Bedrock stream format
+                                if (parsed.contentBlockDelta && parsed.contentBlockDelta.delta && parsed.contentBlockDelta.delta.text) {
+                                    res.write(`data: ${JSON.stringify({ text: parsed.contentBlockDelta.delta.text })}\n\n`);
                                 }
                             } catch (e) {
                                 // Skip invalid JSON
                             }
                         }
                     }
+                } finally {
+                    res.write('data: [DONE]\n\n');
+                    res.end();
                 }
-            } finally {
-                res.write('data: [DONE]\n\n');
-                res.end();
+            } else if (provider === 'anthropic') {
+                // Anthropic streaming
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-api-key": apiKey.trim(),
+                        "anthropic-version": "2023-06-01"
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 4000,
+                        stream: true,
+                        messages: [{ role: "user", content: userPrompt }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                        res.write(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`);
+                                    }
+                                } catch (e) {
+                                    // Skip invalid JSON
+                                }
+                            }
+                        }
+                    }
+                } finally {
+                    res.write('data: [DONE]\n\n');
+                    res.end();
+                }
             }
         } else {
             // Non-streaming
