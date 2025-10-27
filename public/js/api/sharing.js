@@ -76,9 +76,12 @@ function showShareLinkInline(shareUrl, expiresIn) {
     const container = document.getElementById('generatePptSection');
     if (!container) return;
     
-    // Clear and create the result section - ONE UNIFIED CARD
-    container.innerHTML = '';
+    // Clear existing content (Zscaler-safe method)
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
+    }
     
+    // Create result section - ONE UNIFIED CARD (Zscaler-safe pattern)
     const resultSection = document.createElement('div');
     resultSection.id = 'shareLinkDisplay';
     resultSection.className = 'card';

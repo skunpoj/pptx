@@ -282,23 +282,31 @@ async function modifySlidesWithAI() {
 
 /**
  * Show share and download section
+ * Using Zscaler-safe DOM manipulation pattern
  */
 function showDownloadLink(downloadUrl, fileSize, storage = {}) {
     const container = document.getElementById('generatePptSection');
     if (!container) return;
     
-    // Clear any existing content
-    container.innerHTML = '';
+    // Clear any existing content (this is safe)
+    while (container.firstChild) {
+        container.removeChild(container.firstChild);
+    }
     
     // Create loading message while share link is being created
+    // IMPORTANT: Create element first, THEN set innerHTML, THEN append
     const loadingDiv = document.createElement('div');
     loadingDiv.id = 'shareLoadingMessage';
     loadingDiv.className = 'card';
     loadingDiv.style.cssText = 'background: white; border: 2px solid #667eea; border-radius: 8px; padding: 1.5rem; text-align: center;';
+    
+    // Set innerHTML on the NEW element (not yet in DOM)
     loadingDiv.innerHTML = `
         <h3 style="margin: 0 0 0.5rem 0; color: #333; font-size: 1.2rem;">🎉 Presentation Generated Successfully!</h3>
         <p style="margin: 0; color: #666;">⏳ Creating shareable link...</p>
     `;
+    
+    // Now append to container (Zscaler-safe pattern)
     container.appendChild(loadingDiv);
     
     // Auto-create share link (which will replace the loading message)

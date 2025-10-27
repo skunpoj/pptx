@@ -169,6 +169,13 @@
             border-radius: 6px;
             font-family: monospace;
         }
+        
+        /* Responsive layout for two-column section */
+        @media (max-width: 768px) {
+            #allSlidesContainer > div > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -206,9 +213,6 @@
                         <button class="btn btn-success" onclick="downloadPresentation()">
                             📥 Download PPT
                         </button>
-                        <button class="btn btn-secondary" onclick="generateNewFromModified()" id="generateNewBtn" style="display: none;">
-                            🚀 Generate New Presentation
-                        </button>
                         <button class="btn btn-secondary" onclick="copyShareLink()">
                             📋 Copy Link
                         </button>
@@ -219,23 +223,9 @@
                 </div>
             </div>
             
-            <!-- Slide Viewer (default) -->
+            <!-- Slide Viewer (default) - All slides in one page -->
             <div class="slide-viewer" id="slideViewerContainer">
-                <div class="slide-navigation">
-                    <button class="btn btn-primary" onclick="previousSlide()" id="prevBtn">
-                        ◀ Previous
-                    </button>
-                    <span class="slide-counter" id="slideCounter">1 / 1</span>
-                    <button class="btn btn-primary" onclick="nextSlide()" id="nextBtn">
-                        Next ▶
-                    </button>
-                </div>
-                
-                <div id="slideContainer" style="min-height: 400px;"></div>
-                
-                <p style="text-align: center; margin-top: 2rem; color: #666; font-size: 0.9rem;">
-                    💡 Use arrow keys (← →) to navigate slides • Press Esc to exit fullscreen
-                </p>
+                <div id="allSlidesContainer" style="display: flex; flex-direction: column; gap: 2rem;"></div>
             </div>
             
             <!-- PDF Viewer (hidden by default) -->
@@ -311,107 +301,241 @@
             // Store slide data globally
             window.currentSlideData = data.slideData;
             
-            // Display first slide
-            displaySlide(0);
-            
-            // Set up keyboard navigation
-            document.addEventListener('keydown', handleKeyboardNav);
+            // Display all slides
+            displayAllSlides();
         }
         
-        function displaySlide(index) {
+        function displayAllSlides() {
             const slides = window.currentSlideData.slides;
-            const theme = window.currentSlideData.designTheme || window.colorThemes['vibrant-purple'];
+            const theme = window.currentSlideData.designTheme || {
+                name: 'Default Theme',
+                colorPrimary: '#667eea',
+                colorSecondary: '#764ba2',
+                colorAccent: '#F39C12',
+                colorBackground: '#FFFFFF',
+                colorText: '#1d1d1d'
+            };
             
-            if (index < 0 || index >= slides.length) return;
+            const container = document.getElementById('allSlidesContainer');
+            container.innerHTML = '';
             
-            currentSlideIndex = index;
-            const slide = slides[index];
-            
-            // Render slide preview with modification controls
-            const container = document.getElementById('slideContainer');
-            container.innerHTML = renderSlideWithModifyControls(slide, index, theme);
-            
-            // Update counter
-            document.getElementById('slideCounter').textContent = `${index + 1} / ${slides.length}`;
-            
-            // Update button states
-            document.getElementById('prevBtn').disabled = index === 0;
-            document.getElementById('nextBtn').disabled = index === slides.length - 1;
-        }
-        
-        function renderSlideWithModifyControls(slide, index, theme) {
-            const slidePreview = window.renderSlidePreviewCard ? 
-                window.renderSlidePreviewCard(slide, index, theme) :
-                `<div style="padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <h3 style="color: ${theme.colorPrimary};">${slide.title}</h3>
-                    ${slide.content ? `<ul>${slide.content.map(c => `<li>${c}</li>`).join('')}</ul>` : ''}
-                </div>`;
-            
-            return `
-                <div style="background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                    <!-- Slide Preview -->
-                    <div style="margin-bottom: 2rem; border: 2px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; background: #f9f9f9;">
-                        ${slidePreview}
-                    </div>
-                    
-                    <!-- Modification Controls -->
-                    <div style="background: linear-gradient(135deg, #f0f4ff, #e8f0ff); border-radius: 8px; padding: 1.5rem; border: 2px solid ${theme.colorPrimary};">
-                        <h4 style="margin: 0 0 1rem 0; color: ${theme.colorPrimary}; font-size: 1.1rem;">
-                            ✏️ Modify This Slide
-                        </h4>
-                        
-                        <div style="margin-bottom: 1rem;">
-                            <label for="modifyPrompt${index}" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">
-                                Enter modification prompt:
-                            </label>
-                            <textarea 
-                                id="modifyPrompt${index}" 
-                                rows="3" 
-                                placeholder="e.g., 'Add more details about market trends' or 'Change to bullet points' or 'Make it more concise'"
-                                style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95rem; font-family: inherit; resize: vertical;"
-                            ></textarea>
+            // Render all slides
+            slides.forEach((slide, index) => {
+                const slideCard = document.createElement('div');
+                slideCard.style.cssText = `
+                    background: white;
+                    border-radius: 12px;
+                    padding: 2rem;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                    border: 2px solid #e0e0e0;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                `;
+                
+                // Add hover effect
+                slideCard.onmouseenter = function() {
+                    this.style.transform = 'translateY(-4px)';
+                    this.style.boxShadow = '0 8px 30px rgba(0,0,0,0.15)';
+                    this.style.borderColor = theme.colorPrimary;
+                };
+                slideCard.onmouseleave = function() {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)';
+                    this.style.borderColor = '#e0e0e0';
+                };
+                
+                // Slide number badge
+                const badge = document.createElement('div');
+                badge.style.cssText = `
+                    display: inline-block;
+                    background: ${theme.colorAccent || '#F39C12'};
+                    color: white;
+                    padding: 0.5rem 1rem;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    font-size: 0.9rem;
+                    margin-bottom: 1rem;
+                `;
+                badge.textContent = `Slide ${index + 1} of ${slides.length}`;
+                slideCard.appendChild(badge);
+                
+                // Slide content
+                const slideContent = renderSlideContent(slide, theme);
+                slideCard.innerHTML += slideContent;
+                
+                // Two-column layout: Generate button (left) + Success message (right)
+                const bottomSection = document.createElement('div');
+                bottomSection.style.cssText = `
+                    margin-top: 2rem;
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 1.5rem;
+                    align-items: stretch;
+                `;
+                
+                // Left panel: Generate New Slide button
+                const leftPanel = document.createElement('div');
+                leftPanel.style.cssText = `
+                    background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
+                    border: 2px solid ${theme.colorPrimary};
+                    border-radius: 8px;
+                    padding: 1.5rem;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    text-align: center;
+                    gap: 1rem;
+                `;
+                leftPanel.innerHTML = `
+                    <div style="font-size: 2.5rem;">🚀</div>
+                    <h4 style="margin: 0; color: ${theme.colorPrimary}; font-size: 1.1rem;">
+                        Generate New Slide
+                    </h4>
+                    <button 
+                        class="btn btn-primary" 
+                        onclick="generateNewSlide(${index})"
+                        style="background: ${theme.colorPrimary}; padding: 0.75rem 1.5rem; width: 100%;"
+                    >
+                        ➕ Add Slide After This
+                    </button>
+                    <p style="margin: 0; font-size: 0.85rem; color: #666; font-style: italic;">
+                        Create additional content based on this slide
+                    </p>
+                `;
+                
+                // Right panel: Success message
+                const rightPanel = document.createElement('div');
+                rightPanel.style.cssText = `
+                    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+                    border: 2px solid #28a745;
+                    border-radius: 8px;
+                    padding: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                `;
+                rightPanel.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
+                        <div style="font-size: 3rem; flex-shrink: 0;">✅</div>
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: #155724; font-size: 1.1rem;">
+                                Presentation Generated Successfully!
+                            </h4>
+                            <p style="margin: 0; color: #155724; font-size: 0.9rem;">
+                                This slide was created by AI and is ready to use. Download the complete presentation above.
+                            </p>
                         </div>
-                        
-                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                            <button 
-                                class="btn btn-primary" 
-                                onclick="modifyIndividualSlide(${index})"
-                                style="background: ${theme.colorPrimary}; flex: 1; min-width: 200px;"
-                            >
-                                🔄 Modify This Slide Only
-                            </button>
-                            <button 
-                                class="btn btn-secondary" 
-                                onclick="resetSlideModification(${index})"
-                                style="border-color: ${theme.colorPrimary}; color: ${theme.colorPrimary};"
-                            >
-                                ↺ Reset
-                            </button>
-                        </div>
-                        
-                        <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #666; font-style: italic;">
-                            💡 Tip: Be specific with your modification request for best results
-                        </p>
                     </div>
-                </div>
+                `;
+                
+                bottomSection.appendChild(leftPanel);
+                bottomSection.appendChild(rightPanel);
+                slideCard.appendChild(bottomSection);
+                
+                container.appendChild(slideCard);
+            });
+            
+            // Add helpful tip at the end
+            const tipCard = document.createElement('div');
+            tipCard.style.cssText = `
+                background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
+                border: 2px solid ${theme.colorPrimary};
+                border-radius: 12px;
+                padding: 2rem;
+                text-align: center;
             `;
+            tipCard.innerHTML = `
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">💡</div>
+                <h3 style="margin: 0 0 1rem 0; color: ${theme.colorPrimary};">
+                    All ${slides.length} Slides Displayed
+                </h3>
+                <p style="margin: 0; color: #666; font-size: 1rem;">
+                    Scroll up to review all slides • Use the Download PPT button above to save your presentation
+                </p>
+            `;
+            container.appendChild(tipCard);
         }
         
-        function previousSlide() {
-            if (currentSlideIndex > 0) {
-                displaySlide(currentSlideIndex - 1);
+        function renderSlideContent(slide, theme) {
+            if (slide.type === 'title') {
+                return `
+                    <div style="text-align: center; padding: 2rem 0;">
+                        <h2 style="color: ${theme.colorPrimary}; margin: 0 0 1rem 0; font-size: 2rem;">
+                            ${slide.title}
+                        </h2>
+                        ${slide.subtitle ? `
+                            <p style="color: ${theme.colorSecondary}; font-size: 1.2rem; margin: 0;">
+                                ${slide.subtitle}
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+            } else if (slide.type === 'content') {
+                let html = `
+                    <h3 style="color: ${theme.colorPrimary}; margin: 0 0 1rem 0; font-size: 1.5rem;">
+                        ${slide.title}
+                    </h3>
+                `;
+                
+                if (slide.header) {
+                    html += `
+                        <p style="color: #666; font-style: italic; margin: 0 0 1rem 0;">
+                            ${slide.header}
+                        </p>
+                    `;
+                }
+                
+                if (slide.layout === 'chart' && slide.chart) {
+                    html += `
+                        <div style="background: #f8f9fa; border: 2px solid ${theme.colorAccent}; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
+                            <div style="font-weight: 600; color: ${theme.colorPrimary}; margin-bottom: 1rem; text-align: center; font-size: 1.1rem;">
+                                📊 ${slide.chart.title || 'Chart'}
+                            </div>
+                            <div style="text-align: center;">
+                                ${typeof window.generateChartSVG === 'function' ? 
+                                    window.generateChartSVG(slide.chart, theme, 600, 350) : 
+                                    '<p>Chart rendering not available</p>'}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (slide.content && slide.content.length > 0) {
+                    html += `
+                        <ul style="color: ${theme.colorText}; line-height: 1.8; margin: 1rem 0; font-size: 1rem;">
+                            ${slide.content.map(item => `<li style="margin: 0.5rem 0;">${item}</li>`).join('')}
+                        </ul>
+                    `;
+                }
+                
+                if (slide.imageUrl) {
+                    html += `
+                        <div style="margin-top: 1.5rem; text-align: center;">
+                            <img src="${slide.imageUrl}" 
+                                 alt="${slide.imageDescription || 'Slide image'}" 
+                                 style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div style="display: none; background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 1rem; border-radius: 8px; color: #666;">
+                                🖼️ Image failed to load
+                            </div>
+                        </div>
+                    `;
+                } else if (slide.imageDescription) {
+                    html += `
+                        <div style="margin-top: 1.5rem; background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 1.5rem; border-radius: 8px;">
+                            <div style="font-weight: 600; color: ${theme.colorPrimary}; margin-bottom: 0.5rem; font-size: 1rem;">
+                                🖼️ Image Placeholder
+                            </div>
+                            <div style="font-size: 0.95rem; color: #666; font-style: italic;">
+                                ${slide.imageDescription}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return html;
             }
-        }
-        
-        function nextSlide() {
-            if (window.currentSlideData && currentSlideIndex < window.currentSlideData.slides.length - 1) {
-                displaySlide(currentSlideIndex + 1);
-            }
-        }
-        
-        function handleKeyboardNav(e) {
-            if (e.key === 'ArrowLeft') previousSlide();
-            else if (e.key === 'ArrowRight') nextSlide();
+            
+            return '';
         }
         
         function showError(message) {
@@ -449,36 +573,6 @@
             }
         }
         
-        function openModifyModal() {
-            const slide = window.currentSlideData.slides[currentSlideIndex];
-            const newTitle = prompt('Enter new title:', slide.title);
-            
-            if (newTitle && newTitle !== slide.title) {
-                slide.title = newTitle;
-                displaySlide(currentSlideIndex);
-                
-                // Save to server
-                saveModifications();
-            }
-        }
-        
-        async function saveModifications() {
-            try {
-                const response = await fetch(`/api/update-presentation/${shareId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ slideData: window.currentSlideData })
-                });
-                
-                if (response.ok) {
-                    alert('✅ Changes saved! Others viewing this link will see the updates.');
-                }
-            } catch (error) {
-                console.error('Save error:', error);
-                alert('❌ Failed to save changes. Please try again.');
-            }
-        }
-        
         function copyShareLink() {
             const shareUrl = window.location.href;
             navigator.clipboard.writeText(shareUrl).then(() => {
@@ -488,147 +582,18 @@
             });
         }
         
-        async function modifyIndividualSlide(slideIndex) {
-            const promptTextarea = document.getElementById(`modifyPrompt${slideIndex}`);
-            const modificationPrompt = promptTextarea.value.trim();
+        function generateNewSlide(afterIndex) {
+            alert(`🚀 Generate New Slide feature\n\nThis will generate a new slide after slide ${afterIndex + 1}.\n\nFeature coming soon!`);
             
-            if (!modificationPrompt) {
-                alert('❌ Please enter a modification prompt');
-                return;
-            }
-            
-            if (!window.currentSlideData || !window.currentSlideData.slides[slideIndex]) {
-                alert('❌ Slide data not found');
-                return;
-            }
-            
-            const originalSlide = window.currentSlideData.slides[slideIndex];
-            
-            // Show loading state
-            const modifyBtn = event.target;
-            const originalBtnText = modifyBtn.textContent;
-            modifyBtn.textContent = '⏳ Modifying...';
-            modifyBtn.disabled = true;
-            
-            try {
-                console.log(`🔄 Modifying slide ${slideIndex + 1}:`, modificationPrompt);
-                
-                // Call the modify API with just this one slide
-                const response = await fetch('/api/modify-slides', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        currentSlides: [originalSlide],
-                        modificationRequest: modificationPrompt,
-                        provider: 'bedrock' // Use default backend provider
-                    })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Modification failed');
-                }
-                
-                const result = await response.json();
-                const modifiedSlide = result.slideData?.slides?.[0] || result.slides?.[0];
-                
-                if (!modifiedSlide) {
-                    throw new Error('No modified slide returned from API');
-                }
-                
-                // Update the slide in our data
-                window.currentSlideData.slides[slideIndex] = modifiedSlide;
-                
-                // Mark that modifications have been made
-                window.hasModifications = true;
-                
-                // Show the "Generate New Presentation" button
-                document.getElementById('generateNewBtn').style.display = 'inline-flex';
-                
-                // Save modifications to server
-                await saveModifications();
-                
-                // Re-render the slide
-                displaySlide(slideIndex);
-                
-                alert('✅ Slide modified successfully! You can now generate a new presentation with this change.');
-                
-            } catch (error) {
-                console.error('Modification error:', error);
-                alert('❌ Failed to modify slide: ' + error.message);
-                
-                // Restore button
-                modifyBtn.textContent = originalBtnText;
-                modifyBtn.disabled = false;
-            }
+            // Future implementation:
+            // 1. Show modal with prompt input
+            // 2. Call AI to generate new slide based on context
+            // 3. Insert new slide into presentation
+            // 4. Regenerate full presentation
+            // 5. Provide download link
         }
         
-        function resetSlideModification(slideIndex) {
-            const promptTextarea = document.getElementById(`modifyPrompt${slideIndex}`);
-            promptTextarea.value = '';
-        }
-        
-        async function generateNewFromModified() {
-            if (!window.currentSlideData || !window.hasModifications) {
-                alert('❌ No modifications to generate from');
-                return;
-            }
-            
-            if (!confirm('🚀 Generate a new PowerPoint presentation with your modifications?\n\nThis will create a new downloadable PPTX file.')) {
-                return;
-            }
-            
-            const generateBtn = document.getElementById('generateNewBtn');
-            const originalText = generateBtn.textContent;
-            generateBtn.textContent = '⏳ Generating...';
-            generateBtn.disabled = true;
-            
-            try {
-                console.log('🚀 Generating new presentation from modified slides...');
-                
-                const response = await fetch('/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        slideData: window.currentSlideData,
-                        provider: 'bedrock'
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Generation failed: ' + response.status);
-                }
-                
-                // Get the new session ID from headers
-                const newSessionId = response.headers.get('X-Session-Id');
-                
-                // Download the generated presentation
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'Modified-AI-Presentation.pptx';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-                
-                alert('✅ New presentation generated successfully! Check your downloads folder.');
-                
-                // Reset modifications flag
-                window.hasModifications = false;
-                generateBtn.style.display = 'none';
-                
-            } catch (error) {
-                console.error('Generation error:', error);
-                alert('❌ Failed to generate presentation: ' + error.message);
-            } finally {
-                generateBtn.textContent = originalText;
-                generateBtn.disabled = false;
-            }
-        }
-        
-        function switchViewMode(mode) {
+        async function switchViewMode(mode) {
             const slideViewer = document.getElementById('slideViewerContainer');
             const pdfViewer = document.getElementById('pdfViewerContainer');
             const slidesBtn = document.getElementById('viewModeSlides');
@@ -648,11 +613,65 @@
                 // Load PDF in iframe using sessionId (not shareId)
                 const pdfFrame = document.getElementById('pdfFrame');
                 
-                if (sessionId) {
-                    const pdfUrl = `/view-pdf/${sessionId}`;
-                    pdfFrame.src = pdfUrl;
-                } else {
-                    pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">PDF not available for this presentation.</p>';
+                if (!sessionId) {
+                    pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">PDF not available - no session ID found.</p>';
+                    return;
+                }
+                
+                // Show loading message
+                pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #667eea;">⏳ Loading PDF...</p>';
+                
+                try {
+                    // Check if PDF exists
+                    const checkResponse = await fetch(`/view-pdf/${sessionId}`, {
+                        method: 'HEAD'
+                    });
+                    
+                    if (checkResponse.ok) {
+                        // PDF exists, load it
+                        const pdfUrl = `/view-pdf/${sessionId}`;
+                        pdfFrame.src = pdfUrl;
+                        console.log('✅ PDF loaded successfully');
+                    } else if (checkResponse.status === 404) {
+                        // PDF doesn't exist, try to generate it
+                        console.log('⏳ PDF not found, attempting to generate...');
+                        pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #667eea;">⏳ Generating PDF... This may take a moment.</p>';
+                        
+                        const generateResponse = await fetch(`/api/convert-to-pdf/${sessionId}`, {
+                            method: 'POST'
+                        });
+                        
+                        if (generateResponse.ok) {
+                            // PDF generated successfully
+                            const result = await generateResponse.json();
+                            console.log('✅ PDF generated successfully');
+                            
+                            // Wait a moment for file to be fully written
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            
+                            // Load the PDF
+                            const pdfUrl = `/view-pdf/${sessionId}`;
+                            pdfFrame.src = pdfUrl;
+                        } else {
+                            const errorData = await generateResponse.json();
+                            throw new Error(errorData.error || 'PDF generation failed');
+                        }
+                    } else {
+                        throw new Error(`Unexpected response: ${checkResponse.status}`);
+                    }
+                } catch (error) {
+                    console.error('PDF loading error:', error);
+                    pdfFrame.innerHTML = `
+                        <div style="padding: 2rem; text-align: center; color: #dc2626;">
+                            <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
+                            <h3 style="margin: 0 0 0.5rem 0;">PDF Not Available</h3>
+                            <p style="margin: 0; font-size: 0.9rem;">${error.message}</p>
+                            <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #666;">
+                                This may happen if LibreOffice is not installed on the server.<br>
+                                You can still download the PowerPoint file above.
+                            </p>
+                        </div>
+                    `;
                 }
             }
         }
