@@ -182,27 +182,24 @@
                 </div>
                 
                 <div class="viewer-actions">
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; background: #f0f4ff; padding: 0.5rem; border-radius: 8px;">
-                        <button class="btn btn-primary" onclick="switchViewMode('slides')" id="viewModeSlides" style="flex: 1;">
+                    <!-- Primary Actions -->
+                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <button class="btn btn-primary" onclick="switchViewMode('slides')" id="viewModeSlides">
                             👁️ View Slides
                         </button>
-                        <button class="btn btn-secondary" onclick="switchViewMode('pdf')" id="viewModePDF" style="flex: 1;">
+                        <button class="btn btn-secondary" onclick="switchViewMode('pdf')" id="viewModePDF">
                             📄 View PDF
                         </button>
+                        <button class="btn btn-success" onclick="downloadPresentation()">
+                            📥 Download PPT
+                        </button>
+                        <button class="btn btn-secondary" onclick="copyShareLink()">
+                            📋 Copy Link
+                        </button>
+                        <a href="/" class="btn btn-secondary">
+                            ✨ Create New
+                        </a>
                     </div>
-                    
-                    <button class="btn btn-primary" onclick="downloadPresentation()">
-                        ⬇️ Download PowerPoint
-                    </button>
-                    <button class="btn btn-secondary" onclick="openModifyModal()">
-                        ✏️ Modify Slides
-                    </button>
-                    <button class="btn btn-secondary" onclick="copyShareLink()">
-                        🔗 Copy Share Link
-                    </button>
-                    <a href="/" class="btn btn-secondary">
-                        ← Create New
-                    </a>
                 </div>
             </div>
             

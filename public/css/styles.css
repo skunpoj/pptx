@@ -160,8 +160,14 @@ body {
    PRODUCT HUNT BADGE - IN HEADER NEXT TO LOGO
    ========================================================================== */
 
+.header-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
 .product-hunt-badge {
-    margin-left: 0.75rem;
     display: flex;
     align-items: center;
     flex-shrink: 0;
@@ -279,20 +285,18 @@ body {
     z-index: 1;
     flex-shrink: 0;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.5rem;
-    flex-wrap: nowrap;
+    align-items: flex-start;
 }
 
 .header-right {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
+    align-items: center;
+    justify-content: flex-end;
     position: relative;
     z-index: 1;
-    align-items: flex-end;
-    text-align: right;
 }
 
 .header-top-row {
@@ -317,18 +321,22 @@ body {
 }
 
 .brand-tagline {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     margin: 0;
-    color: #555;
+    color: #667eea;
     font-weight: 600;
+    font-style: italic;
+    opacity: 0.9;
     letter-spacing: 0.3px;
+    text-align: left;
 }
 
 .header-features {
     display: flex;
     align-items: center;
     gap: 0.3rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
 }
 
 .header-feature {

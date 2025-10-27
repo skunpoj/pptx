@@ -209,13 +209,52 @@ async function modifySlidesWithAI() {
         
         const result = await response.json();
         console.log('✅ Slides modified successfully');
+        console.log('   Modified slide count:', result.slideData?.slides?.length || result.slides?.length);
         
-        // Update slide data
-        window.currentSlideData = result.slideData;
+        // Update slide data - handle both response formats
+        const modifiedSlideData = result.slideData || result;
+        window.currentSlideData = modifiedSlideData;
         
-        // Re-render preview
-        if (typeof renderSlidesProgressively === 'function') {
-            renderSlidesProgressively(result.slideData);
+        console.log('   Stored slide data:', window.currentSlideData);
+        
+        // Re-render preview using the correct function
+        const preview = document.getElementById('preview');
+        if (preview && modifiedSlideData.slides) {
+            console.log('   Re-rendering preview...');
+            preview.innerHTML = '<div style="text-align: center; padding: 2rem; color: #667eea;"><span class="spinner"></span><p>Updating preview...</p></div>';
+            
+            // Call the preview rendering function
+            if (typeof window.renderSlidesProgressively === 'function') {
+                window.renderSlidesProgressively(modifiedSlideData);
+            } else if (typeof renderSlidesProgressively === 'function') {
+                renderSlidesProgressively(modifiedSlideData);
+            } else if (typeof window.displayPreview === 'function') {
+                window.displayPreview(modifiedSlideData);
+            } else {
+                // Fallback: manually render
+                console.log('   Using fallback rendering');
+                preview.innerHTML = '';
+                modifiedSlideData.slides.forEach((slide, idx) => {
+                    const slideCard = document.createElement('div');
+                    slideCard.className = 'slide-preview-card';
+                    slideCard.innerHTML = `
+                        <div style="background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1rem;">
+                            <h3 style="color: ${modifiedSlideData.designTheme?.primaryColor || '#667eea'}; margin: 0 0 0.5rem 0;">
+                                ${idx + 1}. ${slide.title || 'Untitled Slide'}
+                            </h3>
+                            ${slide.content ? `<p style="color: #666; margin: 0 0 0.5rem 0;">${slide.content}</p>` : ''}
+                            ${slide.points && slide.points.length > 0 ? `
+                                <ul style="margin: 0; padding-left: 1.5rem;">
+                                    ${slide.points.map(point => `<li style="color: #444; margin: 0.25rem 0;">${point}</li>`).join('')}
+                                </ul>
+                            ` : ''}
+                        </div>
+                    `;
+                    preview.appendChild(slideCard);
+                });
+            }
+            
+            console.log('   ✓ Preview rendered');
         }
         
         // Show success message
@@ -225,6 +264,8 @@ async function modifySlidesWithAI() {
         
         // Clear the modification prompt
         modificationPrompt.value = '';
+        
+        console.log('✅ Modification complete');
         
     } catch (error) {
         console.error('❌ Modification failed:', error);
@@ -246,39 +287,21 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
     const container = document.getElementById('generatePptSection');
     if (!container) return;
     
-    // Remove any existing sections
-    const existingLink = container.querySelector('.download-link');
-    const existingOptions = container.querySelector('.presentation-options');
-    if (existingLink) existingLink.remove();
-    if (existingOptions) existingOptions.remove();
+    // Clear any existing content
+    container.innerHTML = '';
     
-    // Create share link section (this will be the main interface)
-    const shareSection = document.createElement('div');
-    shareSection.className = 'presentation-options';
-    shareSection.style.marginTop = '1rem';
-    shareSection.style.padding = '1.5rem';
-    shareSection.style.backgroundColor = '#f8f9fa';
-    shareSection.style.borderRadius = '8px';
-    shareSection.style.border = '2px solid #667eea';
+    // Create loading message while share link is being created
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'shareLoadingMessage';
+    loadingDiv.className = 'card';
+    loadingDiv.style.cssText = 'background: white; border: 2px solid #667eea; border-radius: 8px; padding: 1.5rem; text-align: center;';
+    loadingDiv.innerHTML = `
+        <h3 style="margin: 0 0 0.5rem 0; color: #333; font-size: 1.2rem;">🎉 Presentation Generated Successfully!</h3>
+        <p style="margin: 0; color: #666;">⏳ Creating shareable link...</p>
+    `;
+    container.appendChild(loadingDiv);
     
-    const title = document.createElement('h3');
-    title.textContent = '🎉 Presentation Generated Successfully!';
-    title.style.margin = '0 0 1rem 0';
-    title.style.color = '#333';
-    title.style.fontSize = '1.3rem';
-    shareSection.appendChild(title);
-    
-    const loadingMessage = document.createElement('div');
-    loadingMessage.textContent = '⏳ Creating shareable link...';
-    loadingMessage.style.padding = '0.5rem';
-    loadingMessage.style.color = '#666';
-    loadingMessage.style.fontSize = '0.95rem';
-    loadingMessage.id = 'shareLoadingMessage';
-    shareSection.appendChild(loadingMessage);
-    
-    container.appendChild(shareSection);
-    
-    // Auto-create share link (which will contain the download button)
+    // Auto-create share link (which will replace the loading message)
     sharePresentation();
 }
 

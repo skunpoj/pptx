@@ -65,14 +65,6 @@ async function sharePresentation() {
  * Show share link inline (no modal)
  */
 function showShareLinkInline(shareUrl, expiresIn) {
-    // Remove loading message
-    const loadingMsg = document.getElementById('shareLoadingMessage');
-    if (loadingMsg) loadingMsg.remove();
-    
-    // Remove any existing result display
-    const existing = document.getElementById('shareLinkDisplay');
-    if (existing) existing.remove();
-    
     // Store the share URL
     window.currentShareUrl = shareUrl;
     window.shareUrlExpiry = expiresIn;
@@ -80,7 +72,13 @@ function showShareLinkInline(shareUrl, expiresIn) {
     // Extract shareId from URL
     const shareId = shareUrl.split('/').pop();
     
-    // Create the result section - one unified section
+    // Get the container
+    const container = document.getElementById('generatePptSection');
+    if (!container) return;
+    
+    // Clear and create the result section - ONE UNIFIED CARD
+    container.innerHTML = '';
+    
     const resultSection = document.createElement('div');
     resultSection.id = 'shareLinkDisplay';
     resultSection.className = 'card';
@@ -137,15 +135,28 @@ function showShareLinkInline(shareUrl, expiresIn) {
         `;
     }
     
-    // Add view PDF button if sessionId is available
+    // Check if PDF is ready and add button with appropriate state
     if (window.currentSessionId) {
+        // Check if PDF exists
+        checkPDFStatus(window.currentSessionId).then(pdfExists => {
+            const pdfBtn = document.getElementById('pdfViewBtn');
+            if (pdfBtn && pdfExists) {
+                pdfBtn.disabled = false;
+                pdfBtn.style.opacity = '1';
+                pdfBtn.style.cursor = 'pointer';
+                pdfBtn.title = '';
+            }
+        });
+        
         contentHTML += `
             <a 
                 href="/view-pdf/${window.currentSessionId}" 
                 target="_blank"
+                id="pdfViewBtn"
                 class="btn-warning"
-                style="padding: 0.75rem 1.5rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block;"
-            >📄 View PDF</a>
+                style="padding: 0.75rem 1.5rem; background: #999; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block; opacity: 0.5; cursor: not-allowed; pointer-events: none;"
+                title="PDF is being generated..."
+            >📄 View PDF (generating...)</a>
         `;
     }
     
@@ -154,17 +165,68 @@ function showShareLinkInline(shareUrl, expiresIn) {
     `;
     
     resultSection.innerHTML = contentHTML;
+    container.appendChild(resultSection);
     
-    // Find the presentation options container
-    const optionsDiv = document.querySelector('.presentation-options');
-    if (optionsDiv) {
-        optionsDiv.appendChild(resultSection);
-        
-        // Scroll to show the result
-        setTimeout(() => {
-            resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 100);
+    // Start checking PDF status
+    if (window.currentSessionId) {
+        startPDFStatusCheck(window.currentSessionId);
     }
+    
+    // Scroll to show the result
+    setTimeout(() => {
+        resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+}
+
+/**
+ * Check if PDF exists
+ */
+async function checkPDFStatus(sessionId) {
+    try {
+        const response = await fetch(`/view-pdf/${sessionId}`, { method: 'HEAD' });
+        return response.ok;
+    } catch (error) {
+        return false;
+    }
+}
+
+/**
+ * Start checking PDF status and enable button when ready
+ */
+function startPDFStatusCheck(sessionId) {
+    let attempts = 0;
+    const maxAttempts = 30; // 30 seconds max
+    
+    const checkInterval = setInterval(async () => {
+        attempts++;
+        
+        const pdfExists = await checkPDFStatus(sessionId);
+        
+        if (pdfExists) {
+            // PDF is ready - enable the button
+            const pdfBtn = document.getElementById('pdfViewBtn');
+            if (pdfBtn) {
+                pdfBtn.style.background = '#e67e22';
+                pdfBtn.style.opacity = '1';
+                pdfBtn.style.cursor = 'pointer';
+                pdfBtn.style.pointerEvents = 'auto';
+                pdfBtn.textContent = '📄 View PDF';
+                pdfBtn.title = 'PDF is ready to view';
+            }
+            clearInterval(checkInterval);
+            console.log('✅ PDF is ready');
+        } else if (attempts >= maxAttempts) {
+            // Timeout - show error state
+            const pdfBtn = document.getElementById('pdfViewBtn');
+            if (pdfBtn) {
+                pdfBtn.style.background = '#dc3545';
+                pdfBtn.textContent = '📄 PDF Failed';
+                pdfBtn.title = 'PDF generation failed or timed out';
+            }
+            clearInterval(checkInterval);
+            console.log('❌ PDF generation timeout');
+        }
+    }, 1000); // Check every second
 }
 
 /**
