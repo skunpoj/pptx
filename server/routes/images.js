@@ -6,6 +6,12 @@ const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
 
+// AWS Bedrock SDK for Nova Canvas image generation
+const {
+    BedrockRuntimeClient,
+    InvokeModelCommand,
+} = require("@aws-sdk/client-bedrock-runtime");
+
 /**
  * Generate images from slide descriptions
  * POST /api/images/generate
@@ -383,6 +389,240 @@ async function generateWithGemini(description, apiKey) {
     };
     */
 }
+
+/**
+ * Generate image using AWS Bedrock Nova Canvas
+ * Uses environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+ */
+async function generateWithBedrock(description) {
+    try {
+        console.log('🎨 Generating image with AWS Bedrock Nova Canvas...');
+        
+        // Create Bedrock client - credentials loaded from environment automatically
+        const client = new BedrockRuntimeClient({ region: "us-east-1" });
+        
+        // Model ID for Nova Canvas
+        const modelId = "amazon.nova-canvas-v1:0";
+        
+        // Random seed for reproducible generation
+        const seed = Math.floor(Math.random() * 858993460);
+        
+        // Prepare payload
+        const payload = {
+            taskType: "TEXT_IMAGE",
+            textToImageParams: {
+                text: description,
+            },
+            imageGenerationConfig: {
+                seed,
+                quality: "standard",
+            },
+        };
+        
+        // Send request
+        const request = {
+            modelId,
+            body: JSON.stringify(payload),
+        };
+        
+        const response = await client.send(new InvokeModelCommand(request));
+        
+        // Decode response
+        const decodedResponseBody = new TextDecoder().decode(response.body);
+        const responseBody = JSON.parse(decodedResponseBody);
+        
+        // Return base64 image data
+        const base64Image = responseBody.images[0];
+        
+        console.log('✅ Image generated successfully with Nova Canvas');
+        
+        return {
+            url: `data:image/png;base64,${base64Image}`,
+            model: modelId,
+            seed: seed
+        };
+        
+    } catch (error) {
+        console.error('❌ Bedrock image generation error:', error.message);
+        
+        // Provide helpful error messages
+        if (error.message.includes('credentials')) {
+            throw new Error('AWS credentials not found. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.');
+        } else if (error.message.includes('region')) {
+            throw new Error('AWS region error. Bedrock is configured for us-east-1.');
+        } else if (error.message.includes('AccessDenied')) {
+            throw new Error('AWS access denied. Please check your IAM permissions for Bedrock.');
+        }
+        
+        throw error;
+    }
+}
+
+/**
+ * Automatic image generation endpoint
+ * POST /api/images/auto-generate
+ * Body: { slideData }
+ * Automatically generates images for all slides with imageDescription
+ */
+router.post('/auto-generate', async (req, res) => {
+    const { slideData, stream = true } = req.body;
+    
+    if (!slideData || !slideData.slides) {
+        return res.status(400).json({ error: 'slideData is required' });
+    }
+    
+    // Extract descriptions from slides
+    const descriptions = [];
+    slideData.slides.forEach((slide, index) => {
+        if (slide.imageDescription) {
+            descriptions.push({
+                id: `slide-${index}`,
+                slideIndex: index,
+                description: slide.imageDescription,
+                slideTitle: slide.title
+            });
+        }
+    });
+    
+    if (descriptions.length === 0) {
+        return res.json({ 
+            images: [],
+            message: 'No image descriptions found in slides'
+        });
+    }
+    
+    console.log(`🖼️  Auto-generating ${descriptions.length} images with AWS Bedrock Nova Canvas`);
+    
+    // STREAMING MODE: Send images as they're generated!
+    if (stream) {
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        let successCount = 0;
+        let failedCount = 0;
+        
+        try {
+            for (let i = 0; i < descriptions.length; i++) {
+                const desc = descriptions[i];
+                console.log(`  [${i + 1}/${descriptions.length}] Generating: ${desc.description.substring(0, 50)}...`);
+                
+                try {
+                    // Generate with AWS Bedrock Nova Canvas
+                    const imageData = await generateWithBedrock(desc.description);
+                    
+                    successCount++;
+                    
+                    // Send this image immediately!
+                    res.write(`data: ${JSON.stringify({
+                        type: 'image',
+                        image: {
+                            id: desc.id,
+                            slideIndex: desc.slideIndex,
+                            slideTitle: desc.slideTitle,
+                            description: desc.description,
+                            url: imageData.url,
+                            thumbnail: imageData.url,
+                            provider: 'bedrock-nova-canvas',
+                            model: imageData.model,
+                            seed: imageData.seed,
+                            timestamp: Date.now()
+                        },
+                        current: i + 1,
+                        total: descriptions.length
+                    })}\n\n`);
+                    
+                    console.log(`  ✅ [${i + 1}/${descriptions.length}] Sent to client: ${desc.id}`);
+                    
+                } catch (error) {
+                    failedCount++;
+                    console.error(`  ❌ [${i + 1}/${descriptions.length}] Failed: ${desc.id}:`, error.message);
+                    
+                    // Send error event
+                    res.write(`data: ${JSON.stringify({
+                        type: 'error',
+                        error: {
+                            id: desc.id,
+                            slideIndex: desc.slideIndex,
+                            description: desc.description,
+                            error: error.message,
+                            timestamp: Date.now()
+                        },
+                        current: i + 1,
+                        total: descriptions.length
+                    })}\n\n`);
+                }
+            }
+            
+            // Send completion event
+            res.write(`data: ${JSON.stringify({
+                type: 'complete',
+                success: successCount,
+                failed: failedCount,
+                total: descriptions.length
+            })}\n\n`);
+            
+            res.write('data: [DONE]\n\n');
+            res.end();
+            
+            console.log(`✅ Auto-generation complete: ${successCount} success, ${failedCount} failed`);
+            
+        } catch (error) {
+            console.error('Streaming error:', error);
+            if (!res.headersSent) {
+                res.status(500).json({ error: error.message });
+            }
+        }
+    } else {
+        // NON-STREAMING MODE
+        try {
+            const generatedImages = [];
+            
+            for (let i = 0; i < descriptions.length; i++) {
+                const desc = descriptions[i];
+                console.log(`  [${i + 1}/${descriptions.length}] Generating: ${desc.description.substring(0, 50)}...`);
+                
+                try {
+                    const imageData = await generateWithBedrock(desc.description);
+                    
+                    generatedImages.push({
+                        id: desc.id,
+                        slideIndex: desc.slideIndex,
+                        description: desc.description,
+                        url: imageData.url,
+                        thumbnail: imageData.url,
+                        provider: 'bedrock-nova-canvas',
+                        model: imageData.model,
+                        seed: imageData.seed,
+                        timestamp: Date.now()
+                    });
+                    
+                    console.log(`  ✅ [${i + 1}/${descriptions.length}] Generated: ${desc.id}`);
+                    
+                } catch (error) {
+                    console.error(`  ❌ [${i + 1}/${descriptions.length}] Failed: ${desc.id}:`, error.message);
+                    generatedImages.push({
+                        id: desc.id,
+                        slideIndex: desc.slideIndex,
+                        description: desc.description,
+                        error: error.message,
+                        timestamp: Date.now()
+                    });
+                }
+            }
+            
+            res.json({ 
+                images: generatedImages,
+                success: generatedImages.filter(img => !img.error).length,
+                failed: generatedImages.filter(img => img.error).length
+            });
+            
+        } catch (error) {
+            console.error('Auto-generation error:', error);
+            res.status(500).json({ error: error.message });
+        }
+    }
+});
 
 module.exports = router;
 

@@ -137,6 +137,17 @@ async function generatePreview() {
                 </div>
             </div>
             
+            <!-- Real-time Streaming Response Box -->
+            <div style="background: #1e1e1e; border: 2px solid #667eea; border-radius: 8px; margin: 1.5rem 0; text-align: left; overflow: hidden;">
+                <div style="background: #667eea; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
+                    <strong style="color: white; font-size: 0.9rem;">💬 AI Response Stream</strong>
+                    <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
+                </div>
+                <div id="streamingTextBox" style="max-height: 200px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #00ff00; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;">
+                    <span style="opacity: 0.6;">Waiting for AI response...</span>
+                </div>
+            </div>
+            
             <p id="slideCount" style="margin-top: 1rem; color: #999; font-size: 0.9rem;">
                 Estimated completion: <span id="countdown">${estimatedTime}</span> seconds
             </p>
@@ -254,6 +265,13 @@ async function generatePreview() {
                 if (typeof showNotification === 'function') {
                     showNotification('✅ Preview generated successfully!', 'success');
                 }
+                
+                // Automatically generate images if slides have image descriptions
+                if (typeof autoGenerateImagesForSlides === 'function') {
+                    setTimeout(() => {
+                        autoGenerateImagesForSlides();
+                    }, 1000); // Small delay for better UX
+                }
             }
         } else {
             // Fallback: non-streaming response
@@ -269,6 +287,13 @@ async function generatePreview() {
                 
                 if (typeof showNotification === 'function') {
                     showNotification('✅ Preview generated successfully!', 'success');
+                }
+                
+                // Automatically generate images if slides have image descriptions
+                if (typeof autoGenerateImagesForSlides === 'function') {
+                    setTimeout(() => {
+                        autoGenerateImagesForSlides();
+                    }, 1000); // Small delay for better UX
                 }
             }
         }
@@ -318,6 +343,44 @@ async function generatePreview() {
 }
 
 /**
+ * Toggle streaming text box visibility
+ */
+function toggleStreamingText() {
+    const textBox = document.getElementById('streamingTextBox');
+    const toggleIcon = document.getElementById('streamToggleIcon');
+    if (!textBox || !toggleIcon) return;
+    
+    if (textBox.style.display === 'none') {
+        textBox.style.display = 'block';
+        toggleIcon.textContent = '▼';
+    } else {
+        textBox.style.display = 'none';
+        toggleIcon.textContent = '▶';
+    }
+}
+
+/**
+ * Append text to streaming text box
+ */
+function appendStreamingText(text) {
+    const textBox = document.getElementById('streamingTextBox');
+    if (!textBox) return;
+    
+    // Replace "Waiting for AI response..." on first update
+    const currentText = textBox.textContent;
+    if (currentText.includes('Waiting for AI response...')) {
+        textBox.textContent = '';
+    }
+    
+    // Append new text
+    const textNode = document.createTextNode(text);
+    textBox.appendChild(textNode);
+    
+    // Auto-scroll to bottom
+    textBox.scrollTop = textBox.scrollHeight;
+}
+
+/**
  * Handle incremental stream - render slides as they arrive (REAL-TIME!)
  */
 async function handleIncrementalStream(response) {
@@ -344,11 +407,16 @@ async function handleIncrementalStream(response) {
             
             if (done) {
                 console.log('📡 Stream closed');
+                appendStreamingText('\n\n✅ Stream complete!');
                 break;
             }
             
             // Decode chunk and add to buffer
-            buffer += decoder.decode(value, { stream: true });
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
+            
+            // Show raw chunk in streaming text box
+            appendStreamingText(chunk);
             
             // Process complete lines
             const lines = buffer.split('\n');
@@ -968,6 +1036,8 @@ window.hidePreviewProgress = hidePreviewProgress;
 window.handleIncrementalStream = handleIncrementalStream;
 window.clearPreviewCacheForText = clearPreviewCacheForText;
 window.clearAllPreviewCaches = clearAllPreviewCaches;
+window.toggleStreamingText = toggleStreamingText;
+window.appendStreamingText = appendStreamingText;
 
 // Add spinner animation CSS if not exists
 if (!document.querySelector('#spinnerAnimationStyle')) {
@@ -990,4 +1060,6 @@ if (!document.querySelector('#spinnerAnimationStyle')) {
 console.log('✅ slidePreview.js loaded - Real-time incremental rendering enabled');
 console.log('   window.generatePreview:', typeof window.generatePreview);
 console.log('   window.handleIncrementalStream:', typeof window.handleIncrementalStream);
+console.log('   window.toggleStreamingText:', typeof window.toggleStreamingText);
+console.log('   window.appendStreamingText:', typeof window.appendStreamingText);
 

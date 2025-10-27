@@ -72,43 +72,74 @@ function showShareLinkInline(shareUrl, expiresIn) {
     // Extract shareId from URL
     const shareId = shareUrl.split('/').pop();
     
-    // IMPORTANT: Make sure modify section is hidden
+    // Instead of hiding modify section, we'll transform it into a two-column layout
     const modifySection = document.getElementById('modificationSection');
-    if (modifySection) {
-        modifySection.style.display = 'none';
-    }
-    
-    // Get the container
-    const container = document.getElementById('generatePptSection');
-    if (!container) {
-        console.error('❌ Container generatePptSection not found!');
+    if (!modifySection) {
+        console.error('❌ Modify section not found!');
         return;
     }
     
-    // Make sure container is visible
-    container.style.display = 'block';
+    // Make sure it's visible
+    modifySection.style.display = 'block';
     
-    // Clear existing content (Zscaler-safe method)
-    while (container.firstChild) {
-        container.removeChild(container.firstChild);
+    // Clear the modify section content (Zscaler-safe method)
+    const modifyGrid = modifySection.querySelector('.modification-grid');
+    if (modifyGrid) {
+        while (modifyGrid.firstChild) {
+            modifyGrid.removeChild(modifyGrid.firstChild);
+        }
     }
     
-    console.log('✅ Creating share link display in container');
+    console.log('✅ Creating two-column layout in modify section');
     
-    // Create result section - ONE UNIFIED CARD (Zscaler-safe pattern)
-    const resultSection = document.createElement('div');
-    resultSection.id = 'shareLinkDisplay';
-    resultSection.className = 'card';
-    resultSection.style.cssText = `
+    // Create LEFT panel: Generate New Slide button
+    const leftPanel = document.createElement('div');
+    leftPanel.className = 'card';
+    leftPanel.style.cssText = `
+        background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
+        border: 2px solid #667eea;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        gap: 1rem;
+    `;
+    leftPanel.innerHTML = `
+        <div style="font-size: 2.5rem;">🚀</div>
+        <h4 style="margin: 0; color: #667eea; font-size: 1.2rem;">
+            Generate New Slide
+        </h4>
+        <button 
+            class="btn btn-primary" 
+            onclick="alert('Generate new slide feature coming soon!')"
+            style="background: #667eea; padding: 0.75rem 1.5rem; width: 100%; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;"
+        >
+            ➕ Add New Slide
+        </button>
+        <p style="margin: 0; font-size: 0.85rem; color: #666;">
+            Generate additional slides to expand your presentation
+        </p>
+    `;
+    
+    // Create RIGHT panel: Presentation Generated Successfully
+    const rightPanel = document.createElement('div');
+    rightPanel.id = 'shareLinkDisplay';
+    rightPanel.className = 'card';
+    rightPanel.style.cssText = `
         background: white;
         border: 2px solid #667eea;
         border-radius: 8px;
         padding: 1.5rem;
     `;
     
-    // Build unified content with share link and action buttons
+    // Build success message with share link and action buttons
     let contentHTML = `
-        <h3 style="margin: 0 0 1rem 0; color: #333; font-size: 1.2rem;">🎉 Presentation Generated Successfully!</h3>
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 2.5rem;">✅</div>
+            <h3 style="margin: 0; color: #155724; font-size: 1.2rem;">Presentation Generated Successfully!</h3>
+        </div>
         
         <!-- Share Link Input -->
         <div style="margin-bottom: 1rem;">
@@ -181,8 +212,13 @@ function showShareLinkInline(shareUrl, expiresIn) {
         </div>
     `;
     
-    resultSection.innerHTML = contentHTML;
-    container.appendChild(resultSection);
+    rightPanel.innerHTML = contentHTML;
+    
+    // Append both panels to the grid
+    if (modifyGrid) {
+        modifyGrid.appendChild(leftPanel);
+        modifyGrid.appendChild(rightPanel);
+    }
     
     // Start checking PDF status
     if (window.currentSessionId) {

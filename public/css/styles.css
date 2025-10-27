@@ -231,6 +231,12 @@ body {
         gap: 0.75rem;
     }
     
+    /* Stack checkbox with number input on mobile */
+    .checkbox-purple[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+    
     .input-group-inline {
         width: 100%;
         justify-content: space-between;
@@ -1436,6 +1442,11 @@ textarea:focus {
 .checkbox-green {
     background: #f0fff4;
     border-color: #c6f6d5;
+}
+
+.checkbox-purple {
+    background: #f3f0ff;
+    border-color: #e0d7ff;
 }
 
 .generation-options {

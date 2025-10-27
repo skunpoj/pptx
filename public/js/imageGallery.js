@@ -536,8 +536,8 @@ function showImageGenerationProgress(count) {
     if (!galleryContainer) return;
     
     galleryContainer.innerHTML = `
-        <div id="imageGenHeader" style="padding: 1rem; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; margin-bottom: 1rem; color: white; text-align: center;">
-            <h3 style="margin: 0 0 0.5rem 0; color: white;">🎨 AI Image Generation in Progress</h3>
+        <div id="imageGenHeader" style="padding: 1rem; background: linear-gradient(135deg, #FF9900, #232F3E); border-radius: 8px; margin-bottom: 1rem; color: white; text-align: center;">
+            <h3 style="margin: 0 0 0.5rem 0; color: white;">🤖 AWS Bedrock Nova Canvas - Auto Image Generation</h3>
             <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">
                 <span id="imageGenCurrent">0</span> / ${count}
             </div>
@@ -545,10 +545,10 @@ function showImageGenerationProgress(count) {
                 <div id="imageGenBar" style="width: 0%; height: 100%; background: #2ecc71; transition: width 0.3s ease;"></div>
             </div>
             <div id="imageGenStatus" style="font-size: 0.9rem; opacity: 0.95;">
-                🔄 Preparing to generate...
+                🔄 Preparing AWS Bedrock image generation...
             </div>
             <div style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.9;">
-                💡 Using ${window.currentImageProvider || 'Hugging Face'} • Images appear below as they're generated
+                ⚡ Using AWS Bedrock Nova Canvas v1.0 • Images appear below as they're generated
             </div>
         </div>
         <div class="image-gallery-grid" id="imageGalleryGrid">
@@ -558,7 +558,7 @@ function showImageGenerationProgress(count) {
     
     // Show notification
     if (typeof showNotification === 'function') {
-        showNotification(`🎨 Generating ${count} images...`, 'info');
+        showNotification(`🤖 Auto-generating ${count} images with AWS Bedrock Nova Canvas...`, 'info');
     }
 }
 
@@ -876,8 +876,80 @@ function verifyImagesInSlideData() {
     return hasImages > 0;
 }
 
+/**
+ * Automatically generate images for slides with image descriptions
+ * Uses AWS Bedrock Nova Canvas
+ */
+async function autoGenerateImagesForSlides() {
+    console.log('🖼️  Auto-generating images with AWS Bedrock Nova Canvas...');
+    
+    const slideData = window.currentSlideData;
+    if (!slideData) {
+        console.log('No slide data available');
+        return;
+    }
+    
+    const descriptions = extractImageDescriptions(slideData);
+    if (descriptions.length === 0) {
+        console.log('No image descriptions found in slides');
+        return;
+    }
+    
+    console.log(`📋 Found ${descriptions.length} image descriptions - auto-generating...`);
+    
+    // Show progress
+    showImageGenerationProgress(descriptions.length);
+    
+    // Switch to gallery tab to show progress
+    const galleryTabBtn = document.getElementById('galleryTabBtn');
+    if (galleryTabBtn && typeof window.showImageGallery === 'function') {
+        window.showImageGallery();
+    }
+    
+    try {
+        const response = await fetch('/api/images/auto-generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                slideData: slideData,
+                stream: true // Enable streaming!
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Auto-generation failed: ${response.status}`);
+        }
+        
+        // Check if streaming response
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('text/event-stream')) {
+            console.log('📡 Receiving REAL-TIME streaming images from AWS Bedrock...');
+            
+            // Handle streaming response - images appear ONE BY ONE!
+            await handleImageStream(response, descriptions.length);
+            
+        } else {
+            // Fallback: non-streaming response
+            console.log('📋 Receiving non-streaming response...');
+            const result = await response.json();
+            
+            handleNonStreamingResult(result);
+        }
+        
+    } catch (error) {
+        console.error('Auto image generation error:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('⚠️ Auto image generation failed: ' + error.message, 'warning');
+        }
+    }
+}
+
 // Export functions
 window.generateImagesForSlides = generateImagesForSlides;
+window.autoGenerateImagesForSlides = autoGenerateImagesForSlides;
 window.showImageGallery = showImageGallery;
 window.showSlidesPreview = showSlidesPreview;
 window.selectGalleryImage = selectGalleryImage;

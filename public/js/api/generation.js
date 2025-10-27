@@ -281,45 +281,89 @@ async function modifySlidesWithAI() {
 }
 
 /**
- * Show share and download section
+ * Show share and download section in two-column layout
  * Using Zscaler-safe DOM manipulation pattern
  */
 function showDownloadLink(downloadUrl, fileSize, storage = {}) {
-    // STEP 1: Hide the modify section (we're done with it)
+    // Find the modify section - we'll transform it into results layout
     const modifySection = document.getElementById('modificationSection');
-    if (modifySection) {
-        modifySection.style.display = 'none';
+    if (!modifySection) {
+        console.error('❌ Modify section not found!');
+        return;
     }
-    
-    // STEP 2: Show the results section
-    const container = document.getElementById('generatePptSection');
-    if (!container) return;
     
     // Make sure it's visible
-    container.style.display = 'block';
+    modifySection.style.display = 'block';
     
-    // Clear any existing content (Zscaler-safe method)
-    while (container.firstChild) {
-        container.removeChild(container.firstChild);
+    // Find the grid container
+    const modifyGrid = modifySection.querySelector('.modification-grid');
+    if (!modifyGrid) {
+        console.error('❌ Modification grid not found!');
+        return;
     }
     
-    // Create loading message while share link is being created
-    // IMPORTANT: Create element first, THEN set innerHTML, THEN append
-    const loadingDiv = document.createElement('div');
-    loadingDiv.id = 'shareLoadingMessage';
-    loadingDiv.className = 'card';
-    loadingDiv.style.cssText = 'background: white; border: 2px solid #667eea; border-radius: 8px; padding: 1.5rem; text-align: center;';
+    // Clear existing content (Zscaler-safe method)
+    while (modifyGrid.firstChild) {
+        modifyGrid.removeChild(modifyGrid.firstChild);
+    }
     
-    // Set innerHTML on the NEW element (not yet in DOM)
-    loadingDiv.innerHTML = `
-        <h3 style="margin: 0 0 0.5rem 0; color: #333; font-size: 1.2rem;">🎉 Presentation Generated Successfully!</h3>
+    // Create LEFT panel: Generate New Slide (placeholder for now)
+    const leftPanel = document.createElement('div');
+    leftPanel.className = 'card';
+    leftPanel.style.cssText = `
+        background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
+        border: 2px solid #667eea;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        gap: 1rem;
+    `;
+    leftPanel.innerHTML = `
+        <div style="font-size: 2.5rem;">🚀</div>
+        <h4 style="margin: 0; color: #667eea; font-size: 1.2rem;">
+            Generate New Slide
+        </h4>
+        <button 
+            class="btn btn-primary" 
+            onclick="alert('Generate new slide feature coming soon!')"
+            style="background: #667eea; padding: 0.75rem 1.5rem; width: 100%; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;"
+        >
+            ➕ Add New Slide
+        </button>
+        <p style="margin: 0; font-size: 0.85rem; color: #666;">
+            Generate additional slides to expand your presentation
+        </p>
+    `;
+    
+    // Create RIGHT panel: Loading message (will be replaced by share link)
+    const rightPanel = document.createElement('div');
+    rightPanel.id = 'shareLoadingMessage';
+    rightPanel.className = 'card';
+    rightPanel.style.cssText = `
+        background: white;
+        border: 2px solid #667eea;
+        border-radius: 8px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    `;
+    rightPanel.innerHTML = `
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🎉</div>
+        <h3 style="margin: 0 0 0.5rem 0; color: #333; font-size: 1.2rem;">Presentation Generated Successfully!</h3>
         <p style="margin: 0; color: #666;">⏳ Creating shareable link...</p>
     `;
     
-    // Now append to container (Zscaler-safe pattern)
-    container.appendChild(loadingDiv);
+    // Append both panels to the grid (Zscaler-safe)
+    modifyGrid.appendChild(leftPanel);
+    modifyGrid.appendChild(rightPanel);
     
-    // Auto-create share link (which will replace the loading message)
+    // Auto-create share link (which will replace the right panel loading message)
     sharePresentation();
 }
 
