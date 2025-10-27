@@ -131,8 +131,8 @@ async function generatePresentation() {
         console.log('  Download URL:', downloadUrl);
         console.log('  PDF URL:', pdfUrl);
         
-            // Show download link
-        showDownloadLink(blobUrl, blob.size, { sessionId, downloadUrl, pdfUrl });
+        // Show progress indicator while preparing share link and PDF
+        showGenerationProgress(sessionId, blobUrl, blob.size, { sessionId, downloadUrl, pdfUrl });
         
         const successMessage = window.templateFile 
             ? '✅ PowerPoint generated with template successfully!' 
@@ -296,52 +296,115 @@ async function modifySlidesWithAI() {
 }
 
 /**
- * Show share and download section - Gen PPT stays on left, results on right
- * Using Zscaler-safe DOM manipulation pattern
+ * Show generation progress - wait for PDF and share link before showing success
  */
-function showDownloadLink(downloadUrl, fileSize, storage = {}) {
-    // Find the results card on the right
+async function showGenerationProgress(sessionId, downloadUrl, fileSize, storage = {}) {
     const resultsCard = document.getElementById('generateResultsCard');
-    if (!resultsCard) {
-        console.error('❌ Results card not found!');
-        return;
-    }
+    if (!resultsCard) return;
     
-    // Make it visible
     resultsCard.style.display = 'block';
     
-    // Clear existing content (Zscaler-safe method)
     while (resultsCard.firstChild) {
         resultsCard.removeChild(resultsCard.firstChild);
     }
     
-    // Create loading message (will be replaced by share link)
-    const loadingDiv = document.createElement('div');
-    loadingDiv.id = 'shareLoadingMessage';
-    loadingDiv.className = 'card';
-    loadingDiv.style.cssText = `
-        background: white;
-        border: 2px solid #667eea;
-        border-radius: 8px;
-        padding: 1.5rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        height: 100%;
+    const progressDiv = document.createElement('div');
+    progressDiv.id = 'generationProgress';
+    progressDiv.style.cssText = `
+        background: white; border: 2px solid #667eea; border-radius: 8px; padding: 1.5rem;
+        display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100%;
     `;
-    loadingDiv.innerHTML = `
-        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🎉</div>
-        <h3 style="margin: 0 0 0.5rem 0; color: #333; font-size: 1.2rem;">Presentation Generated Successfully!</h3>
-        <p style="margin: 0; color: #666;">⏳ Creating shareable link...</p>
+    progressDiv.innerHTML = `
+        <div class="spinner" style="width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+        <h3 style="margin: 0 0 1rem 0; color: #333; font-size: 1.2rem;">⏳ Preparing Your Presentation</h3>
+        <div style="text-align: left; width: 100%; max-width: 300px;">
+            <div id="step1" style="padding: 0.5rem; color: #28a745; font-size: 0.9rem;">✅ PowerPoint file generated</div>
+            <div id="step2" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Creating shareable link...</div>
+            <div id="step3" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Generating PDF...</div>
+            <div id="step4" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Verifying all files...</div>
+        </div>
     `;
+    resultsCard.appendChild(progressDiv);
     
-    // Append to results card (Zscaler-safe)
-    resultsCard.appendChild(loadingDiv);
+    // Wait for share link
+    try {
+        await createShareLinkAndWait();
+        const step2 = document.getElementById('step2');
+        if (step2) { step2.textContent = '✅ Share link created'; step2.style.color = '#28a745'; }
+    } catch (e) {
+        const step2 = document.getElementById('step2');
+        if (step2) { step2.textContent = '⚠️ Share link (optional)'; step2.style.color = '#ffc107'; }
+    }
     
-    // Auto-create share link (which will replace the loading message)
-    sharePresentation();
+    // Wait for PDF
+    try {
+        await waitForPDFReady(sessionId);
+        const step3 = document.getElementById('step3');
+        if (step3) { step3.textContent = '✅ PDF ready'; step3.style.color = '#28a745'; }
+    } catch (e) {
+        const step3 = document.getElementById('step3');
+        if (step3) { step3.textContent = '⚠️ PDF (optional)'; step3.style.color = '#ffc107'; }
+    }
+    
+    const step4 = document.getElementById('step4');
+    if (step4) { step4.textContent = '✅ Everything ready!'; step4.style.color = '#28a745'; }
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Now show the actual success message
+    showFinalResults(downloadUrl, fileSize, storage);
+}
+
+async function createShareLinkAndWait() {
+    return new Promise((resolve) => {
+        window.onShareLinkCreated = () => resolve();
+        sharePresentation();
+        setTimeout(() => resolve(), 10000);
+    });
+}
+
+async function waitForPDFReady(sessionId) {
+    if (!sessionId) return;
+    for (let i = 0; i < 30; i++) {
+        try {
+            const response = await fetch(`/view-pdf/${sessionId}`, { method: 'HEAD' });
+            if (response.ok) return true;
+        } catch (e) {}
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    throw new Error('PDF timeout');
+}
+
+/**
+ * Show final results after everything is ready
+ */
+function showFinalResults(downloadUrl, fileSize, storage = {}) {
+    const resultsCard = document.getElementById('generateResultsCard');
+    if (!resultsCard) return;
+    
+    while (resultsCard.firstChild) {
+        resultsCard.removeChild(resultsCard.firstChild);
+    }
+    
+    const successDiv = document.createElement('div');
+    successDiv.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 2.5rem;">✅</div>
+            <h3 style="margin: 0; color: #155724; font-size: 1.2rem;">Everything Ready!</h3>
+        </div>
+        <p style="margin: 0; color: #155724; font-size: 0.9rem;">⏳ Loading share options...</p>
+    `;
+    resultsCard.appendChild(successDiv);
+    
+    // Trigger share link display (will replace this)
+    if (typeof sharePresentation === 'function') {
+        sharePresentation();
+    }
+}
+
+// Keep old function name for compatibility
+function showDownloadLink(downloadUrl, fileSize, storage = {}) {
+    showGenerationProgress(storage.sessionId, downloadUrl, fileSize, storage);
 }
 
 // PDF conversion functions removed - PDFs are now auto-generated on the server

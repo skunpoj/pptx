@@ -101,6 +101,17 @@ async function generatePreview() {
     const estimatedTime = Math.max(5, Math.min(20, Math.ceil(wordCount / 100)));
     
     preview.innerHTML = `
+        <!-- Streaming Text Box (Always Visible from Start) -->
+        <div id="streamingContainer" style="background: #1e1e1e; border: 2px solid #667eea; border-radius: 8px; margin-bottom: 1rem; text-align: left; overflow: hidden;">
+            <div style="background: #667eea; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
+                <strong style="color: white; font-size: 0.9rem;">💬 AI Response Stream (Live)</strong>
+                <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
+            </div>
+            <div id="streamingTextBox" style="max-height: 200px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #00ff00; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;">
+                <span style="opacity: 0.6;">⏳ Connecting to AI... Waiting for response stream...</span>
+            </div>
+        </div>
+        
         <div id="streamingStatus" style="text-align: center; padding: 2rem; max-width: 600px; margin: 0 auto;">
             <div style="position: relative; width: 80px; height: 80px; margin: 0 auto;">
                 <span class="spinner" style="width: 80px; height: 80px; border-width: 4px; border-color: #667eea; border-top-color: transparent; display: inline-block; width: 80px; height: 80px; border: 4px solid #667eea; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span>
@@ -355,13 +366,7 @@ function appendStreamingText(text) {
     const textBox = document.getElementById('streamingTextBox');
     if (!textBox) return;
     
-    // Replace "Waiting for AI response..." on first update
-    const currentText = textBox.textContent;
-    if (currentText.includes('Waiting for AI response...')) {
-        textBox.textContent = '';
-    }
-    
-    // Append new text
+    // Append new text (no need to clear, handled by handleIncrementalStream)
     const textNode = document.createTextNode(text);
     textBox.appendChild(textNode);
     
@@ -378,23 +383,16 @@ async function handleIncrementalStream(response) {
         throw new Error('Preview container not found');
     }
     
-    // Create streaming text box at the top (before clearing container)
-    let streamingContainer = document.createElement('div');
-    streamingContainer.id = 'streamingContainer';
-    streamingContainer.style.cssText = 'background: #1e1e1e; border: 2px solid #667eea; border-radius: 8px; margin-bottom: 1rem; text-align: left; overflow: hidden;';
-    streamingContainer.innerHTML = `
-        <div style="background: #667eea; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
-            <strong style="color: white; font-size: 0.9rem;">💬 AI Response Stream</strong>
-            <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
-        </div>
-        <div id="streamingTextBox" style="max-height: 200px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #00ff00; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;">
-            <span style="opacity: 0.6;">Waiting for AI response...</span>
-        </div>
-    `;
+    // Preserve the existing streaming container
+    let streamingContainer = document.getElementById('streamingContainer');
     
-    // Clear container and add streaming box
-    previewContainer.innerHTML = '';
-    previewContainer.appendChild(streamingContainer);
+    // Clear everything EXCEPT the streaming container
+    const children = Array.from(previewContainer.children);
+    children.forEach(child => {
+        if (child.id !== 'streamingContainer') {
+            child.remove();
+        }
+    });
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -404,6 +402,7 @@ async function handleIncrementalStream(response) {
     let totalSlides = 0;
     let progressDiv = null;
     let buffer = '';
+    let isFirstChunk = true;
     
     try {
         while (true) {
@@ -429,6 +428,15 @@ async function handleIncrementalStream(response) {
             // Decode chunk and add to buffer
             const chunk = decoder.decode(value, { stream: true });
             buffer += chunk;
+            
+            // On first chunk, clear the "Connecting..." message
+            if (isFirstChunk) {
+                const textBox = document.getElementById('streamingTextBox');
+                if (textBox) {
+                    textBox.innerHTML = '<span style="color: #00ff00; font-weight: bold;">🔴 LIVE STREAM ACTIVE</span>\n\n';
+                }
+                isFirstChunk = false;
+            }
             
             // Show raw chunk in streaming text box
             appendStreamingText(chunk);

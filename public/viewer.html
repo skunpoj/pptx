@@ -182,6 +182,13 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -358,53 +365,9 @@
                 slideLayout.innerHTML = renderSlideWithModifyPrompt(slide, index, theme);
                 slideCard.appendChild(slideLayout);
                 
-                // Success message section at bottom
-                const successSection = document.createElement('div');
-                successSection.style.cssText = `
-                    margin-top: 1.5rem;
-                    background: linear-gradient(135deg, #d4edda, #c3e6cb);
-                    border: 2px solid #28a745;
-                    border-radius: 8px;
-                    padding: 1rem;
-                `;
-                successSection.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <div style="font-size: 2rem;">✅</div>
-                        <div style="flex: 1;">
-                            <h4 style="margin: 0 0 0.25rem 0; color: #155724; font-size: 1rem;">
-                                Slide Generated Successfully!
-                            </h4>
-                            <p style="margin: 0; color: #155724; font-size: 0.85rem;">
-                                Modify this slide using the prompt above, or download the complete presentation
-                            </p>
-                        </div>
-                    </div>
-                `;
-                slideCard.appendChild(successSection);
-                
                 container.appendChild(slideCard);
             });
             
-            
-            // Add helpful tip at the end
-            const tipCard = document.createElement('div');
-            tipCard.style.cssText = `
-                background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
-                border: 2px solid ${theme.colorPrimary};
-                border-radius: 12px;
-                padding: 2rem;
-                text-align: center;
-            `;
-            tipCard.innerHTML = `
-                <div style="font-size: 2.5rem; margin-bottom: 1rem;">💡</div>
-                <h3 style="margin: 0 0 1rem 0; color: ${theme.colorPrimary};">
-                    All ${slides.length} Slides Displayed
-                </h3>
-                <p style="margin: 0; color: #666; font-size: 1rem;">
-                    Scroll up to review all slides • Use the Download PPT button above to save your presentation
-                </p>
-            `;
-            container.appendChild(tipCard);
         }
         
         function renderSlideWithModifyPrompt(slide, index, theme) {
@@ -569,7 +532,7 @@
         
         async function modifySlideIndividually(slideIndex) {
             const promptTextarea = document.getElementById(`modifyPrompt_${slideIndex}`);
-            const modificationPrompt = promptTextarea.value.trim();
+            const modificationPrompt = promptTextarea ? promptTextarea.value.trim() : '';
             
             if (!modificationPrompt) {
                 alert('❌ Please enter a modification prompt');
@@ -580,6 +543,8 @@
                 alert('❌ Slide data not found');
                 return;
             }
+            
+            console.log('🔄 Modifying slide', slideIndex, 'with prompt:', modificationPrompt);
             
             const originalSlide = window.currentSlideData.slides[slideIndex];
             const theme = window.currentSlideData.designTheme;
@@ -597,6 +562,8 @@
             
             try {
                 console.log(`🔄 Modifying slide ${slideIndex + 1}:`, modificationPrompt);
+                console.log('Original slide:', originalSlide);
+                console.log('Theme:', theme);
                 
                 // Call the modify API with COMPLETE slide data including theme
                 const response = await fetch('/api/modify-slides', {
@@ -608,21 +575,38 @@
                             designTheme: theme  // Include theme to avoid error
                         },
                         modificationRequest: modificationPrompt,
+                        apiKey: '',  // Use backend provider
                         provider: 'bedrock'
                     })
                 });
                 
+                console.log('Response status:', response.status);
+                
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Modification failed');
+                    let errorMessage = 'Modification failed';
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                        console.error('Error data:', errorData);
+                    } catch (e) {
+                        const errorText = await response.text();
+                        console.error('Error text:', errorText);
+                        errorMessage = errorText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const result = await response.json();
+                console.log('Modification result:', result);
+                
                 const modifiedSlide = result.slideData?.slides?.[0] || result.slides?.[0];
                 
                 if (!modifiedSlide) {
+                    console.error('Full result:', JSON.stringify(result, null, 2));
                     throw new Error('No modified slide returned from API');
                 }
+                
+                console.log('Modified slide:', modifiedSlide);
                 
                 // Update ONLY this slide in our data
                 window.currentSlideData.slides[slideIndex] = modifiedSlide;
@@ -633,12 +617,16 @@
                 }
                 
                 // Clear the prompt
-                promptTextarea.value = '';
+                if (promptTextarea) {
+                    promptTextarea.value = '';
+                }
                 
                 alert('✅ Slide modified successfully!');
+                console.log('✅ Slide modification complete');
                 
             } catch (error) {
                 console.error('Modification error:', error);
+                console.error('Error stack:', error.stack);
                 alert('❌ Failed to modify slide: ' + error.message);
                 
                 // Restore original slide preview

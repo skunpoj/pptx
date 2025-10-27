@@ -1098,18 +1098,24 @@ async function regenerateSelectedImage() {
                 // Refresh gallery display
                 displayImageGallery(window.imageGallery.images);
                 
-                // Update slide preview
+                // Update slide preview with the new image
                 updateSingleSlidePreview({
-                    ...newImage,
+                    url: newImage.url,
                     slideIndex: selectedImage.slideIndex,
-                    slideTitle: selectedImage.slideTitle
+                    slideTitle: selectedImage.slideTitle,
+                    description: newPrompt
                 });
+                
+                // Force refresh the preview display
+                if (typeof displayPreview === 'function' && window.currentSlideData) {
+                    displayPreview(window.currentSlideData);
+                }
                 
                 if (typeof showNotification === 'function') {
                     showNotification('✅ Image regenerated successfully!', 'success');
                 }
                 
-                console.log('✅ Image regenerated and updated');
+                console.log('✅ Image regenerated and updated in preview');
             }
         }
         

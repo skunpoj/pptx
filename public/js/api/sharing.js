@@ -45,6 +45,11 @@ async function sharePresentation() {
             
             // Show share link INLINE next to button
             showShareLinkInline(result.shareUrl, result.expiresIn);
+            
+            // Notify progress tracker that share link is ready
+            if (window.onShareLinkCreated) {
+                window.onShareLinkCreated();
+            }
         } else {
             throw new Error(result.error || 'Sharing failed');
         }
@@ -100,77 +105,62 @@ function showShareLinkInline(shareUrl, expiresIn) {
         padding: 1.5rem;
     `;
     
-    // Build success message with share link and action buttons
+    // Build compact success message with share link and action buttons (all on single line)
     let contentHTML = `
         <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-            <div style="font-size: 2.5rem;">✅</div>
-            <h3 style="margin: 0; color: #155724; font-size: 1.2rem;">Presentation Generated Successfully!</h3>
+            <div style="font-size: 2rem;">✅</div>
+            <h3 style="margin: 0; color: #155724; font-size: 1.1rem;">Presentation Ready!</h3>
         </div>
         
-        <!-- Share Link Input -->
+        <!-- Share Link - All on ONE LINE -->
         <div style="margin-bottom: 1rem;">
-            <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
                 <input 
                     type="text" 
                     value="${shareUrl}" 
                     readonly 
                     id="shareLinkInput"
-                    style="flex: 1; padding: 0.75rem; border: 2px solid #667eea; border-radius: 4px; font-size: 0.95rem; font-family: monospace; background: #f8f9fa;"
+                    style="flex: 1; padding: 0.6rem; border: 2px solid #667eea; border-radius: 4px; font-size: 0.85rem; font-family: monospace; background: #f8f9fa;"
                 />
                 <button 
                     onclick="window.copyShareLink()" 
-                    style="padding: 0.75rem 1.25rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
-                >📋 Copy Link</button>
+                    style="padding: 0.6rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; white-space: nowrap;"
+                >📋 Copy</button>
             </div>
-            <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #666;">
-                ⏱️ Link expires in ${expiresIn} • Share this link with anyone!
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: #666;">
+                ⏱️ Expires in ${expiresIn}
             </p>
         </div>
         
-        <!-- Action Buttons -->
-        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <!-- Action Buttons - Compact Layout -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
             <a 
                 href="/view/${shareId}" 
                 target="_blank"
-                class="btn-secondary"
-                style="padding: 0.75rem 1.5rem; background: #764ba2; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block;"
-            >👁️ View Online</a>
+                style="padding: 0.6rem 1rem; background: #764ba2; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem;"
+            >👁️ View</a>
     `;
     
-    // Add download button
+    // Add download button - compact
     if (window.currentDownloadUrl && window.currentFileSize) {
         contentHTML += `
             <a 
                 href="${window.currentDownloadUrl}" 
                 download="presentation.pptx"
-                class="btn-success"
-                style="padding: 0.75rem 1.5rem; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block;"
-            >📥 Download PPT (${formatFileSize(window.currentFileSize)})</a>
+                style="padding: 0.6rem 1rem; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem;"
+            >📥 PPT</a>
         `;
     }
     
-    // Check if PDF is ready and add button with appropriate state
+    // Check if PDF is ready and add button - compact, ready state only
     if (window.currentSessionId) {
-        // Check if PDF exists
-        checkPDFStatus(window.currentSessionId).then(pdfExists => {
-            const pdfBtn = document.getElementById('pdfViewBtn');
-            if (pdfBtn && pdfExists) {
-                pdfBtn.disabled = false;
-                pdfBtn.style.opacity = '1';
-                pdfBtn.style.cursor = 'pointer';
-                pdfBtn.title = '';
-            }
-        });
-        
         contentHTML += `
             <a 
                 href="/view-pdf/${window.currentSessionId}" 
                 target="_blank"
                 id="pdfViewBtn"
-                class="btn-warning"
-                style="padding: 0.75rem 1.5rem; background: #999; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block; opacity: 0.5; cursor: not-allowed; pointer-events: none;"
-                title="PDF is being generated..."
-            >📄 View PDF (generating...)</a>
+                style="padding: 0.6rem 1rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem;"
+            >📄 PDF</a>
         `;
     }
     
@@ -183,14 +173,9 @@ function showShareLinkInline(shareUrl, expiresIn) {
     // Append to results card
     resultsCard.appendChild(successCard);
     
-    // Start checking PDF status
-    if (window.currentSessionId) {
-        startPDFStatusCheck(window.currentSessionId);
-    }
-    
     // Scroll to show the result
     setTimeout(() => {
-        resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        successCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
 }
 
@@ -206,44 +191,7 @@ async function checkPDFStatus(sessionId) {
     }
 }
 
-/**
- * Start checking PDF status and enable button when ready
- */
-function startPDFStatusCheck(sessionId) {
-    let attempts = 0;
-    const maxAttempts = 30; // 30 seconds max
-    
-    const checkInterval = setInterval(async () => {
-        attempts++;
-        
-        const pdfExists = await checkPDFStatus(sessionId);
-        
-        if (pdfExists) {
-            // PDF is ready - enable the button
-            const pdfBtn = document.getElementById('pdfViewBtn');
-            if (pdfBtn) {
-                pdfBtn.style.background = '#e67e22';
-                pdfBtn.style.opacity = '1';
-                pdfBtn.style.cursor = 'pointer';
-                pdfBtn.style.pointerEvents = 'auto';
-                pdfBtn.textContent = '📄 View PDF';
-                pdfBtn.title = 'PDF is ready to view';
-            }
-            clearInterval(checkInterval);
-            console.log('✅ PDF is ready');
-        } else if (attempts >= maxAttempts) {
-            // Timeout - show error state
-            const pdfBtn = document.getElementById('pdfViewBtn');
-            if (pdfBtn) {
-                pdfBtn.style.background = '#dc3545';
-                pdfBtn.textContent = '📄 PDF Failed';
-                pdfBtn.title = 'PDF generation failed or timed out';
-            }
-            clearInterval(checkInterval);
-            console.log('❌ PDF generation timeout');
-        }
-    }, 1000); // Check every second
-}
+// PDF status checking removed - now we wait for PDF before showing success
 
 /**
  * Open share link modal
