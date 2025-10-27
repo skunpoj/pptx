@@ -151,7 +151,14 @@ async function generateFromPrompt() {
                 window.showStatus('🎨 Extracting color theme from files...', 'info');
                 extractedColors = await extractColorsFromFiles(files);
                 if (extractedColors) {
-                    window.showStatus(`✅ Color theme extracted: ${extractedColors.name}`, 'success');
+                    // Display and auto-select the extracted theme
+                    if (window.displayThemeSelector) {
+                        window.displayThemeSelector('extracted-custom');
+                    }
+                    if (window.selectTheme) {
+                        window.selectTheme('extracted-custom');
+                    }
+                    window.showStatus(`✅ Color theme extracted and auto-selected: ${extractedColors.name}`, 'success');
                 }
             }
             
@@ -366,7 +373,13 @@ function handleFileUpload(event) {
                 if (window.displayThemeSelector) {
                     window.displayThemeSelector('extracted-custom');
                 }
-                window.showStatus(`✅ Colors extracted! "${extractedTheme.name}" theme added.`, 'success');
+                
+                // Auto-select the extracted theme
+                if (window.selectTheme) {
+                    window.selectTheme('extracted-custom');
+                }
+                
+                window.showStatus(`✅ Colors extracted! "${extractedTheme.name}" theme auto-selected.`, 'success');
             }
         });
     }

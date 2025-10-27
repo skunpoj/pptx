@@ -193,14 +193,13 @@ body {
     gap: 0.75rem;
 }
 
-/* Responsive Grid for AI Idea & Theme Selector */
+/* Responsive Grid for AI Idea & Theme Selector - Match main-grid behavior */
 .ai-theme-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
-    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
     align-items: start;
-    height: auto;
 }
 
 /* Modification Grid - Modify Slides and Generate Button */
@@ -209,25 +208,22 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
     width: 100%;
+    margin-bottom: 0.5rem;
 }
 
-/* Mobile Responsive */
+/* Mobile Responsive - Apply same behavior to all left/right panel grids */
 @media (max-width: 968px) {
-    .main-grid {
-        grid-template-columns: 1fr; /* Stack vertically on tablets/mobile */
-        height: auto; /* Remove fixed height */
-    }
-    
-    .ai-theme-grid {
-        grid-template-columns: 1fr; /* Stack vertically on mobile */
-    }
-    
+    /* All grid layouts stack vertically on tablets/mobile */
+    .main-grid,
+    .ai-theme-grid,
     .modification-grid {
-        grid-template-columns: 1fr; /* Stack vertically on mobile */
+        grid-template-columns: 1fr;
+        height: auto;
+        gap: 0.75rem;
     }
     
     .action-row {
-        grid-template-columns: 1fr; /* Stack vertically on mobile */
+        grid-template-columns: 1fr;
         gap: 0.75rem;
     }
     
@@ -235,6 +231,15 @@ body {
     .checkbox-purple[style*="grid-template-columns"] {
         grid-template-columns: 1fr !important;
         gap: 0.75rem !important;
+    }
+    
+    /* Preview container adjustments */
+    .preview-container {
+        max-height: none;
+    }
+    
+    .card {
+        height: auto;
     }
     
     .input-group-inline {
@@ -1930,8 +1935,11 @@ textarea:focus {
         max-width: 100%;
     }
     
-    .main-grid {
-        gap: 1rem;
+    /* All grids get consistent gap and height on tablets */
+    .main-grid,
+    .ai-theme-grid,
+    .modification-grid {
+        gap: 0.75rem;
         height: auto;
     }
 }
@@ -1948,8 +1956,10 @@ textarea:focus {
         padding: 1rem;
     }
     
-    /* Single column layout */
-    .main-grid {
+    /* Single column layout - Apply to all grids */
+    .main-grid,
+    .ai-theme-grid,
+    .modification-grid {
         grid-template-columns: 1fr;
         gap: 1rem;
         height: auto;
@@ -2189,7 +2199,9 @@ textarea:focus {
 
 /* Landscape mobile optimization */
 @media (max-width: 768px) and (orientation: landscape) {
-    .main-grid {
+    .main-grid,
+    .ai-theme-grid,
+    .modification-grid {
         height: auto;
     }
     

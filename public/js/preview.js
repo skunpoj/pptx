@@ -150,7 +150,7 @@ window.renderSlidePreviewCard = function renderSlidePreviewCard(slide, index, th
     const borderColor = isTitle ? theme.colorPrimary : '#dee2e6';
     
     let html = `
-        <div class="slide-preview ${isTitle ? 'title-slide' : ''}" style="background: ${bgColor}; border-color: ${borderColor}; padding-left: ${isTitle ? '1rem' : '1.5rem'};">
+        <div class="slide-preview ${isTitle ? 'title-slide' : ''}" style="background: ${bgColor}; border-color: ${borderColor}; padding-left: ${isTitle ? '1rem' : '1.5rem'}; position: relative;">
             <div class="slide-header">
                 <span class="slide-number" style="background: ${theme.colorAccent};">Slide ${index + 1}</span>
                 <span class="slide-type" style="color: ${isTitle ? 'rgba(255,255,255,0.8)' : '#666'};">${getSlideTypeLabel(slide)}</span>
@@ -194,16 +194,38 @@ function renderSlideDetails(slide, theme, isTitle, textColor) {
         html += `<div style="background: ${isTitle ? 'rgba(255,255,255,0.1)' : 'linear-gradient(90deg, ' + theme.colorAccent + '20 0%, transparent 100%)'}; border-left: ${isTitle ? '3px solid rgba(255,255,255,0.5)' : '3px solid ' + theme.colorAccent}; color: ${isTitle ? 'rgba(255,255,255,0.95)' : theme.colorSecondary}; font-size: 0.85rem; margin-top: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 0 6px 6px 0; font-style: italic;">${slide.header}</div>`;
     }
     
-    // Image placeholder
-    if (slide.imageDescription) {
-        html += `<div style="background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 0.5rem; margin-top: 0.5rem; border-radius: 4px; font-size: 0.75rem; color: #666; text-align: center;">📸 ${slide.imageDescription}</div>`;
+    // Image display (actual or placeholder)
+    if (slide.imageUrl) {
+        // Actual image - position on right side like PowerPoint
+        html += `
+            <div style="position: absolute; right: 0.5rem; top: 2.5rem; width: 35%; max-width: 280px;">
+                <img src="${slide.imageUrl}" 
+                     alt="${slide.imageDescription || 'Slide image'}" 
+                     style="width: 100%; height: auto; max-height: 200px; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div style="display: none; background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; color: #666; text-align: center;">
+                    🖼️ Image failed to load
+                </div>
+            </div>
+        `;
+    } else if (slide.imageDescription) {
+        // Placeholder - position on right side like PowerPoint
+        html += `
+            <div style="position: absolute; right: 0.5rem; top: 2.5rem; width: 35%; max-width: 280px; background: #f0f4ff; border: 2px dashed ${theme.colorAccent}; padding: 0.5rem; border-radius: 8px; font-size: 0.7rem; color: #666; text-align: center; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <div style="font-size: 2rem; margin-bottom: 0.25rem;">📸</div>
+                <div style="font-size: 0.7rem;">${slide.imageDescription}</div>
+            </div>
+        `;
     }
     
-    // Content based on layout
+    // Content based on layout - adjust width if image present
+    const hasImage = slide.imageUrl || slide.imageDescription;
+    const contentWidth = hasImage ? '60%' : '100%';
+    
     if (slide.layout === 'chart' && slide.chart) {
-        html += renderChartContent(slide, theme);
+        html += `<div style="width: ${contentWidth};">` + renderChartContent(slide, theme) + `</div>`;
     } else if (slide.content && slide.content.length > 0) {
-        html += renderContentByLayout(slide, theme);
+        html += `<div style="width: ${contentWidth};">` + renderContentByLayout(slide, theme) + `</div>`;
     }
     
     return html;

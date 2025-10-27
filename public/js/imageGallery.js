@@ -268,13 +268,9 @@ async function handleImageStream(response, totalCount) {
         console.groupEnd();
     }
     
-    // Switch back to Slides tab after 2 seconds
-    setTimeout(() => {
-        if (typeof window.showSlidesPreview === 'function') {
-            window.showSlidesPreview();
-            console.log('📄 Switched back to Slides tab - images are visible!');
-        }
-    }, 2000);
+    // Don't auto-switch tabs - let user stay where they are
+    // User can manually switch to Slides tab to see images
+    console.log('✅ Image generation complete - check Slides tab to see images!');
 }
 
 /**
@@ -312,12 +308,8 @@ function handleNonStreamingResult(result) {
         }
     }
     
-    // Switch back to Slides tab
-    setTimeout(() => {
-        if (typeof window.showSlidesPreview === 'function') {
-            window.showSlidesPreview();
-        }
-    }, 2000);
+    // Don't auto-switch tabs - let user stay where they are
+    console.log('✅ Image generation complete - check Slides tab to see images!');
 }
 
 /**
@@ -605,13 +597,42 @@ function displayImageGallery(images) {
         return;
     }
     
+    const selectedImage = images.find(img => img.id === window.imageGallery.selectedImageId);
+    
     let html = `
         <div style="padding: 1rem; background: linear-gradient(135deg, #667eea15, #764ba215); border-radius: 8px; margin-bottom: 1rem;">
             <h3 style="margin: 0 0 0.5rem 0; color: #667eea;">🎨 AI Generated Images</h3>
-            <p style="margin: 0; font-size: 0.9rem; color: #666;">Click an image to select it for inserting into slides</p>
+            <p style="margin: 0; font-size: 0.9rem; color: #666;">Click an image to select it for regeneration or editing</p>
         </div>
-        <div class="image-gallery-grid">
     `;
+    
+    // Show regenerate controls if image selected
+    if (selectedImage) {
+        html += `
+            <div style="background: #fff8e1; border: 2px solid #ffc107; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <strong style="color: #f57c00;">🔄 Regenerate Selected Image</strong>
+                    <button onclick="window.imageGallery.selectedImageId = null; displayImageGallery(window.imageGallery.images);" 
+                            style="padding: 0.25rem 0.5rem; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        Cancel
+                    </button>
+                </div>
+                <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">
+                    Slide ${selectedImage.slideIndex + 1}: ${selectedImage.slideTitle}
+                </div>
+                <textarea id="regeneratePrompt" 
+                          style="width: 100%; height: 80px; padding: 0.5rem; border: 1px solid #ffc107; border-radius: 4px; font-size: 0.9rem; resize: vertical; font-family: inherit;"
+                          placeholder="Edit the image description...">${selectedImage.description}</textarea>
+                <button onclick="window.regenerateSelectedImage()" 
+                        class="btn-primary" 
+                        style="width: 100%; margin-top: 0.5rem; padding: 0.75rem; font-size: 1rem;">
+                    ✨ Regenerate Image
+                </button>
+            </div>
+        `;
+    }
+    
+    html += `<div class="image-gallery-grid">`;
     
     images.forEach((image, index) => {
         const isSelected = window.imageGallery.selectedImageId === image.id;
@@ -632,7 +653,7 @@ function displayImageGallery(images) {
                     </div>
                     ${isSelected ? `
                         <div style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #667eea; color: white; border-radius: 4px; text-align: center; font-size: 0.75rem; font-weight: 600;">
-                            ✓ SELECTED
+                            ✓ SELECTED - Click Regenerate Above
                         </div>
                     ` : ''}
                 </div>
@@ -877,6 +898,34 @@ function verifyImagesInSlideData() {
 }
 
 /**
+ * Check if auto image generation is enabled
+ */
+function isAutoImageGenEnabled() {
+    const checkbox = document.getElementById('autoImageGenCheckbox');
+    return checkbox ? checkbox.checked : true; // Default to true if checkbox not found
+}
+
+/**
+ * Toggle auto image generation UI
+ */
+function toggleAutoImageGen() {
+    const checkbox = document.getElementById('autoImageGenCheckbox');
+    const manualBtn = document.getElementById('manualGenerateBtn');
+    
+    if (!checkbox || !manualBtn) return;
+    
+    if (checkbox.checked) {
+        // Auto-gen enabled - hide manual button
+        manualBtn.style.display = 'none';
+        console.log('✅ Auto image generation enabled');
+    } else {
+        // Auto-gen disabled - show manual button
+        manualBtn.style.display = 'block';
+        console.log('⏸️ Auto image generation disabled - use manual button');
+    }
+}
+
+/**
  * Automatically generate images for slides with image descriptions
  * Uses AWS Bedrock Nova Canvas
  */
@@ -900,11 +949,11 @@ async function autoGenerateImagesForSlides() {
     // Show progress
     showImageGenerationProgress(descriptions.length);
     
-    // Switch to gallery tab to show progress
-    const galleryTabBtn = document.getElementById('galleryTabBtn');
-    if (galleryTabBtn && typeof window.showImageGallery === 'function') {
-        window.showImageGallery();
-    }
+    // DON'T switch to gallery tab - let user stay on slides tab to see images appear
+    // const galleryTabBtn = document.getElementById('galleryTabBtn');
+    // if (galleryTabBtn && typeof window.showImageGallery === 'function') {
+    //     window.showImageGallery();
+    // }
     
     try {
         const response = await fetch('/api/images/auto-generate', {
@@ -947,9 +996,120 @@ async function autoGenerateImagesForSlides() {
     }
 }
 
+/**
+ * Regenerate a selected image with edited prompt
+ */
+async function regenerateSelectedImage() {
+    const selectedImage = window.imageGallery.images.find(
+        img => img.id === window.imageGallery.selectedImageId
+    );
+    
+    if (!selectedImage) {
+        alert('No image selected');
+        return;
+    }
+    
+    const promptTextarea = document.getElementById('regeneratePrompt');
+    const newPrompt = promptTextarea ? promptTextarea.value.trim() : selectedImage.description;
+    
+    if (!newPrompt) {
+        alert('Please enter a description');
+        return;
+    }
+    
+    console.log(`🔄 Regenerating image for slide ${selectedImage.slideIndex + 1}`);
+    console.log(`   Old prompt: ${selectedImage.description}`);
+    console.log(`   New prompt: ${newPrompt}`);
+    
+    // Show loading state
+    const regenerateBtn = event.target;
+    const originalText = regenerateBtn.textContent;
+    regenerateBtn.textContent = '🔄 Regenerating...';
+    regenerateBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/images/auto-generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                slideData: {
+                    slides: [{
+                        title: selectedImage.slideTitle,
+                        imageDescription: newPrompt
+                    }]
+                },
+                stream: false // Single image, no streaming needed
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Regeneration failed: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.images && result.images.length > 0) {
+            const newImage = result.images[0];
+            
+            if (newImage.error) {
+                throw new Error(newImage.error);
+            }
+            
+            // Update the image in gallery
+            const imageIndex = window.imageGallery.images.findIndex(
+                img => img.id === selectedImage.id
+            );
+            
+            if (imageIndex !== -1) {
+                window.imageGallery.images[imageIndex] = {
+                    ...selectedImage,
+                    url: newImage.url,
+                    description: newPrompt,
+                    timestamp: Date.now()
+                };
+                
+                // Update slide data
+                if (window.currentSlideData && 
+                    window.currentSlideData.slides[selectedImage.slideIndex]) {
+                    window.currentSlideData.slides[selectedImage.slideIndex].imageUrl = newImage.url;
+                    window.currentSlideData.slides[selectedImage.slideIndex].imageDescription = newPrompt;
+                }
+                
+                // Refresh gallery display
+                displayImageGallery(window.imageGallery.images);
+                
+                // Update slide preview
+                updateSingleSlidePreview({
+                    ...newImage,
+                    slideIndex: selectedImage.slideIndex,
+                    slideTitle: selectedImage.slideTitle
+                });
+                
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ Image regenerated successfully!', 'success');
+                }
+                
+                console.log('✅ Image regenerated and updated');
+            }
+        }
+        
+    } catch (error) {
+        console.error('Regeneration error:', error);
+        alert('Failed to regenerate image: ' + error.message);
+    } finally {
+        regenerateBtn.textContent = originalText;
+        regenerateBtn.disabled = false;
+    }
+}
+
 // Export functions
 window.generateImagesForSlides = generateImagesForSlides;
 window.autoGenerateImagesForSlides = autoGenerateImagesForSlides;
+window.regenerateSelectedImage = regenerateSelectedImage;
+window.isAutoImageGenEnabled = isAutoImageGenEnabled;
+window.toggleAutoImageGen = toggleAutoImageGen;
 window.showImageGallery = showImageGallery;
 window.showSlidesPreview = showSlidesPreview;
 window.selectGalleryImage = selectGalleryImage;

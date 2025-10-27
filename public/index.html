@@ -97,16 +97,20 @@ Our Products
                 <h2>👁️ Slide Preview</h2>
                 
                 <!-- Tab Navigation -->
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #ddd;">
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #ddd; align-items: center; flex-wrap: wrap;">
                     <button class="gallery-tab-btn active" id="slidesTabBtn" onclick="window.showSlidesPreview()">
                         📄 Slides
                     </button>
                     <button class="gallery-tab-btn" id="galleryTabBtn" onclick="window.showImageGallery()">
                         🖼️ Image Gallery
                     </button>
-                    <div style="margin-left: auto; padding: 0.5rem 1rem; font-size: 0.85rem; color: #667eea; font-weight: 600;">
-                        🤖 Auto AI Image Generation
-                    </div>
+                    <button class="btn-secondary" id="manualGenerateBtn" onclick="window.generateImagesForSlides()" style="display: none; margin-left: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        🎨 Generate All Images
+                    </button>
+                    <label style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; font-size: 0.85rem;">
+                        <input type="checkbox" id="autoImageGenCheckbox" checked onchange="window.toggleAutoImageGen()">
+                        <span style="color: #667eea; font-weight: 600;">🤖 Auto Generate Images</span>
+                    </label>
                 </div>
                 
                 <!-- Slides Preview Container -->
@@ -178,21 +182,36 @@ Our Products
                 
                 <!-- File Upload Row -->
                 <div style="margin-bottom: 0.5rem;">
-                    <label class="file-label" style="display: block; font-weight: 600; color: #555; margin-bottom: 0.5rem;">📎 Upload files (documents & images):</label>
+                    <label class="file-label" style="display: block; font-weight: 600; color: #555; margin-bottom: 0.35rem;">📎 Upload files (documents & images):</label>
                     <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx,.jpg,.jpeg,.png,.gif,.webp,.svg" class="file-input" style="width: 100%;">
                 </div>
                 
                 <!-- File List -->
-                <div id="fileList" class="file-list-container" style="margin-bottom: 0.75rem;"></div>
+                <div id="fileList" class="file-list-container" style="margin-bottom: 0.5rem;"></div>
                 
                 <!-- Options Checkboxes -->
                 <div class="options-container">
+                    <!-- Combined Image Options + Number of Images Row -->
+                    <div class="checkbox-label checkbox-purple" style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: start;">
+                        <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer; flex: 1;">
+                            <input type="checkbox" id="generateImages" checked style="margin-top: 0.25rem; flex-shrink: 0;">
+                            <span>
+                                <strong>🖼️ AI Image Generation & Insertion</strong>
+                                <span class="checkbox-desc">Generate AI image suggestions from content descriptions AND insert uploaded images directly into appropriate slides based on context</span>
+                            </span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
+                            <label style="font-weight: 600; color: #555; font-size: 0.9rem;">Images to generate:</label>
+                            <input type="number" id="numImagesToGenerate" value="3" min="0" max="20" class="number-input" style="width: 70px;">
+                        </div>
+                    </div>
+                    
                     <!-- Extract Colors Checkbox -->
                     <label class="checkbox-label checkbox-blue">
                         <input type="checkbox" id="extractColors" checked>
                         <span>
-                            <strong>🎨 Extract color theme from uploaded files</strong>
-                            <span class="checkbox-desc">File content will be incorporated and used together with your idea prompt to create the presentation. AI also suggests color themes based on file names/types (e.g., finance → blue, healthcare → teal)</span>
+                            <strong>🎨 Extract & auto-select color theme from uploaded files</strong>
+                            <span class="checkbox-desc">File content will be incorporated and used together with your idea prompt. AI analyzes uploaded files to suggest and automatically select color themes based on file names/types (e.g., finance → blue, healthcare → teal)</span>
                         </span>
                     </label>
                     
@@ -204,30 +223,6 @@ Our Products
                             <span class="checkbox-desc">Uses uploaded PowerPoint file as template - preserves formatting, modifies content, or adds new slides</span>
                         </span>
                     </label>
-                    
-                    <!-- AI Image Generation Checkbox -->
-                    <label class="checkbox-label checkbox-green">
-                        <input type="checkbox" id="generateImages" checked>
-                        <span>
-                            <strong>📸 Include AI-generated image suggestions in content</strong>
-                            <span class="checkbox-desc">AI will include image descriptions in the generated content (descriptions only, not actual images)</span>
-                        </span>
-                    </label>
-                    
-                    <!-- Insert Uploaded Images + Number of Images Row -->
-                    <div class="checkbox-label checkbox-purple" style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: start;">
-                        <label style="display: flex; align-items: start; gap: 0.75rem; cursor: pointer; flex: 1;">
-                            <input type="checkbox" id="insertUploadedImages" checked style="margin-top: 0.25rem; flex-shrink: 0;">
-                            <span>
-                                <strong>🖼️ Insert uploaded images directly into slides</strong>
-                                <span class="checkbox-desc">Automatically place uploaded image files into appropriate PowerPoint slides based on content context</span>
-                            </span>
-                        </label>
-                        <div style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
-                            <label style="font-weight: 600; color: #555; font-size: 0.9rem;">Images to generate:</label>
-                            <input type="number" id="numImagesToGenerate" value="3" min="0" max="20" class="number-input" style="width: 70px;">
-                        </div>
-                    </div>
                 </div>
             </div>
 
