@@ -191,6 +191,12 @@ async function generatePreview() {
     try {
         const currentProvider = window.currentProvider || 'anthropic';
         
+        // Update streaming status
+        appendStreamingText('📤 Sending request to /api/preview...\n');
+        appendStreamingText(`Provider: ${currentProvider}\n`);
+        appendStreamingText(`Content length: ${text.length} chars (${wordCount} words)\n`);
+        appendStreamingText(`Incremental: true\n\n`);
+        
         // Create AbortController for timeout handling
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout for long slide generations
@@ -208,6 +214,9 @@ async function generatePreview() {
             }),
             signal: controller.signal
         }).finally(() => clearTimeout(timeoutId));
+        
+        appendStreamingText('✅ Response received!\n');
+        appendStreamingText(`Status: ${response.status} ${response.statusText}\n`);
         
         if (!response.ok) {
             // Try to get the actual error message from backend
@@ -229,9 +238,12 @@ async function generatePreview() {
         
         // Check if it's SSE streaming response
         const contentType = response.headers.get('content-type');
+        appendStreamingText(`Content-Type: ${contentType}\n\n`);
         
         if (contentType && contentType.includes('text/event-stream')) {
             console.log('📡 Receiving real-time SSE stream...');
+            appendStreamingText('🔴 STREAMING MODE DETECTED\n');
+            appendStreamingText('📡 Processing Server-Sent Events...\n\n');
             
             // Use ReadableStream to process chunks as they arrive (REAL-TIME!)
             const slideData = await handleIncrementalStream(response);
@@ -270,7 +282,13 @@ async function generatePreview() {
         } else {
             // Fallback: non-streaming response
             console.log('📋 Receiving non-streaming response...');
+            appendStreamingText('⚠️ NON-STREAMING MODE\n');
+            appendStreamingText('📋 Waiting for complete response...\n\n');
+            
             const responseText = await response.text();
+            appendStreamingText(`Response received: ${responseText.length} bytes\n`);
+            appendStreamingText('Parsing JSON...\n\n');
+            
             const slideData = JSON.parse(responseText);
             
             if (slideData && slideData.slides) {
@@ -364,7 +382,13 @@ function toggleStreamingText() {
  */
 function appendStreamingText(text) {
     const textBox = document.getElementById('streamingTextBox');
-    if (!textBox) return;
+    if (!textBox) {
+        console.warn('⚠️ streamingTextBox not found!');
+        return;
+    }
+    
+    // Debug log
+    console.log('📝 Appending to stream:', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
     
     // Append new text (no need to clear, handled by handleIncrementalStream)
     const textNode = document.createTextNode(text);
@@ -429,12 +453,10 @@ async function handleIncrementalStream(response) {
             const chunk = decoder.decode(value, { stream: true });
             buffer += chunk;
             
-            // On first chunk, clear the "Connecting..." message
+            // On first chunk, add a marker (don't clear - keep the connection status)
             if (isFirstChunk) {
-                const textBox = document.getElementById('streamingTextBox');
-                if (textBox) {
-                    textBox.innerHTML = '<span style="color: #00ff00; font-weight: bold;">🔴 LIVE STREAM ACTIVE</span>\n\n';
-                }
+                appendStreamingText('\n🔴 LIVE STREAM ACTIVE - Raw SSE Data:\n');
+                appendStreamingText('═══════════════════════════════════\n\n');
                 isFirstChunk = false;
             }
             

@@ -105,66 +105,62 @@ function showShareLinkInline(shareUrl, expiresIn) {
         padding: 1.5rem;
     `;
     
-    // Build compact success message with share link and action buttons (all on single line)
+    // Build compact success message - EVERYTHING ON ONE LINE
     let contentHTML = `
         <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
             <div style="font-size: 2rem;">✅</div>
             <h3 style="margin: 0; color: #155724; font-size: 1.1rem;">Presentation Ready!</h3>
         </div>
         
-        <!-- Share Link - All on ONE LINE -->
-        <div style="margin-bottom: 1rem;">
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <!-- Share Link + Copy Button + All Action Buttons - ALL ON ONE SINGLE LINE -->
+        <div style="margin-bottom: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap;">
                 <input 
                     type="text" 
                     value="${shareUrl}" 
                     readonly 
                     id="shareLinkInput"
-                    style="flex: 1; padding: 0.6rem; border: 2px solid #667eea; border-radius: 4px; font-size: 0.85rem; font-family: monospace; background: #f8f9fa;"
+                    style="flex: 0 0 250px; min-width: 200px; padding: 0.6rem; border: 2px solid #667eea; border-radius: 4px; font-size: 0.75rem; font-family: monospace; background: #f8f9fa;"
                 />
                 <button 
                     onclick="window.copyShareLink()" 
-                    style="padding: 0.6rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.9rem; white-space: nowrap;"
-                >📋 Copy</button>
-            </div>
-            <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: #666;">
-                ⏱️ Expires in ${expiresIn}
-            </p>
-        </div>
-        
-        <!-- Action Buttons - Compact Layout -->
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            <a 
-                href="/view/${shareId}" 
-                target="_blank"
-                style="padding: 0.6rem 1rem; background: #764ba2; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem;"
-            >👁️ View</a>
+                    style="padding: 0.6rem 0.8rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; white-space: nowrap;"
+                >📋</button>
+                <a 
+                    href="/view/${shareId}" 
+                    target="_blank"
+                    style="padding: 0.6rem 0.8rem; background: #764ba2; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.85rem; white-space: nowrap;"
+                >👁️ View</a>
     `;
     
     // Add download button - compact
     if (window.currentDownloadUrl && window.currentFileSize) {
         contentHTML += `
-            <a 
-                href="${window.currentDownloadUrl}" 
-                download="presentation.pptx"
-                style="padding: 0.6rem 1rem; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem;"
-            >📥 PPT</a>
+                <a 
+                    href="${window.currentDownloadUrl}" 
+                    download="presentation.pptx"
+                    style="padding: 0.6rem 0.8rem; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.85rem; white-space: nowrap;"
+                >📥 PPT</a>
         `;
     }
     
     // Check if PDF is ready and add button - compact, ready state only
     if (window.currentSessionId) {
         contentHTML += `
-            <a 
-                href="/view-pdf/${window.currentSessionId}" 
-                target="_blank"
-                id="pdfViewBtn"
-                style="padding: 0.6rem 1rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem;"
-            >📄 PDF</a>
+                <a 
+                    href="/view-pdf/${window.currentSessionId}" 
+                    target="_blank"
+                    id="pdfViewBtn"
+                    style="padding: 0.6rem 0.8rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.85rem; white-space: nowrap;"
+                >📄 PDF</a>
         `;
     }
     
     contentHTML += `
+            </div>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.75rem; color: #666;">
+                ⏱️ Expires in ${expiresIn}
+            </p>
         </div>
     `;
     

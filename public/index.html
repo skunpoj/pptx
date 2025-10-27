@@ -15,16 +15,16 @@
         <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                     <h1 class="brand-name" style="margin: 0;">GENIS.AI</h1>
                     <div class="product-hunt-badge">
                         <a href="https://www.producthunt.com/products/genis-ai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-genis&#0045;ai" target="_blank">
-                            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1030870&theme=light&t=1761434413944" alt="GENIS&#0046;AI - Transform&#0032;Your&#0032;Ideas&#0032;into&#0032;Stunning&#0032;Presentations&#0032;with&#0032;AI | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" />
+                            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1030870&theme=light&t=1761434413944" alt="GENIS&#0046;AI - Transform&#0032;Your&#0032;Ideas&#0032;into&#0032;Stunning&#0032;Presentations&#0032;with&#0032;AI | Product Hunt" style="width: 180px; height: 38px;" width="180" height="38" />
                         </a>
                     </div>
                     <a class="github-button" href="https://github.com/skunpoj/pptx" data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-star" data-size="large" aria-label="Star skunpoj/pptx on GitHub">Star</a>
                 </div>
-                <p class="brand-tagline" style="margin: 0.5rem 0 0 0;">Transform Your Ideas into Stunning Presentations with AI</p>
+                <p class="brand-tagline" style="margin: 0.25rem 0 0 0;">Transform Your Ideas into Stunning Presentations with AI</p>
             </div>
             <div class="header-right">
                 <div class="header-features">
@@ -49,7 +49,7 @@
                 <!-- Main Content Editor -->
                 <div class="content-editor-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <p style="margin: 0; color: #555; font-size: 0.95rem;">Enter or paste your detailed content here, then generate preview</p>
+                        <p style="margin: 0; color: #555; font-size: 0.95rem;">Enter or paste your content here, then generate preview</p>
                         <span id="contentCharCount" style="font-size: 0.85rem; color: #888; font-weight: 600;">0 characters / 0 words</span>
                     </div>
                     
@@ -186,14 +186,15 @@ Our Products
                 </button>
                 <p class="helper-text" style="margin-bottom: 0.75rem; margin-top: 0;">This creates detailed text content that you can edit above before generating slides</p>
                 
-                <!-- File Upload Row -->
-                <div style="margin-bottom: 0.5rem;">
-                    <label class="file-label" style="display: block; font-weight: 600; color: #555; margin-bottom: 0.35rem;">📎 Upload files (documents & images):</label>
-                    <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx,.jpg,.jpeg,.png,.gif,.webp,.svg" class="file-input" style="width: 100%;">
+                <!-- File Upload Section (styled like checkboxes) -->
+                <div class="checkbox-label checkbox-teal" style="display: block; cursor: default; margin-bottom: 0.5rem;">
+                    <strong style="color: #0d9488; display: block; margin-bottom: 0.5rem;">📎 Upload Files (Documents & Images)</strong>
+                    <span class="checkbox-desc" style="display: block; margin-bottom: 0.75rem;">Upload PowerPoint templates, documents for content, or images to insert directly into slides</span>
+                    <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx,.jpg,.jpeg,.png,.gif,.webp,.svg" class="file-input" style="width: 100%; padding: 0.5rem; border: 2px dashed #0d9488; border-radius: 6px; background: #f0fdfa; cursor: pointer; font-size: 0.85rem;">
+                    
+                    <!-- File List -->
+                    <div id="fileList" class="file-list-container" style="margin-top: 0.75rem;"></div>
                 </div>
-                
-                <!-- File List -->
-                <div id="fileList" class="file-list-container" style="margin-bottom: 0.5rem;"></div>
                 
                 <!-- Options Checkboxes -->
                 <div class="options-container">
@@ -290,216 +291,230 @@ Our Products
                 <div id="apiSettingsContent">
                     <h3 style="margin-top: 1rem;">🔑 API Configuration</h3>
                 
-                    <div id="apiSectionContainer" class="api-section-container">
-                    <!-- Provider Selection for Content Generation -->
-                    <div class="provider-selection">
-                        <h3>📝 Content Generation Provider</h3>
-                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Select which AI to use for writing presentation content and slide structure</p>
-                        <div class="provider-buttons">
-                            <button class="provider-btn active" onclick="window.selectProvider('anthropic')" id="provider-anthropic">Anthropic</button>
-                            <button class="provider-btn" onclick="window.selectProvider('openai')" id="provider-openai">OpenAI</button>
-                            <button class="provider-btn" onclick="window.selectProvider('gemini')" id="provider-gemini">Gemini</button>
-                            <button class="provider-btn" onclick="window.selectProvider('openrouter')" id="provider-openrouter">OpenRouter</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Provider Selection for Image Generation -->
-                    <div class="provider-selection" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
-                        <h3>🎨 Image Generation Provider</h3>
-                        <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Select which AI to use for creating actual images from descriptions (optional)</p>
-                        <div class="provider-buttons">
-                            <button class="provider-btn-img active" onclick="window.selectImageProvider('huggingface')" id="img-provider-huggingface">
-                                🤗 Hugging Face
-                                <span style="display: block; font-size: 0.7rem; opacity: 0.8;">Free API • Default</span>
-                            </button>
-                            <button class="provider-btn-img" onclick="window.selectImageProvider('dalle')" id="img-provider-dalle">DALL-E 3</button>
-                            <button class="provider-btn-img" onclick="window.selectImageProvider('stability')" id="img-provider-stability">Stability AI</button>
-                            <button class="provider-btn-img" onclick="window.selectImageProvider('gemini')" id="img-provider-gemini" disabled style="opacity: 0.5; cursor: not-allowed; position: relative;">
-                                Gemini Imagen
-                                <span style="display: block; font-size: 0.65rem; color: #e74c3c; font-weight: 700;">⚠️ Not Available</span>
-                            </button>
-                        </div>
-                        <p style="font-size: 0.75rem; color: #2ecc71; margin-top: 0.5rem; font-weight: 600;">🎁 Hugging Face: FREE API access to Stable Diffusion & FLUX models!</p>
-                        <p style="font-size: 0.75rem; color: #888; margin-top: 0.25rem; font-style: italic;">💡 Get free API key at <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #667eea;">huggingface.co/settings/tokens</a></p>
-                        <div id="imageProviderHint" style="margin-top: 0.75rem; padding: 0.5rem; background: #f0f4ff; border-left: 3px solid #667eea; border-radius: 4px; font-size: 0.8rem; color: #555;">
-                            💡 <strong>Currently selected:</strong> <span id="currentImageProviderName">Hugging Face</span>
-                            <br>
-                            <span style="font-size: 0.75rem; color: #777;">The API key input section below will update when you select a different provider.</span>
-                        </div>
-                    </div>
-
-                    <!-- Hugging Face Section (for image generation) - SHOWN BY DEFAULT & FIRST -->
-                    <div class="api-section provider-section" id="section-huggingface" style="margin-top: 1.5rem; border-top: 3px solid #ff9800; padding-top: 1.5rem;">
-                        <h3>🤗 Hugging Face API (for Image Generation)</h3>
-                        <div class="info-box" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%); border-left: 4px solid #ff9800;">
-                            <strong style="color: #e65100;">🎁 FREE Image Generation!</strong>
-                            <p style="margin-top: 0.5rem; color: #666;">Hugging Face offers <strong>FREE API access</strong> to powerful models like Stable Diffusion XL and FLUX.1</p>
-                            <strong style="margin-top: 1rem; display: block;">To get your FREE API key:</strong>
-                            <ol>
-                                <li>Go to <a href="https://huggingface.co/join" target="_blank">huggingface.co/join</a> (create account)</li>
-                                <li>Navigate to <a href="https://huggingface.co/settings/tokens" target="_blank">Settings → Access Tokens</a></li>
-                                <li>Click "New token" or "Create new token"</li>
-                                <li>Give it a name (e.g., "GENIS.AI") and select "Read" access</li>
-                                <li>Copy your token (starts with <code>hf_...</code>)</li>
-                            </ol>
-                            <p style="margin-top: 0.5rem; color: #666;">💡 <strong>Note:</strong> Hugging Face is the default and recommended option for FREE unlimited image generation!</p>
-                        </div>
-                        <form autocomplete="off" onsubmit="return false;">
-                            <div class="input-group">
-                                <input type="text" 
-                                       id="apiKey-huggingface" 
-                                       placeholder="hf_..."
-                                       autocomplete="off"
-                                       data-form-type="other"
-                                       data-lpignore="true"
-                                       name="not-a-password"
-                                       spellcheck="false"
-                                       style="font-family: monospace; letter-spacing: 0.5px;">
-                                <button class="btn-primary" onclick="window.saveApiKey('huggingface'); return false;" type="button">Save Key</button>
+                    <!-- API Keys Grid - Left/Right Panel Layout -->
+                    <div class="api-keys-grid">
+                        <!-- Left Panel: Provider Selection -->
+                        <div class="card api-keys-left-panel">
+                            <h3 style="margin-top: 0; font-size: 1.1rem;">Provider Selection</h3>
+                            
+                            <!-- Provider Selection for Content Generation -->
+                            <div class="provider-selection">
+                                <h3>📝 Content Generation Provider</h3>
+                                <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Select which AI to use for writing presentation content and slide structure</p>
+                                <div class="provider-buttons">
+                                    <button class="provider-btn active" onclick="window.selectProvider('anthropic')" id="provider-anthropic">Anthropic</button>
+                                    <button class="provider-btn" onclick="window.selectProvider('openai')" id="provider-openai">OpenAI</button>
+                                    <button class="provider-btn" onclick="window.selectProvider('gemini')" id="provider-gemini">Gemini</button>
+                                    <button class="provider-btn" onclick="window.selectProvider('openrouter')" id="provider-openrouter">OpenRouter</button>
+                                </div>
                             </div>
-                        </form>
-                    </div>
-
-                    <!-- Anthropic Section -->
-                    <div class="api-section provider-section" id="section-anthropic">
-                        <h3>Anthropic Claude API</h3>
-                        <div class="info-box">
-                            <strong>To get your API key:</strong>
-                            <ol>
-                                <li>Go to <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></li>
-                                <li>Sign up or log in</li>
-                                <li>Navigate to "API Keys"</li>
-                                <li>Create and copy your key</li>
-                            </ol>
-                        </div>
-                        <form autocomplete="off" onsubmit="return false;">
-                        <div class="input-group">
-                                <input type="text" 
-                                       id="apiKey-anthropic" 
-                                       placeholder="sk-ant-api03-..."
-                                       autocomplete="off"
-                                       data-form-type="other"
-                                       data-lpignore="true"
-                                       name="not-a-password"
-                                       spellcheck="false"
-                                       style="font-family: monospace; letter-spacing: 0.5px;">
-                                <button class="btn-primary" onclick="window.saveApiKey('anthropic'); return false;" type="button">Save Key</button>
-                        </div>
-                        </form>
-                    </div>
-
-                    <!-- OpenAI Section -->
-                    <div class="api-section provider-section" id="section-openai" style="display: none;">
-                        <h3>OpenAI API</h3>
-                        <div class="info-box">
-                            <strong>To get your API key:</strong>
-                            <ol>
-                                <li>Go to <a href="https://platform.openai.com/" target="_blank">platform.openai.com</a></li>
-                                <li>Sign up or log in</li>
-                                <li>Navigate to "API Keys"</li>
-                                <li>Create and copy your key</li>
-                            </ol>
-                        </div>
-                        <form autocomplete="off" onsubmit="return false;">
-                        <div class="input-group">
-                                <input type="text" 
-                                       id="apiKey-openai" 
-                                       placeholder="sk-..."
-                                       autocomplete="off"
-                                       data-form-type="other"
-                                       data-lpignore="true"
-                                       name="not-a-password"
-                                       spellcheck="false"
-                                       style="font-family: monospace; letter-spacing: 0.5px;">
-                                <button class="btn-primary" onclick="window.saveApiKey('openai'); return false;" type="button">Save Key</button>
-                        </div>
-                        </form>
-                    </div>
-
-                    <!-- Gemini Section -->
-                    <div class="api-section provider-section" id="section-gemini" style="display: none;">
-                        <h3>Google Gemini API</h3>
-                        <div class="info-box">
-                            <strong>To get your API key:</strong>
-                            <ol>
-                                <li>Go to <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
-                                <li>Sign up or log in</li>
-                                <li>Click "Create API Key"</li>
-                                <li>Copy your key</li>
-                            </ol>
-                        </div>
-                        <form autocomplete="off" onsubmit="return false;">
-                        <div class="input-group">
-                                <input type="text" 
-                                       id="apiKey-gemini" 
-                                       placeholder="AIza..."
-                                       autocomplete="off"
-                                       data-form-type="other"
-                                       data-lpignore="true"
-                                       name="not-a-password"
-                                       spellcheck="false"
-                                       style="font-family: monospace; letter-spacing: 0.5px;">
-                                <button class="btn-primary" onclick="window.saveApiKey('gemini'); return false;" type="button">Save Key</button>
-                        </div>
-                        </form>
-                    </div>
-
-                    <!-- OpenRouter Section -->
-                    <div class="api-section provider-section" id="section-openrouter" style="display: none;">
-                        <h3>OpenRouter API</h3>
-                        <div class="info-box">
-                            <strong>To get your API key:</strong>
-                            <ol>
-                                <li>Go to <a href="https://openrouter.ai/" target="_blank">openrouter.ai</a></li>
-                                <li>Sign up or log in</li>
-                                <li>Navigate to "Keys"</li>
-                                <li>Create and copy your key</li>
-                            </ol>
-                        </div>
-                        <form autocomplete="off" onsubmit="return false;">
-                        <div class="input-group">
-                                <input type="text" 
-                                       id="apiKey-openrouter" 
-                                       placeholder="sk-or-..."
-                                       autocomplete="off"
-                                       data-form-type="other"
-                                       data-lpignore="true"
-                                       name="not-a-password"
-                                       spellcheck="false"
-                                       style="font-family: monospace; letter-spacing: 0.5px;">
-                                <button class="btn-primary" onclick="window.saveApiKey('openrouter'); return false;" type="button">Save Key</button>
-                        </div>
-                        </form>
-                    </div>
-                    
-                    <!-- Stability AI Section (for image generation) - HIDDEN BY DEFAULT -->
-                    <div class="api-section provider-section" id="section-stability" style="display: none;">
-                        <h3>Stability AI API (for Image Generation)</h3>
-                        <div class="info-box">
-                            <strong>To get your API key:</strong>
-                            <ol>
-                                <li>Go to <a href="https://platform.stability.ai/" target="_blank">platform.stability.ai</a></li>
-                                <li>Sign up or log in</li>
-                                <li>Navigate to "API Keys"</li>
-                                <li>Create and copy your key</li>
-                            </ol>
-                            <p style="margin-top: 0.5rem; color: #666;">💡 <strong>Note:</strong> This key is only needed if you want to use Stability AI for image generation. It's separate from content generation.</p>
-                        </div>
-                        <form autocomplete="off" onsubmit="return false;">
-                            <div class="input-group">
-                                <input type="text" 
-                                       id="apiKey-stability" 
-                                       placeholder="sk-..."
-                                       autocomplete="off"
-                                       data-form-type="other"
-                                       data-lpignore="true"
-                                       name="not-a-password"
-                                       spellcheck="false"
-                                       style="font-family: monospace; letter-spacing: 0.5px;">
-                                <button class="btn-primary" onclick="window.saveApiKey('stability'); return false;" type="button">Save Key</button>
+                            
+                            <!-- Provider Selection for Image Generation -->
+                            <div class="provider-selection" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #e0e0e0;">
+                                <h3>🎨 Image Generation Provider</h3>
+                                <p style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">Select which AI to use for creating actual images from descriptions (optional)</p>
+                                <div class="provider-buttons">
+                                    <button class="provider-btn-img active" onclick="window.selectImageProvider('huggingface')" id="img-provider-huggingface">
+                                        🤗 Hugging Face
+                                        <span style="display: block; font-size: 0.7rem; opacity: 0.8;">Free API • Default</span>
+                                    </button>
+                                    <button class="provider-btn-img" onclick="window.selectImageProvider('dalle')" id="img-provider-dalle">DALL-E 3</button>
+                                    <button class="provider-btn-img" onclick="window.selectImageProvider('stability')" id="img-provider-stability">Stability AI</button>
+                                    <button class="provider-btn-img" onclick="window.selectImageProvider('gemini')" id="img-provider-gemini" disabled style="opacity: 0.5; cursor: not-allowed; position: relative;">
+                                        Gemini Imagen
+                                        <span style="display: block; font-size: 0.65rem; color: #e74c3c; font-weight: 700;">⚠️ Not Available</span>
+                                    </button>
+                                </div>
+                                <p style="font-size: 0.75rem; color: #2ecc71; margin-top: 0.5rem; font-weight: 600;">🎁 Hugging Face: FREE API access to Stable Diffusion & FLUX models!</p>
+                                <p style="font-size: 0.75rem; color: #888; margin-top: 0.25rem; font-style: italic;">💡 Get free API key at <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #667eea;">huggingface.co/settings/tokens</a></p>
+                                <div id="imageProviderHint" style="margin-top: 0.75rem; padding: 0.5rem; background: #f0f4ff; border-left: 3px solid #667eea; border-radius: 4px; font-size: 0.8rem; color: #555;">
+                                    💡 <strong>Currently selected:</strong> <span id="currentImageProviderName">Hugging Face</span>
+                                    <br>
+                                    <span style="font-size: 0.75rem; color: #777;">The API key input section will update when you select a different provider.</span>
+                                </div>
                             </div>
-                        </form>
-                    </div>
+                        </div>
+                        
+                        <!-- Right Panel: API Key Forms -->
+                        <div class="card api-keys-right-panel">
+                            <h3 style="margin-top: 0; font-size: 1.1rem;">API Key Configuration</h3>
+                            <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Enter your API keys for the selected providers below</p>
+                            
+                            <div id="apiSectionContainer" class="api-section-container">
+                                <!-- Hugging Face Section (for image generation) - SHOWN BY DEFAULT & FIRST -->
+                                <div class="api-section provider-section" id="section-huggingface">
+                                    <h3>🤗 Hugging Face API (for Image Generation)</h3>
+                                    <div class="info-box" style="background: linear-gradient(135deg, #fff8e1 0%, #ffe0b2 100%); border-left: 4px solid #ff9800;">
+                                        <strong style="color: #e65100;">🎁 FREE Image Generation!</strong>
+                                        <p style="margin-top: 0.5rem; color: #666;">Hugging Face offers <strong>FREE API access</strong> to powerful models like Stable Diffusion XL and FLUX.1</p>
+                                        <strong style="margin-top: 1rem; display: block;">To get your FREE API key:</strong>
+                                        <ol>
+                                            <li>Go to <a href="https://huggingface.co/join" target="_blank">huggingface.co/join</a> (create account)</li>
+                                            <li>Navigate to <a href="https://huggingface.co/settings/tokens" target="_blank">Settings → Access Tokens</a></li>
+                                            <li>Click "New token" or "Create new token"</li>
+                                            <li>Give it a name (e.g., "GENIS.AI") and select "Read" access</li>
+                                            <li>Copy your token (starts with <code>hf_...</code>)</li>
+                                        </ol>
+                                        <p style="margin-top: 0.5rem; color: #666;">💡 <strong>Note:</strong> Hugging Face is the default and recommended option for FREE unlimited image generation!</p>
+                                    </div>
+                                    <form autocomplete="off" onsubmit="return false;">
+                                        <div class="input-group">
+                                            <input type="text" 
+                                                   id="apiKey-huggingface" 
+                                                   placeholder="hf_..."
+                                                   autocomplete="off"
+                                                   data-form-type="other"
+                                                   data-lpignore="true"
+                                                   name="not-a-password"
+                                                   spellcheck="false"
+                                                   style="font-family: monospace; letter-spacing: 0.5px;">
+                                            <button class="btn-primary" onclick="window.saveApiKey('huggingface'); return false;" type="button">Save Key</button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- Anthropic Section -->
+                                <div class="api-section provider-section" id="section-anthropic">
+                                    <h3>Anthropic Claude API</h3>
+                                    <div class="info-box">
+                                        <strong>To get your API key:</strong>
+                                        <ol>
+                                            <li>Go to <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></li>
+                                            <li>Sign up or log in</li>
+                                            <li>Navigate to "API Keys"</li>
+                                            <li>Create and copy your key</li>
+                                        </ol>
+                                    </div>
+                                    <form autocomplete="off" onsubmit="return false;">
+                                        <div class="input-group">
+                                            <input type="text" 
+                                                   id="apiKey-anthropic" 
+                                                   placeholder="sk-ant-api03-..."
+                                                   autocomplete="off"
+                                                   data-form-type="other"
+                                                   data-lpignore="true"
+                                                   name="not-a-password"
+                                                   spellcheck="false"
+                                                   style="font-family: monospace; letter-spacing: 0.5px;">
+                                            <button class="btn-primary" onclick="window.saveApiKey('anthropic'); return false;" type="button">Save Key</button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- OpenAI Section -->
+                                <div class="api-section provider-section" id="section-openai" style="display: none;">
+                                    <h3>OpenAI API</h3>
+                                    <div class="info-box">
+                                        <strong>To get your API key:</strong>
+                                        <ol>
+                                            <li>Go to <a href="https://platform.openai.com/" target="_blank">platform.openai.com</a></li>
+                                            <li>Sign up or log in</li>
+                                            <li>Navigate to "API Keys"</li>
+                                            <li>Create and copy your key</li>
+                                        </ol>
+                                    </div>
+                                    <form autocomplete="off" onsubmit="return false;">
+                                        <div class="input-group">
+                                            <input type="text" 
+                                                   id="apiKey-openai" 
+                                                   placeholder="sk-..."
+                                                   autocomplete="off"
+                                                   data-form-type="other"
+                                                   data-lpignore="true"
+                                                   name="not-a-password"
+                                                   spellcheck="false"
+                                                   style="font-family: monospace; letter-spacing: 0.5px;">
+                                            <button class="btn-primary" onclick="window.saveApiKey('openai'); return false;" type="button">Save Key</button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- Gemini Section -->
+                                <div class="api-section provider-section" id="section-gemini" style="display: none;">
+                                    <h3>Google Gemini API</h3>
+                                    <div class="info-box">
+                                        <strong>To get your API key:</strong>
+                                        <ol>
+                                            <li>Go to <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                                            <li>Sign up or log in</li>
+                                            <li>Click "Create API Key"</li>
+                                            <li>Copy your key</li>
+                                        </ol>
+                                    </div>
+                                    <form autocomplete="off" onsubmit="return false;">
+                                        <div class="input-group">
+                                            <input type="text" 
+                                                   id="apiKey-gemini" 
+                                                   placeholder="AIza..."
+                                                   autocomplete="off"
+                                                   data-form-type="other"
+                                                   data-lpignore="true"
+                                                   name="not-a-password"
+                                                   spellcheck="false"
+                                                   style="font-family: monospace; letter-spacing: 0.5px;">
+                                            <button class="btn-primary" onclick="window.saveApiKey('gemini'); return false;" type="button">Save Key</button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <!-- OpenRouter Section -->
+                                <div class="api-section provider-section" id="section-openrouter" style="display: none;">
+                                    <h3>OpenRouter API</h3>
+                                    <div class="info-box">
+                                        <strong>To get your API key:</strong>
+                                        <ol>
+                                            <li>Go to <a href="https://openrouter.ai/" target="_blank">openrouter.ai</a></li>
+                                            <li>Sign up or log in</li>
+                                            <li>Navigate to "Keys"</li>
+                                            <li>Create and copy your key</li>
+                                        </ol>
+                                    </div>
+                                    <form autocomplete="off" onsubmit="return false;">
+                                        <div class="input-group">
+                                            <input type="text" 
+                                                   id="apiKey-openrouter" 
+                                                   placeholder="sk-or-..."
+                                                   autocomplete="off"
+                                                   data-form-type="other"
+                                                   data-lpignore="true"
+                                                   name="not-a-password"
+                                                   spellcheck="false"
+                                                   style="font-family: monospace; letter-spacing: 0.5px;">
+                                            <button class="btn-primary" onclick="window.saveApiKey('openrouter'); return false;" type="button">Save Key</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                
+                                <!-- Stability AI Section (for image generation) - HIDDEN BY DEFAULT -->
+                                <div class="api-section provider-section" id="section-stability" style="display: none;">
+                                    <h3>Stability AI API (for Image Generation)</h3>
+                                    <div class="info-box">
+                                        <strong>To get your API key:</strong>
+                                        <ol>
+                                            <li>Go to <a href="https://platform.stability.ai/" target="_blank">platform.stability.ai</a></li>
+                                            <li>Sign up or log in</li>
+                                            <li>Navigate to "API Keys"</li>
+                                            <li>Create and copy your key</li>
+                                        </ol>
+                                        <p style="margin-top: 0.5rem; color: #666;">💡 <strong>Note:</strong> This key is only needed if you want to use Stability AI for image generation. It's separate from content generation.</p>
+                                    </div>
+                                    <form autocomplete="off" onsubmit="return false;">
+                                        <div class="input-group">
+                                            <input type="text" 
+                                                   id="apiKey-stability" 
+                                                   placeholder="sk-..."
+                                                   autocomplete="off"
+                                                   data-form-type="other"
+                                                   data-lpignore="true"
+                                                   name="not-a-password"
+                                                   spellcheck="false"
+                                                   style="font-family: monospace; letter-spacing: 0.5px;">
+                                            <button class="btn-primary" onclick="window.saveApiKey('stability'); return false;" type="button">Save Key</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 

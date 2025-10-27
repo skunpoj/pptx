@@ -493,31 +493,37 @@
         }
         
         async function downloadPresentation() {
+            console.log('📥 Download requested, sessionId:', sessionId);
+            
             if (!sessionId) {
-                alert('❌ Download not available for this presentation.');
+                alert('❌ Download not available - no session ID found.');
                 return;
             }
             
             try {
-                // Use sessionId to download the original PPTX file
-                const downloadUrl = `/download/${sessionId}/presentation.pptx`;
-                console.log('📥 Downloading presentation from:', downloadUrl);
+                // First verify the file exists
+                const checkUrl = `/download/${sessionId}/presentation.pptx`;
+                console.log('📥 Checking file at:', checkUrl);
                 
-                // Create a temporary link and click it
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = 'AI-Presentation-Pro.pptx';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                const checkResponse = await fetch(checkUrl, { method: 'HEAD' });
+                
+                if (!checkResponse.ok) {
+                    throw new Error(`File not found (${checkResponse.status})`);
+                }
+                
+                console.log('✅ File exists, starting download...');
+                
+                // Use direct window.location for more reliable download
+                window.location.href = checkUrl;
                 
                 // Show success message
                 setTimeout(() => {
                     alert('✅ Download started! Check your downloads folder.');
                 }, 500);
+                
             } catch (error) {
-                console.error('Download error:', error);
-                alert('❌ Download failed. Please try again.');
+                console.error('❌ Download error:', error);
+                alert('❌ Download failed: ' + error.message + '\n\nPlease try refreshing the page or contact support.');
             }
         }
         
@@ -661,47 +667,57 @@
                     return;
                 }
                 
+                console.log('📄 Loading PDF for session:', sessionId);
+                
                 // Show loading message
                 pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #667eea;">⏳ Loading PDF...</p>';
                 
                 try {
-                    // Check if PDF exists
-                    const checkResponse = await fetch(`/view-pdf/${sessionId}`, {
-                        method: 'HEAD'
-                    });
+                    // Try to load PDF directly first (optimistic approach)
+                    const pdfUrl = `/view-pdf/${sessionId}`;
+                    
+                    // Check if PDF exists with timeout
+                    const checkResponse = await Promise.race([
+                        fetch(pdfUrl, { method: 'HEAD' }),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+                    ]);
                     
                     if (checkResponse.ok) {
-                        // PDF exists, load it
-                        const pdfUrl = `/view-pdf/${sessionId}`;
-                        pdfFrame.src = pdfUrl;
+                        // PDF exists, load it with cache-busting
+                        pdfFrame.src = `${pdfUrl}?t=${Date.now()}`;
                         console.log('✅ PDF loaded successfully');
-                    } else if (checkResponse.status === 404) {
-                        // PDF doesn't exist, try to generate it
-                        console.log('⏳ PDF not found, attempting to generate...');
-                        pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #667eea;">⏳ Generating PDF... This may take a moment.</p>';
+                        return;
+                    }
+                    
+                    // PDF doesn't exist, generate it
+                    console.log('⏳ PDF not found, generating...');
+                    pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #667eea;">⏳ Generating PDF... Please wait (up to 30 seconds)</p>';
+                    
+                    const generateResponse = await fetch(`/api/convert-to-pdf/${sessionId}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (generateResponse.ok) {
+                        console.log('✅ PDF generated successfully');
                         
-                        const generateResponse = await fetch(`/api/convert-to-pdf/${sessionId}`, {
-                            method: 'POST'
-                        });
+                        // Wait for file to be written
+                        await new Promise(resolve => setTimeout(resolve, 2000));
                         
-                        if (generateResponse.ok) {
-                            // PDF generated successfully
-                            const result = await generateResponse.json();
-                            console.log('✅ PDF generated successfully');
-                            
-                            // Wait a moment for file to be fully written
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                            
-                            // Load the PDF
-                            const pdfUrl = `/view-pdf/${sessionId}`;
-                            pdfFrame.src = pdfUrl;
+                        // Verify it's really there
+                        const verifyResponse = await fetch(pdfUrl, { method: 'HEAD' });
+                        
+                        if (verifyResponse.ok) {
+                            // Load with cache-busting
+                            pdfFrame.src = `${pdfUrl}?t=${Date.now()}`;
+                            console.log('✅ PDF verified and loaded');
                         } else {
-                            const errorData = await generateResponse.json();
-                            throw new Error(errorData.error || 'PDF generation failed');
+                            throw new Error('PDF generated but not accessible');
                         }
                     } else {
-                        throw new Error(`Unexpected response: ${checkResponse.status}`);
+                        const errorData = await generateResponse.json();
+                        throw new Error(errorData.error || errorData.message || 'PDF generation failed');
                     }
+                    
                 } catch (error) {
                     console.error('PDF loading error:', error);
                     pdfFrame.innerHTML = `
@@ -711,8 +727,14 @@
                             <p style="margin: 0; font-size: 0.9rem;">${error.message}</p>
                             <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #666;">
                                 This may happen if LibreOffice is not installed on the server.<br>
-                                You can still download the PowerPoint file above.
+                                Try clicking "View PDF" button again, or download the PowerPoint file instead.
                             </p>
+                            <button 
+                                onclick="switchViewMode('pdf')" 
+                                style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                            >
+                                🔄 Retry PDF Load
+                            </button>
                         </div>
                     `;
                 }
