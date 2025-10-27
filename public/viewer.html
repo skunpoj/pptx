@@ -176,6 +176,12 @@
                 grid-template-columns: 1fr !important;
             }
         }
+        
+        /* Spinner animation for loading states */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -319,29 +325,18 @@
             const container = document.getElementById('allSlidesContainer');
             container.innerHTML = '';
             
-            // Render all slides
+            // Render all slides with modify prompts
             slides.forEach((slide, index) => {
                 const slideCard = document.createElement('div');
+                slideCard.id = `slideCard_${index}`;
                 slideCard.style.cssText = `
                     background: white;
                     border-radius: 12px;
                     padding: 2rem;
                     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
                     border: 2px solid #e0e0e0;
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                    margin-bottom: 2rem;
                 `;
-                
-                // Add hover effect
-                slideCard.onmouseenter = function() {
-                    this.style.transform = 'translateY(-4px)';
-                    this.style.boxShadow = '0 8px 30px rgba(0,0,0,0.15)';
-                    this.style.borderColor = theme.colorPrimary;
-                };
-                slideCard.onmouseleave = function() {
-                    this.style.transform = 'translateY(0)';
-                    this.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)';
-                    this.style.borderColor = '#e0e0e0';
-                };
                 
                 // Slide number badge
                 const badge = document.createElement('div');
@@ -353,86 +348,43 @@
                     border-radius: 8px;
                     font-weight: bold;
                     font-size: 0.9rem;
-                    margin-bottom: 1rem;
+                    margin-bottom: 1.5rem;
                 `;
                 badge.textContent = `Slide ${index + 1} of ${slides.length}`;
                 slideCard.appendChild(badge);
                 
-                // Slide content
-                const slideContent = renderSlideContent(slide, theme);
-                slideCard.innerHTML += slideContent;
+                // Two-column layout: Modify prompt (left) + Slide preview (right)
+                const slideLayout = document.createElement('div');
+                slideLayout.innerHTML = renderSlideWithModifyPrompt(slide, index, theme);
+                slideCard.appendChild(slideLayout);
                 
-                // Two-column layout: Generate button (left) + Success message (right)
-                const bottomSection = document.createElement('div');
-                bottomSection.style.cssText = `
-                    margin-top: 2rem;
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 1.5rem;
-                    align-items: stretch;
-                `;
-                
-                // Left panel: Generate New Slide button
-                const leftPanel = document.createElement('div');
-                leftPanel.style.cssText = `
-                    background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
-                    border: 2px solid ${theme.colorPrimary};
-                    border-radius: 8px;
-                    padding: 1.5rem;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    text-align: center;
-                    gap: 1rem;
-                `;
-                leftPanel.innerHTML = `
-                    <div style="font-size: 2.5rem;">🚀</div>
-                    <h4 style="margin: 0; color: ${theme.colorPrimary}; font-size: 1.1rem;">
-                        Generate New Slide
-                    </h4>
-                    <button 
-                        class="btn btn-primary" 
-                        onclick="generateNewSlide(${index})"
-                        style="background: ${theme.colorPrimary}; padding: 0.75rem 1.5rem; width: 100%;"
-                    >
-                        ➕ Add Slide After This
-                    </button>
-                    <p style="margin: 0; font-size: 0.85rem; color: #666; font-style: italic;">
-                        Create additional content based on this slide
-                    </p>
-                `;
-                
-                // Right panel: Success message
-                const rightPanel = document.createElement('div');
-                rightPanel.style.cssText = `
+                // Success message section at bottom
+                const successSection = document.createElement('div');
+                successSection.style.cssText = `
+                    margin-top: 1.5rem;
                     background: linear-gradient(135deg, #d4edda, #c3e6cb);
                     border: 2px solid #28a745;
                     border-radius: 8px;
-                    padding: 1.5rem;
-                    display: flex;
-                    align-items: center;
+                    padding: 1rem;
                 `;
-                rightPanel.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
-                        <div style="font-size: 3rem; flex-shrink: 0;">✅</div>
+                successSection.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="font-size: 2rem;">✅</div>
                         <div style="flex: 1;">
-                            <h4 style="margin: 0 0 0.5rem 0; color: #155724; font-size: 1.1rem;">
-                                Presentation Generated Successfully!
+                            <h4 style="margin: 0 0 0.25rem 0; color: #155724; font-size: 1rem;">
+                                Slide Generated Successfully!
                             </h4>
-                            <p style="margin: 0; color: #155724; font-size: 0.9rem;">
-                                This slide was created by AI and is ready to use. Download the complete presentation above.
+                            <p style="margin: 0; color: #155724; font-size: 0.85rem;">
+                                Modify this slide using the prompt above, or download the complete presentation
                             </p>
                         </div>
                     </div>
                 `;
-                
-                bottomSection.appendChild(leftPanel);
-                bottomSection.appendChild(rightPanel);
-                slideCard.appendChild(bottomSection);
+                slideCard.appendChild(successSection);
                 
                 container.appendChild(slideCard);
             });
+            
             
             // Add helpful tip at the end
             const tipCard = document.createElement('div');
@@ -453,6 +405,39 @@
                 </p>
             `;
             container.appendChild(tipCard);
+        }
+        
+        function renderSlideWithModifyPrompt(slide, index, theme) {
+            // Create two-column layout: Modify prompt (left) + Slide preview (right)
+            return `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <!-- LEFT: Modify Prompt -->
+                    <div style="background: linear-gradient(135deg, #fff8e1, #ffe4b3); border: 2px solid #ffc107; border-radius: 8px; padding: 1.5rem;">
+                        <h4 style="margin: 0 0 1rem 0; color: #f57c00; font-size: 1.1rem;">
+                            ✏️ Modify This Slide
+                        </h4>
+                        <textarea 
+                            id="modifyPrompt_${index}" 
+                            placeholder="Enter modification prompt (e.g., 'Add more details about...' or 'Change title to...')"
+                            style="width: 100%; height: 100px; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 6px; font-size: 0.9rem; resize: vertical; font-family: inherit; margin-bottom: 1rem;"
+                        ></textarea>
+                        <button 
+                            onclick="modifySlideIndividually(${index})"
+                            style="width: 100%; background: #f57c00; color: white; border: none; border-radius: 6px; padding: 0.75rem; font-weight: 600; cursor: pointer; font-size: 1rem;"
+                        >
+                            🔄 Modify Slide ${index + 1}
+                        </button>
+                        <p style="margin: 0.75rem 0 0 0; font-size: 0.85rem; color: #666; font-style: italic;">
+                            💡 Only this slide will be updated
+                        </p>
+                    </div>
+                    
+                    <!-- RIGHT: Slide Preview -->
+                    <div id="slidePreview_${index}" style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 1.5rem;">
+                        ${renderSlideContent(slide, theme)}
+                    </div>
+                </div>
+            `;
         }
         
         function renderSlideContent(slide, theme) {
@@ -582,15 +567,85 @@
             });
         }
         
-        function generateNewSlide(afterIndex) {
-            alert(`🚀 Generate New Slide feature\n\nThis will generate a new slide after slide ${afterIndex + 1}.\n\nFeature coming soon!`);
+        async function modifySlideIndividually(slideIndex) {
+            const promptTextarea = document.getElementById(`modifyPrompt_${slideIndex}`);
+            const modificationPrompt = promptTextarea.value.trim();
             
-            // Future implementation:
-            // 1. Show modal with prompt input
-            // 2. Call AI to generate new slide based on context
-            // 3. Insert new slide into presentation
-            // 4. Regenerate full presentation
-            // 5. Provide download link
+            if (!modificationPrompt) {
+                alert('❌ Please enter a modification prompt');
+                return;
+            }
+            
+            if (!window.currentSlideData || !window.currentSlideData.slides[slideIndex]) {
+                alert('❌ Slide data not found');
+                return;
+            }
+            
+            const originalSlide = window.currentSlideData.slides[slideIndex];
+            const theme = window.currentSlideData.designTheme;
+            
+            // Show loading state in the slide preview
+            const slidePreview = document.getElementById(`slidePreview_${slideIndex}`);
+            if (slidePreview) {
+                slidePreview.innerHTML = `
+                    <div style="text-align: center; padding: 3rem;">
+                        <div class="spinner" style="width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                        <p style="margin-top: 1rem; color: #667eea;">⏳ Modifying slide...</p>
+                    </div>
+                `;
+            }
+            
+            try {
+                console.log(`🔄 Modifying slide ${slideIndex + 1}:`, modificationPrompt);
+                
+                // Call the modify API with COMPLETE slide data including theme
+                const response = await fetch('/api/modify-slides', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        slideData: {
+                            slides: [originalSlide],
+                            designTheme: theme  // Include theme to avoid error
+                        },
+                        modificationRequest: modificationPrompt,
+                        provider: 'bedrock'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Modification failed');
+                }
+                
+                const result = await response.json();
+                const modifiedSlide = result.slideData?.slides?.[0] || result.slides?.[0];
+                
+                if (!modifiedSlide) {
+                    throw new Error('No modified slide returned from API');
+                }
+                
+                // Update ONLY this slide in our data
+                window.currentSlideData.slides[slideIndex] = modifiedSlide;
+                
+                // Update ONLY this slide's preview (not whole deck)
+                if (slidePreview) {
+                    slidePreview.innerHTML = renderSlideContent(modifiedSlide, theme);
+                }
+                
+                // Clear the prompt
+                promptTextarea.value = '';
+                
+                alert('✅ Slide modified successfully!');
+                
+            } catch (error) {
+                console.error('Modification error:', error);
+                alert('❌ Failed to modify slide: ' + error.message);
+                
+                // Restore original slide preview
+                if (slidePreview) {
+                    slidePreview.innerHTML = renderSlideContent(originalSlide, theme);
+                }
+            }
         }
         
         async function switchViewMode(mode) {

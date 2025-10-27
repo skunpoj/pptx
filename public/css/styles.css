@@ -116,6 +116,14 @@ body {
     height: 700px;
 }
 
+/* Individual Panels - Consistent Styling */
+.content-panel,
+.preview-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
 /* Action Row - Two column layout for inputs and buttons */
 .action-row {
     display: grid;
@@ -370,57 +378,101 @@ body {
    HEADER
    ========================================================================== */
 
+/* Header Main Container */
 .header {
-    color: #333;
-    margin-bottom: 0.3rem;
-    padding: 0.5rem 0.75rem;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-    border-radius: 12px;
-    border: 2px solid rgba(102, 126, 234, 0.15);
-    position: relative;
-    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.5rem 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+/* Header Content Wrapper */
+.header-content {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.75rem;
 }
 
-.header::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 250px;
-    height: 250px;
-    background: radial-gradient(circle, rgba(102, 126, 234, 0.12) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: float 6s ease-in-out infinite;
-}
-
-.header::after {
-    content: '';
-    position: absolute;
-    bottom: -50%;
-    left: -10%;
-    width: 200px;
-    height: 200px;
-    background: radial-gradient(circle, rgba(118, 75, 162, 0.1) 0%, transparent 70%);
-    border-radius: 50%;
-    animation: float 8s ease-in-out infinite reverse;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-15px); }
-}
-
-.header-left {
-    position: relative;
-    z-index: 1;
-    flex-shrink: 0;
+/* Logo and Badges on Same Line */
+.header-top-row {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+/* Brand Name */
+.brand-name {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: white;
+    margin: 0;
+    letter-spacing: -0.5px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    white-space: nowrap;
+}
+
+/* Header Badges Container */
+.header-badges {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Tagline Always on New Line */
+.brand-tagline {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 1.1rem;
+    margin: 0;
+    font-weight: 500;
+    display: block;
+    width: 100%;
+}
+
+/* Header Features */
+.header-features {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Header Feature Badges */
+.header-feature {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: white;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+/* Free Badge */
+.free-badge {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    color: #333;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
     gap: 0.5rem;
-    align-items: flex-start;
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.badge-icon {
+    font-size: 1rem;
+}
+
+.badge-text {
+    font-size: 0.85rem;
 }
 
 .header-badges {

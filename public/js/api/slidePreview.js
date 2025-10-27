@@ -70,19 +70,8 @@ async function generatePreview() {
         return;
     }
     
-    // Warn if content is very short
+    // Get word count for progress estimation
     const wordCount = text.split(/\s+/).length;
-    if (wordCount < 10) {
-        const proceed = confirm(
-            '⚠️ Your content is very short (' + wordCount + ' words).\n\n' +
-            'The AI works best with at least 20-30 words of detailed content.\n\n' +
-            'Short content may cause the AI to respond conversationally instead of generating slides.\n\n' +
-            'Do you want to proceed anyway?'
-        );
-        if (!proceed) {
-            return;
-        }
-    }
     
     console.log(`📝 Processing ${text.length} characters of content (${wordCount} words)`);
     
@@ -134,17 +123,6 @@ async function generatePreview() {
                     <div id="step3" style="opacity: 0.5;">⏳ Creating slide layout & design</div>
                     <div id="step4" style="opacity: 0.5;">⏳ Extracting data for charts & visuals</div>
                     <div id="step5" style="opacity: 0.5;">⏳ Rendering slide previews</div>
-                </div>
-            </div>
-            
-            <!-- Real-time Streaming Response Box -->
-            <div style="background: #1e1e1e; border: 2px solid #667eea; border-radius: 8px; margin: 1.5rem 0; text-align: left; overflow: hidden;">
-                <div style="background: #667eea; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
-                    <strong style="color: white; font-size: 0.9rem;">💬 AI Response Stream</strong>
-                    <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
-                </div>
-                <div id="streamingTextBox" style="max-height: 200px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #00ff00; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;">
-                    <span style="opacity: 0.6;">Waiting for AI response...</span>
                 </div>
             </div>
             
@@ -204,7 +182,7 @@ async function generatePreview() {
         
         // Create AbortController for timeout handling
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+        const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout for long slide generations
         
         const response = await fetch('/api/preview', {
             method: 'POST',
@@ -250,17 +228,22 @@ async function generatePreview() {
             // Save and finalize
             if (slideData && slideData.slides) {
                 console.log(`✅ Stream complete: ${slideData.slides.length} slides received`);
+                
+                // Match uploaded images to slides
+                if (window.uploadedImages && window.uploadedImages.length > 0 && window.matchImagesToSlides) {
+                    console.log(`🖼️ Matching ${window.uploadedImages.length} uploaded images to slides...`);
+                    slideData.slides = window.matchImagesToSlides(slideData.slides, window.uploadedImages);
+                }
+                
                 savePreviewCache(text, slideData);
                 window.currentSlideData = slideData;
                 
                 // Hide initial progress indicator
                 hidePreviewProgress();
                 
-                // Show action buttons
-                const modificationSection = document.getElementById('modificationSection');
-                const generatePptSection = document.getElementById('generatePptSection');
-                if (modificationSection) modificationSection.style.display = 'block';
-                if (generatePptSection) generatePptSection.style.display = 'block';
+                // Show generation button (no modify section anymore)
+                const generationSection = document.getElementById('generationSection');
+                if (generationSection) generationSection.style.display = 'block';
                 
                 if (typeof showNotification === 'function') {
                     showNotification('✅ Preview generated successfully!', 'success');
@@ -280,6 +263,12 @@ async function generatePreview() {
             const slideData = JSON.parse(responseText);
             
             if (slideData && slideData.slides) {
+                // Match uploaded images to slides
+                if (window.uploadedImages && window.uploadedImages.length > 0 && window.matchImagesToSlides) {
+                    console.log(`🖼️ Matching ${window.uploadedImages.length} uploaded images to slides...`);
+                    slideData.slides = window.matchImagesToSlides(slideData.slides, window.uploadedImages);
+                }
+                
                 savePreviewCache(text, slideData);
                 window.currentSlideData = slideData;
                 displayPreview(slideData);
@@ -389,8 +378,23 @@ async function handleIncrementalStream(response) {
         throw new Error('Preview container not found');
     }
     
-    // Clear container
+    // Create streaming text box at the top (before clearing container)
+    let streamingContainer = document.createElement('div');
+    streamingContainer.id = 'streamingContainer';
+    streamingContainer.style.cssText = 'background: #1e1e1e; border: 2px solid #667eea; border-radius: 8px; margin-bottom: 1rem; text-align: left; overflow: hidden;';
+    streamingContainer.innerHTML = `
+        <div style="background: #667eea; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
+            <strong style="color: white; font-size: 0.9rem;">💬 AI Response Stream</strong>
+            <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
+        </div>
+        <div id="streamingTextBox" style="max-height: 200px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #00ff00; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;">
+            <span style="opacity: 0.6;">Waiting for AI response...</span>
+        </div>
+    `;
+    
+    // Clear container and add streaming box
     previewContainer.innerHTML = '';
+    previewContainer.appendChild(streamingContainer);
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -408,6 +412,17 @@ async function handleIncrementalStream(response) {
             if (done) {
                 console.log('📡 Stream closed');
                 appendStreamingText('\n\n✅ Stream complete!');
+                
+                // Auto-collapse streaming text box after 3 seconds
+                setTimeout(() => {
+                    const textBox = document.getElementById('streamingTextBox');
+                    const toggleIcon = document.getElementById('streamToggleIcon');
+                    if (textBox && toggleIcon) {
+                        textBox.style.display = 'none';
+                        toggleIcon.textContent = '▶';
+                    }
+                }, 3000);
+                
                 break;
             }
             

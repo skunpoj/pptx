@@ -912,17 +912,35 @@ function toggleAutoImageGen() {
     const checkbox = document.getElementById('autoImageGenCheckbox');
     const manualBtn = document.getElementById('manualGenerateBtn');
     
-    if (!checkbox || !manualBtn) return;
+    if (!checkbox || !manualBtn) {
+        console.warn('⚠️ Checkbox or manual button not found');
+        return;
+    }
     
     if (checkbox.checked) {
         // Auto-gen enabled - hide manual button
         manualBtn.style.display = 'none';
-        console.log('✅ Auto image generation enabled');
+        console.log('✅ Auto image generation enabled - manual button hidden');
     } else {
         // Auto-gen disabled - show manual button
-        manualBtn.style.display = 'block';
-        console.log('⏸️ Auto image generation disabled - use manual button');
+        manualBtn.style.display = 'inline-block';
+        console.log('⏸️ Auto image generation disabled - manual button shown');
     }
+}
+
+/**
+ * Initialize auto image generation UI on page load
+ */
+function initAutoImageGenUI() {
+    // Set initial state based on checkbox
+    toggleAutoImageGen();
+}
+
+// Initialize on page load
+if (typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+        initAutoImageGenUI();
+    });
 }
 
 /**
@@ -1110,6 +1128,7 @@ window.autoGenerateImagesForSlides = autoGenerateImagesForSlides;
 window.regenerateSelectedImage = regenerateSelectedImage;
 window.isAutoImageGenEnabled = isAutoImageGenEnabled;
 window.toggleAutoImageGen = toggleAutoImageGen;
+window.initAutoImageGenUI = initAutoImageGenUI;
 window.showImageGallery = showImageGallery;
 window.showSlidesPreview = showSlidesPreview;
 window.selectGalleryImage = selectGalleryImage;

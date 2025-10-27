@@ -14,19 +14,20 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="header-left">
-                <h1 class="brand-name">GENIS.AI</h1>
-                <p class="brand-tagline">Transform Your Ideas into Stunning Presentations with AI</p>
-                <div class="header-badges">
-                    <div class="product-hunt-badge">
+            <div class="header-content">
+                <!-- Logo and Badges Row -->
+                <div class="header-top-row">
+                    <h1 class="brand-name">GENIS.AI</h1>
+                    <div class="header-badges">
                         <a href="https://www.producthunt.com/products/genis-ai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-genis&#0045;ai" target="_blank">
-                            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1030870&theme=light&t=1761434413944" alt="GENIS&#0046;AI - Transform&#0032;Your&#0032;Ideas&#0032;into&#0032;Stunning&#0032;Presentations&#0032;with&#0032;AI | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" />
+                            <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1030870&theme=light&t=1761434413944" alt="GENIS&#0046;AI - Transform&#0032;Your&#0032;Ideas&#0032;into&#0032;Stunning&#0032;Presentations&#0032;with&#0032;AI | Product Hunt" style="width: 180px; height: 38px;" width="180" height="38" />
                         </a>
+                        <a class="github-button" href="https://github.com/skunpoj/pptx" data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-star" data-size="large" aria-label="Star skunpoj/pptx on GitHub">Star</a>
                     </div>
-                    <a class="github-button" href="https://github.com/skunpoj/pptx" data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-star" data-size="large" aria-label="Star skunpoj/pptx on GitHub">Star</a>
                 </div>
-            </div>
-            <div class="header-right">
+                <!-- Tagline Row (always on new line) -->
+                <p class="brand-tagline">Transform Your Ideas into Stunning Presentations with AI</p>
+                <!-- Features Row -->
                 <div class="header-features">
                     <span class="header-feature">🤖 AI-Powered</span>
                     <span class="header-feature">📊 Native Charts</span>
@@ -42,14 +43,14 @@
 
         <!-- Main Content Grid -->
         <div class="main-grid">
-            <!-- Left Panel: Content Input -->
-            <div class="card">
-                <h2>📝 Your Content</h2>
+            <!-- Left Panel: Slide Content -->
+            <div class="card content-panel">
+                <h2>📝 Slide Content</h2>
                 
                 <!-- Main Content Editor -->
                 <div class="content-editor-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <p style="margin: 0; color: #555; font-size: 0.95rem;">Enter or paste your detailed presentation content here, then generate preview</p>
+                        <p style="margin: 0; color: #555; font-size: 0.95rem;">Enter or paste your detailed content here, then generate preview</p>
                         <span id="contentCharCount" style="font-size: 0.85rem; color: #888; font-weight: 600;">0 characters / 0 words</span>
                     </div>
                     
@@ -81,8 +82,8 @@ Our Products
                 </div>
                 
                 <!-- Num Slides and Preview Button Row -->
-                <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
                         <label class="option-label" style="margin: 0;">Number of slides:</label>
                         <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
                     </div>
@@ -92,8 +93,8 @@ Our Products
                 </div>
             </div>
 
-                <!-- Right Panel: Preview -->
-            <div class="card preview-container">
+            <!-- Right Panel: Preview -->
+            <div class="card preview-panel">
                 <h2>👁️ Slide Preview</h2>
                 
                 <!-- Tab Navigation -->
@@ -104,13 +105,13 @@ Our Products
                     <button class="gallery-tab-btn" id="galleryTabBtn" onclick="window.showImageGallery()">
                         🖼️ Image Gallery
                     </button>
-                    <button class="btn-secondary" id="manualGenerateBtn" onclick="window.generateImagesForSlides()" style="display: none; margin-left: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
-                        🎨 Generate All Images
-                    </button>
                     <label style="margin-left: auto; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; font-size: 0.85rem;">
                         <input type="checkbox" id="autoImageGenCheckbox" checked onchange="window.toggleAutoImageGen()">
                         <span style="color: #667eea; font-weight: 600;">🤖 Auto Generate Images</span>
                     </label>
+                    <button class="btn-secondary" id="manualGenerateBtn" onclick="window.generateImagesForSlides()" style="padding: 0.5rem 1rem; font-size: 0.85rem; display: none;">
+                        🎨 Generate All Images
+                    </button>
                 </div>
                 
                 <!-- Slides Preview Container -->
@@ -126,37 +127,35 @@ Our Products
 
         <!-- Action Buttons Section -->
         <div id="actionButtonsContainer" style="max-width: none; width: 100%; padding: 0;">
-            <!-- Combined Modification and Generation Section (appears after preview) -->
-            <div id="modificationSection" style="display: none; margin-bottom: 1rem;">
-                <div class="modification-grid">
-                    <!-- Left: Modify Slides -->
-                    <div class="card" style="background: #fff8e1; border: 2px solid #ffc107; padding: 1rem;">
-                        <strong style="color: #f57c00; display: block; margin-bottom: 0.5rem; font-size: 1.1rem;">✏️ Modify Slides with AI</strong>
-                        <textarea id="modificationPrompt" 
-                                  placeholder="Example: 'Change slide 3 title to...' or 'Add a bullet point to slide 2 about...' or 'Remove slide 5'"
-                                  style="width: 100%; height: 70px; padding: 0.75rem; border: 1px solid #ffc107; border-radius: 8px; font-size: 0.9rem; resize: vertical;"></textarea>
-                        <button class="btn-secondary btn-full" onclick="window.modifySlidesWithAI()" id="modifyBtn" style="margin-top: 0.75rem; font-size: 1rem; padding: 0.75rem;">
-                            🔄 Apply AI Modifications
-                        </button>
-                    </div>
-                    
-                    <!-- Right: Generate PowerPoint -->
-                    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1rem; display: flex; flex-direction: column; justify-content: center;">
-                        <button class="btn-generate btn-full" onclick="window.generatePresentation()" id="generateBtn" style="background: white; color: #667eea; font-size: 1.2rem; font-weight: 700; padding: 1rem;">
+            <!-- Generation Button Section (appears after preview) -->
+            <div id="generationSection" style="display: none; margin-bottom: 1rem;">
+                <div class="generation-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <!-- Left: Generate PowerPoint Button (stays here always) -->
+                    <div class="card" id="generateButtonCard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 1.5rem; display: flex; flex-direction: column; justify-content: center;">
+                        <button class="btn-generate btn-full" onclick="window.generatePresentation()" id="generateBtn" style="background: white; color: #667eea; font-size: 1.2rem; font-weight: 700; padding: 1rem; border: none; border-radius: 8px; cursor: pointer;">
                             ✨ Generate PowerPoint Presentation
                         </button>
                         <p style="text-align: center; font-size: 0.85rem; color: white; margin-top: 0.75rem; opacity: 0.95;">
                             Download PPTX, view slides online, auto-convert to PDF, or create shareable link
                         </p>
                     </div>
+                    
+                    <!-- Right: Results section (appears after generation) -->
+                    <div id="generateResultsCard" style="display: none;">
+                        <!-- Success message and share link will be inserted here -->
+                    </div>
                 </div>
             </div>
-            
-            <!-- Results section will appear here after generation (full width) -->
-            <div id="generatePptSection" style="display: none; margin-bottom: 1rem; width: 100%;">
-                <!-- Results will be dynamically inserted here -->
-            </div>
         </div>
+        
+        <!-- Responsive CSS for generation grid -->
+        <style>
+            @media (max-width: 768px) {
+                .generation-grid {
+                    grid-template-columns: 1fr !important;
+                }
+            }
+        </style>
 
         <!-- AI IDEA GENERATOR & THEME SELECTOR - Below modify slides section, above settings -->
         <div class="ai-theme-grid">

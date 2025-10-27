@@ -35,24 +35,39 @@ async function generatePresentation() {
     try {
         let response;
         
-        // Check if template file is available
-        if (window.templateFile) {
-            console.log('📄 Using template file:', window.templateFile.name);
+        // Check if we have uploaded images or template file (both require FormData)
+        if (window.templateFile || (window.uploadedImages && window.uploadedImages.length > 0)) {
+            console.log('📄 Using FormData for file uploads');
             
-            // Use FormData for template-based generation
+            // Use FormData for template and/or image-based generation
             const formData = new FormData();
-            formData.append('templateFile', window.templateFile);
+            
+            if (window.templateFile) {
+                console.log('📄 Including template file:', window.templateFile.name);
+                formData.append('templateFile', window.templateFile);
+            }
+            
+            // Add uploaded images
+            if (window.uploadedImages && window.uploadedImages.length > 0) {
+                console.log(`🖼️ Including ${window.uploadedImages.length} uploaded images`);
+                formData.append('images', JSON.stringify(window.uploadedImages.map(img => ({
+                    filename: img.filename,
+                    dataURL: img.dataURL
+                }))));
+            }
+            
             formData.append('slideData', JSON.stringify(window.currentSlideData));
             formData.append('text', JSON.stringify(window.currentSlideData.slides));
             formData.append('apiKey', apiKey);
             formData.append('provider', window.currentProvider || 'anthropic');
             
-            response = await fetch('/api/generate-with-template', {
+            const endpoint = window.templateFile ? '/api/generate-with-template' : '/api/generate';
+            response = await fetch(endpoint, {
                 method: 'POST',
                 body: formData
             });
         } else {
-            // Regular generation without template
+            // Regular generation without template or images
     const requestBody = {
         slideData: window.currentSlideData,
         apiKey: apiKey,
@@ -281,68 +296,30 @@ async function modifySlidesWithAI() {
 }
 
 /**
- * Show share and download section in two-column layout
+ * Show share and download section - Gen PPT stays on left, results on right
  * Using Zscaler-safe DOM manipulation pattern
  */
 function showDownloadLink(downloadUrl, fileSize, storage = {}) {
-    // Find the modify section - we'll transform it into results layout
-    const modifySection = document.getElementById('modificationSection');
-    if (!modifySection) {
-        console.error('❌ Modify section not found!');
+    // Find the results card on the right
+    const resultsCard = document.getElementById('generateResultsCard');
+    if (!resultsCard) {
+        console.error('❌ Results card not found!');
         return;
     }
     
-    // Make sure it's visible
-    modifySection.style.display = 'block';
-    
-    // Find the grid container
-    const modifyGrid = modifySection.querySelector('.modification-grid');
-    if (!modifyGrid) {
-        console.error('❌ Modification grid not found!');
-        return;
-    }
+    // Make it visible
+    resultsCard.style.display = 'block';
     
     // Clear existing content (Zscaler-safe method)
-    while (modifyGrid.firstChild) {
-        modifyGrid.removeChild(modifyGrid.firstChild);
+    while (resultsCard.firstChild) {
+        resultsCard.removeChild(resultsCard.firstChild);
     }
     
-    // Create LEFT panel: Generate New Slide (placeholder for now)
-    const leftPanel = document.createElement('div');
-    leftPanel.className = 'card';
-    leftPanel.style.cssText = `
-        background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
-        border: 2px solid #667eea;
-        padding: 1.5rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        gap: 1rem;
-    `;
-    leftPanel.innerHTML = `
-        <div style="font-size: 2.5rem;">🚀</div>
-        <h4 style="margin: 0; color: #667eea; font-size: 1.2rem;">
-            Generate New Slide
-        </h4>
-        <button 
-            class="btn btn-primary" 
-            onclick="alert('Generate new slide feature coming soon!')"
-            style="background: #667eea; padding: 0.75rem 1.5rem; width: 100%; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;"
-        >
-            ➕ Add New Slide
-        </button>
-        <p style="margin: 0; font-size: 0.85rem; color: #666;">
-            Generate additional slides to expand your presentation
-        </p>
-    `;
-    
-    // Create RIGHT panel: Loading message (will be replaced by share link)
-    const rightPanel = document.createElement('div');
-    rightPanel.id = 'shareLoadingMessage';
-    rightPanel.className = 'card';
-    rightPanel.style.cssText = `
+    // Create loading message (will be replaced by share link)
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'shareLoadingMessage';
+    loadingDiv.className = 'card';
+    loadingDiv.style.cssText = `
         background: white;
         border: 2px solid #667eea;
         border-radius: 8px;
@@ -352,18 +329,18 @@ function showDownloadLink(downloadUrl, fileSize, storage = {}) {
         justify-content: center;
         align-items: center;
         text-align: center;
+        height: 100%;
     `;
-    rightPanel.innerHTML = `
+    loadingDiv.innerHTML = `
         <div style="font-size: 2.5rem; margin-bottom: 1rem;">🎉</div>
         <h3 style="margin: 0 0 0.5rem 0; color: #333; font-size: 1.2rem;">Presentation Generated Successfully!</h3>
         <p style="margin: 0; color: #666;">⏳ Creating shareable link...</p>
     `;
     
-    // Append both panels to the grid (Zscaler-safe)
-    modifyGrid.appendChild(leftPanel);
-    modifyGrid.appendChild(rightPanel);
+    // Append to results card (Zscaler-safe)
+    resultsCard.appendChild(loadingDiv);
     
-    // Auto-create share link (which will replace the right panel loading message)
+    // Auto-create share link (which will replace the loading message)
     sharePresentation();
 }
 

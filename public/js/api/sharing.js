@@ -62,7 +62,7 @@ async function sharePresentation() {
 }
 
 /**
- * Show share link inline (no modal)
+ * Show share link inline - replaces loading message in right card
  */
 function showShareLinkInline(shareUrl, expiresIn) {
     // Store the share URL
@@ -72,62 +72,28 @@ function showShareLinkInline(shareUrl, expiresIn) {
     // Extract shareId from URL
     const shareId = shareUrl.split('/').pop();
     
-    // Instead of hiding modify section, we'll transform it into a two-column layout
-    const modifySection = document.getElementById('modificationSection');
-    if (!modifySection) {
-        console.error('❌ Modify section not found!');
+    // Find the results card on the right
+    const resultsCard = document.getElementById('generateResultsCard');
+    if (!resultsCard) {
+        console.error('❌ Results card not found!');
         return;
     }
     
     // Make sure it's visible
-    modifySection.style.display = 'block';
+    resultsCard.style.display = 'block';
     
-    // Clear the modify section content (Zscaler-safe method)
-    const modifyGrid = modifySection.querySelector('.modification-grid');
-    if (modifyGrid) {
-        while (modifyGrid.firstChild) {
-            modifyGrid.removeChild(modifyGrid.firstChild);
-        }
+    // Clear existing content (Zscaler-safe method)
+    while (resultsCard.firstChild) {
+        resultsCard.removeChild(resultsCard.firstChild);
     }
     
-    console.log('✅ Creating two-column layout in modify section');
+    console.log('✅ Creating share link display in results card');
     
-    // Create LEFT panel: Generate New Slide button
-    const leftPanel = document.createElement('div');
-    leftPanel.className = 'card';
-    leftPanel.style.cssText = `
-        background: linear-gradient(135deg, #f0f4ff, #e8f0ff);
-        border: 2px solid #667eea;
-        padding: 1.5rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        gap: 1rem;
-    `;
-    leftPanel.innerHTML = `
-        <div style="font-size: 2.5rem;">🚀</div>
-        <h4 style="margin: 0; color: #667eea; font-size: 1.2rem;">
-            Generate New Slide
-        </h4>
-        <button 
-            class="btn btn-primary" 
-            onclick="alert('Generate new slide feature coming soon!')"
-            style="background: #667eea; padding: 0.75rem 1.5rem; width: 100%; border: none; border-radius: 6px; color: white; font-weight: 600; cursor: pointer;"
-        >
-            ➕ Add New Slide
-        </button>
-        <p style="margin: 0; font-size: 0.85rem; color: #666;">
-            Generate additional slides to expand your presentation
-        </p>
-    `;
-    
-    // Create RIGHT panel: Presentation Generated Successfully
-    const rightPanel = document.createElement('div');
-    rightPanel.id = 'shareLinkDisplay';
-    rightPanel.className = 'card';
-    rightPanel.style.cssText = `
+    // Create the success card with share link
+    const successCard = document.createElement('div');
+    successCard.id = 'shareLinkDisplay';
+    successCard.className = 'card';
+    successCard.style.cssText = `
         background: white;
         border: 2px solid #667eea;
         border-radius: 8px;
@@ -212,13 +178,10 @@ function showShareLinkInline(shareUrl, expiresIn) {
         </div>
     `;
     
-    rightPanel.innerHTML = contentHTML;
+    successCard.innerHTML = contentHTML;
     
-    // Append both panels to the grid
-    if (modifyGrid) {
-        modifyGrid.appendChild(leftPanel);
-        modifyGrid.appendChild(rightPanel);
-    }
+    // Append to results card
+    resultsCard.appendChild(successCard);
     
     // Start checking PDF status
     if (window.currentSessionId) {

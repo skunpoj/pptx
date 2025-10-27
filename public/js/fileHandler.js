@@ -21,6 +21,120 @@ function readFileAsText(file) {
     });
 }
 
+/**
+ * Reads an image file as Data URL
+ * @param {File} file - Image file object
+ * @returns {Promise<string>} - Data URL of the image
+ */
+function readImageAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read image'));
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Checks if a file is an image
+ * @param {File} file - File to check
+ * @returns {boolean} - True if file is an image
+ */
+function isImageFile(file) {
+    const imageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+    return imageTypes.includes(file.type) || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name);
+}
+
+/**
+ * Generates a text description for an uploaded image
+ * @param {File} file - Image file
+ * @returns {string} - Description text for content generation
+ */
+function generateImageDescription(file) {
+    const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+    const cleanName = fileName.replace(/[-_]/g, ' '); // Replace dashes/underscores with spaces
+    
+    return `[IMAGE: ${cleanName}]\nDescription: A visual representation related to "${cleanName}". This image should be placed on an appropriate slide based on the content context.`;
+}
+
+// Global storage for uploaded images
+window.uploadedImages = [];
+
+/**
+ * Matches uploaded images to slides based on content similarity
+ * @param {Array} slides - Array of slide objects
+ * @param {Array} images - Array of uploaded image objects
+ * @returns {Array} - Slides with matched images
+ */
+function matchImagesToSlides(slides, images) {
+    if (!images || images.length === 0) return slides;
+    
+    const updatedSlides = slides.map(slide => ({ ...slide }));
+    const usedImageIndices = new Set();
+    
+    // First pass: Try to match images based on filename keywords
+    images.forEach((image, imageIndex) => {
+        if (usedImageIndices.has(imageIndex)) return;
+        
+        // Extract keywords from image filename
+        const imageKeywords = image.filename
+            .toLowerCase()
+            .replace(/\.[^/.]+$/, "") // Remove extension
+            .replace(/[-_]/g, ' ') // Replace dashes/underscores
+            .split(' ')
+            .filter(word => word.length > 2); // Only meaningful words
+        
+        // Find best matching slide
+        let bestMatch = { slideIndex: -1, score: 0 };
+        
+        updatedSlides.forEach((slide, slideIndex) => {
+            if (slide.imageUrl || slide.type === 'title') return; // Skip if already has image or is title
+            
+            const slideText = (slide.title + ' ' + (slide.content?.join(' ') || '')).toLowerCase();
+            let matchScore = 0;
+            
+            imageKeywords.forEach(keyword => {
+                if (slideText.includes(keyword)) {
+                    matchScore += 2; // Strong match
+                } else if (slideText.split(' ').some(word => word.includes(keyword) || keyword.includes(word))) {
+                    matchScore += 1; // Partial match
+                }
+            });
+            
+            if (matchScore > bestMatch.score) {
+                bestMatch = { slideIndex, score: matchScore };
+            }
+        });
+        
+        // If found a good match, assign image to slide
+        if (bestMatch.score > 0 && bestMatch.slideIndex >= 0) {
+            updatedSlides[bestMatch.slideIndex].imageUrl = image.dataURL;
+            updatedSlides[bestMatch.slideIndex].imageFilename = image.filename;
+            usedImageIndices.add(imageIndex);
+        }
+    });
+    
+    // Second pass: Distribute remaining images to slides without images
+    const remainingImages = images.filter((_, index) => !usedImageIndices.has(index));
+    if (remainingImages.length > 0) {
+        const slidesWithoutImages = updatedSlides
+            .map((slide, index) => ({ slide, index }))
+            .filter(({ slide }) => !slide.imageUrl && slide.type !== 'title');
+        
+        remainingImages.forEach((image, i) => {
+            if (i < slidesWithoutImages.length) {
+                const slideIndex = slidesWithoutImages[i].index;
+                updatedSlides[slideIndex].imageUrl = image.dataURL;
+                updatedSlides[slideIndex].imageFilename = image.filename;
+            }
+        });
+    }
+    
+    return updatedSlides;
+}
+
+window.matchImagesToSlides = matchImagesToSlides;
+
 // ========================================
 // COLOR EXTRACTION
 // ========================================
@@ -162,21 +276,51 @@ async function generateFromPrompt() {
                 }
             }
             
-            // Read file contents
+            // Read file contents - separate images from text files
             const fileContents = [];
+            const imageFiles = [];
+            
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                const text = await readFileAsText(file);
-                fileContents.push({
-                    filename: file.name,
-                    content: text
-                });
+                
+                if (isImageFile(file)) {
+                    // Handle image files - store them and generate description
+                    const imageDataURL = await readImageAsDataURL(file);
+                    const imageDescription = generateImageDescription(file);
+                    
+                    imageFiles.push({
+                        filename: file.name,
+                        dataURL: imageDataURL,
+                        description: imageDescription
+                    });
+                    
+                    fileContents.push({
+                        filename: file.name,
+                        content: imageDescription,
+                        isImage: true
+                    });
+                } else {
+                    // Handle text files normally
+                    const text = await readFileAsText(file);
+                    fileContents.push({
+                        filename: file.name,
+                        content: text,
+                        isImage: false
+                    });
+                }
             }
+            
+            // Store uploaded images globally for slide generation
+            window.uploadedImages = imageFiles;
             
             // Combine file contents with prompt - this goes to AI
             let combinedFilesForAI = '';
             fileContents.forEach(file => {
-                combinedFilesForAI += `\n\n=== File: ${file.filename} ===\n\n${file.content}`;
+                if (file.isImage) {
+                    combinedFilesForAI += `\n\n=== Image File: ${file.filename} ===\n\n${file.content}`;
+                } else {
+                    combinedFilesForAI += `\n\n=== File: ${file.filename} ===\n\n${file.content}`;
+                }
             });
             
             // Also prepare file content to show in textarea (for user visibility)
