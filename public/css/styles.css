@@ -191,18 +191,8 @@ body {
 }
 
 /* ==========================================================================
-   HEADER BADGE (FREE PILL) - IN HEADER
+   FREE BADGE - GROUPED WITH FEATURE PILLS
    ========================================================================== */
-
-.header-badge {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex-shrink: 0;
-    margin-left: 1rem;
-    position: relative;
-    z-index: 1;
-}
 
 .free-badge {
     background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
@@ -362,10 +352,6 @@ body {
 
 /* Responsive header */
 @media (max-width: 768px) {
-    .header-badge {
-        margin-left: 0.5rem; /* Reduce spacing on mobile */
-    }
-    
     .free-badge {
         padding: 0.25rem 0.5rem;
         font-size: 0.55rem;
@@ -439,10 +425,6 @@ body {
 }
 
 @media (max-width: 480px) {
-    .header-badge {
-        margin-left: 0.25rem; /* Minimal spacing on small mobile */
-    }
-    
     .free-badge {
         padding: 0.2rem 0.4rem;
         font-size: 0.5rem;

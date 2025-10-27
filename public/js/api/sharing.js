@@ -62,134 +62,214 @@ async function sharePresentation() {
 }
 
 /**
- * Show share link as the main result interface
+ * Show share link in a modal popup
  */
 function showShareLinkInline(shareUrl, expiresIn) {
-    // Find the presentation options container
-    const optionsDiv = document.querySelector('.presentation-options');
-    if (!optionsDiv) {
-        console.warn('Could not find presentation options container');
-        return;
-    }
-    
     // Remove loading message
     const loadingMsg = document.getElementById('shareLoadingMessage');
     if (loadingMsg) loadingMsg.remove();
     
-    // Remove any existing share link display
+    // Remove any existing result display
     const existing = document.getElementById('shareLinkDisplay');
     if (existing) existing.remove();
     
-    // Create main result display
-    const shareDisplay = document.createElement('div');
-    shareDisplay.id = 'shareLinkDisplay';
+    // Store the share URL for modal
+    window.currentShareUrl = shareUrl;
+    window.shareUrlExpiry = expiresIn;
     
-    // Build the content
-    let contentHTML = `
-        <div style="margin-bottom: 1.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                <span style="font-size: 1.5rem;">🔗</span>
-                <strong style="color: #667eea; font-size: 1.1rem;">Shareable Link</strong>
-            </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                <input 
-                    type="text" 
-                    value="${shareUrl}" 
-                    readonly 
-                    id="shareLinkInput"
-                    style="flex: 1; min-width: 300px; padding: 0.5rem; border: 1px solid #667eea; border-radius: 4px; font-size: 0.9rem; font-family: monospace; background: white;"
-                />
-                <button 
-                    onclick="window.copyShareLink()" 
-                    style="padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
-                >📋 Copy Link</button>
-                <button 
-                    onclick="window.open('${shareUrl}', '_blank')" 
-                    style="padding: 0.5rem 1rem; background: #764ba2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
-                >👁️ View Online</button>
-            </div>
-            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #666;">
-                ⏱️ Link expires in ${expiresIn} • Share with anyone!
-            </div>
-        </div>
+    // Create the result section with action buttons
+    const resultSection = document.createElement('div');
+    resultSection.id = 'shareLinkDisplay';
+    resultSection.className = 'card';
+    resultSection.style.cssText = `
+        background: white;
+        border: 2px solid #667eea;
+        border-radius: 8px;
+        padding: 1.5rem;
     `;
     
-    // Add download section
+    // Build action buttons on same line
+    let contentHTML = `
+        <h3 style="margin: 0 0 1rem 0; color: #333; font-size: 1.2rem;">🎉 Presentation Generated Successfully!</h3>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button 
+                onclick="window.openShareModal()" 
+                class="btn-primary"
+                style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;"
+            >🔗 Share Link</button>
+            
+            <a 
+                href="/view/${shareUrl.split('/').pop()}" 
+                target="_blank"
+                class="btn-secondary"
+                style="padding: 0.75rem 1.5rem; background: #764ba2; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block;"
+            >👁️ View Online</button>
+    `;
+    
+    // Add download button
     if (window.currentDownloadUrl && window.currentFileSize) {
         contentHTML += `
-            <div style="padding-top: 1rem; border-top: 1px solid #ddd;">
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                    <span style="font-size: 1.5rem;">📥</span>
-                    <strong style="color: #4CAF50; font-size: 1.1rem;">Download</strong>
-                </div>
-                <div id="downloadButtonContainer"></div>
-            </div>
+            <a 
+                href="${window.currentDownloadUrl}" 
+                download="presentation.pptx"
+                class="btn-success"
+                style="padding: 0.75rem 1.5rem; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block;"
+            >📥 Download PPT (${formatFileSize(window.currentFileSize)})</a>
         `;
     }
     
-    // Add PDF info section if sessionId is available
+    // Add view PDF button if sessionId is available
     if (window.currentSessionId) {
         contentHTML += `
-            <div style="padding-top: 1rem; border-top: 1px solid #ddd; margin-top: 1rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-                    <span style="font-size: 1.5rem;">📄</span>
-                    <strong style="color: #e67e22; font-size: 1.1rem;">PDF Version</strong>
-                </div>
-                <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">
-                    PDF is automatically generated and accessible via:
-                </div>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    <a 
-                        href="/view-pdf/${window.currentSessionId}" 
-                        target="_blank"
-                        style="padding: 0.5rem 1rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; white-space: nowrap;"
-                    >👁️ View PDF</a>
-                    <a 
-                        href="/download/${window.currentSessionId}/presentation.pdf" 
-                        download="presentation.pdf"
-                        style="padding: 0.5rem 1rem; background: #d35400; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; white-space: nowrap;"
-                    >📥 Download PDF</a>
-                </div>
-            </div>
+            <a 
+                href="/view-pdf/${window.currentSessionId}" 
+                target="_blank"
+                class="btn-warning"
+                style="padding: 0.75rem 1.5rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block;"
+            >📄 View PDF</a>
         `;
     }
     
-    shareDisplay.innerHTML = contentHTML;
-    optionsDiv.appendChild(shareDisplay);
+    contentHTML += `
+        </div>
+        <p style="margin-top: 1rem; font-size: 0.85rem; color: #666;">
+            ⏱️ Share link expires in ${expiresIn}
+        </p>
+    `;
     
-    // Add the download button
-    if (window.currentDownloadUrl && window.currentFileSize) {
-        const downloadContainer = document.getElementById('downloadButtonContainer');
-        if (downloadContainer) {
-            const downloadBtn = document.createElement('a');
-            downloadBtn.href = window.currentDownloadUrl;
-            downloadBtn.download = 'presentation.pptx';
-            downloadBtn.className = 'download-link';
-            downloadBtn.style.cssText = `
-                display: inline-block;
-                padding: 0.75rem 1.5rem;
-                background-color: #4CAF50;
-                color: white;
-                text-decoration: none;
-                border-radius: 4px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: background-color 0.2s;
-            `;
-            downloadBtn.onmouseover = () => downloadBtn.style.backgroundColor = '#45a049';
-            downloadBtn.onmouseout = () => downloadBtn.style.backgroundColor = '#4CAF50';
-            downloadBtn.textContent = `📥 Download PowerPoint (${formatFileSize(window.currentFileSize)})`;
-            downloadContainer.appendChild(downloadBtn);
-        }
+    resultSection.innerHTML = contentHTML;
+    
+    // Find the presentation options container
+    const optionsDiv = document.querySelector('.presentation-options');
+    if (optionsDiv) {
+        optionsDiv.appendChild(resultSection);
     }
     
-    // Store URL for copy function
-    window.currentShareUrl = shareUrl;
-    
-    // Scroll to show the link
+    // Auto-open share modal
     setTimeout(() => {
-        shareDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 100);
+        openShareModal();
+    }, 500);
+}
+
+/**
+ * Open share link modal
+ */
+function openShareModal() {
+    if (!window.currentShareUrl) {
+        alert('No share link available');
+        return;
+    }
+    
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.id = 'shareModal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        max-width: 600px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        position: relative;
+    `;
+    
+    modalContent.innerHTML = `
+        <button 
+            onclick="document.getElementById('shareModal').remove()" 
+            style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; line-height: 1;"
+        >×</button>
+        
+        <h2 style="margin: 0 0 1.5rem 0; color: #333; font-size: 1.5rem;">🔗 Shareable Link</h2>
+        
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; color: #666; font-size: 0.9rem;">Your presentation link:</label>
+            <div style="display: flex; gap: 0.5rem;">
+                <input 
+                    type="text" 
+                    value="${window.currentShareUrl}" 
+                    readonly 
+                    id="shareModalInput"
+                    style="flex: 1; padding: 0.75rem; border: 2px solid #667eea; border-radius: 4px; font-size: 0.95rem; font-family: monospace; background: #f8f9fa;"
+                />
+                <button 
+                    onclick="window.copyShareLinkFromModal()" 
+                    style="padding: 0.75rem 1.25rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                >📋 Copy</button>
+            </div>
+        </div>
+        
+        <div style="background: #f0f4ff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <p style="margin: 0 0 0.5rem 0; color: #333; font-weight: 600;">📌 What's included in this link:</p>
+            <ul style="margin: 0; padding-left: 1.5rem; color: #666;">
+                <li>View slides online with navigation</li>
+                <li>Download PowerPoint file</li>
+                <li>View PDF version</li>
+                <li>Modify slides and regenerate</li>
+            </ul>
+        </div>
+        
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+            <button 
+                onclick="window.open('${window.currentShareUrl}', '_blank')" 
+                style="padding: 0.75rem 1.5rem; background: #764ba2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"
+            >👁️ Open Link</button>
+            <button 
+                onclick="document.getElementById('shareModal').remove()" 
+                style="padding: 0.75rem 1.5rem; background: #ddd; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;"
+            >Close</button>
+        </div>
+        
+        <p style="margin-top: 1rem; font-size: 0.85rem; color: #999; text-align: center;">
+            ⏱️ Link expires in ${window.shareUrlExpiry || '7 days'}
+        </p>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Close modal when clicking outside
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    };
+}
+
+/**
+ * Copy share link from modal
+ */
+function copyShareLinkFromModal() {
+    const input = document.getElementById('shareModalInput');
+    if (input) {
+        input.select();
+        input.setSelectionRange(0, 99999);
+        
+        navigator.clipboard.writeText(input.value).then(() => {
+            if (typeof showNotification === 'function') {
+                showNotification('✅ Link copied to clipboard!', 'success');
+            }
+        }).catch(() => {
+            document.execCommand('copy');
+            if (typeof showNotification === 'function') {
+                showNotification('✅ Link copied to clipboard!', 'success');
+            }
+        });
+    }
 }
 
 /**
@@ -390,4 +470,6 @@ function openShareUrl() {
 window.sharePresentation = sharePresentation;
 window.copyShareUrl = copyShareUrl;
 window.copyShareLink = copyShareLink;
+window.openShareModal = openShareModal;
+window.copyShareLinkFromModal = copyShareLinkFromModal;
 window.openShareUrl = openShareUrl;
