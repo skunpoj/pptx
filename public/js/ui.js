@@ -162,9 +162,33 @@ window.showStatus = showStatus;
 window.showProgress = showProgress;
 window.hideProgress = hideProgress;
 window.updateProgress = updateProgress;
+// ========================================
+// CHARACTER/WORD COUNT
+// ========================================
+
+/**
+ * Updates character and word count for a textarea
+ * @param {string} textareaId - ID of the textarea element
+ * @param {string} counterId - ID of the counter display element
+ */
+function updateCharCount(textareaId, counterId) {
+    const textarea = document.getElementById(textareaId);
+    const counter = document.getElementById(counterId);
+    
+    if (textarea && counter) {
+        const text = textarea.value;
+        const charCount = text.length;
+        const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length;
+        
+        counter.textContent = `${charCount} characters / ${wordCount} words`;
+    }
+}
+
+// Export functions
 window.switchView = switchView;
 window.scrollToSlide = scrollToSlide;
 window.switchSettingsTab = switchSettingsTab;
+window.updateCharCount = updateCharCount;
 
 // Immediate diagnostic
 console.log('✅ ui.js loaded - window.showStatus:', typeof window.showStatus);

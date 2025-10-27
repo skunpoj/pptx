@@ -285,10 +285,20 @@ async function modifySlidesWithAI() {
  * Using Zscaler-safe DOM manipulation pattern
  */
 function showDownloadLink(downloadUrl, fileSize, storage = {}) {
+    // STEP 1: Hide the modify section (we're done with it)
+    const modifySection = document.getElementById('modificationSection');
+    if (modifySection) {
+        modifySection.style.display = 'none';
+    }
+    
+    // STEP 2: Show the results section
     const container = document.getElementById('generatePptSection');
     if (!container) return;
     
-    // Clear any existing content (this is safe)
+    // Make sure it's visible
+    container.style.display = 'block';
+    
+    // Clear any existing content (Zscaler-safe method)
     while (container.firstChild) {
         container.removeChild(container.firstChild);
     }

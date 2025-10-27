@@ -72,14 +72,28 @@ function showShareLinkInline(shareUrl, expiresIn) {
     // Extract shareId from URL
     const shareId = shareUrl.split('/').pop();
     
+    // IMPORTANT: Make sure modify section is hidden
+    const modifySection = document.getElementById('modificationSection');
+    if (modifySection) {
+        modifySection.style.display = 'none';
+    }
+    
     // Get the container
     const container = document.getElementById('generatePptSection');
-    if (!container) return;
+    if (!container) {
+        console.error('❌ Container generatePptSection not found!');
+        return;
+    }
+    
+    // Make sure container is visible
+    container.style.display = 'block';
     
     // Clear existing content (Zscaler-safe method)
     while (container.firstChild) {
         container.removeChild(container.firstChild);
     }
+    
+    console.log('✅ Creating share link display in container');
     
     // Create result section - ONE UNIFIED CARD (Zscaler-safe pattern)
     const resultSection = document.createElement('div');
