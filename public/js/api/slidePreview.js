@@ -70,7 +70,21 @@ async function generatePreview() {
         return;
     }
     
-    console.log(`📝 Processing ${text.length} characters of content`);
+    // Warn if content is very short
+    const wordCount = text.split(/\s+/).length;
+    if (wordCount < 10) {
+        const proceed = confirm(
+            '⚠️ Your content is very short (' + wordCount + ' words).\n\n' +
+            'The AI works best with at least 20-30 words of detailed content.\n\n' +
+            'Short content may cause the AI to respond conversationally instead of generating slides.\n\n' +
+            'Do you want to proceed anyway?'
+        );
+        if (!proceed) {
+            return;
+        }
+    }
+    
+    console.log(`📝 Processing ${text.length} characters of content (${wordCount} words)`);
     
     const apiKey = (typeof getApiKey === 'function') ? getApiKey() : '';
     

@@ -297,12 +297,31 @@ function parseAIResponse(responseText) {
         jsonText = jsonMatch[1];
     }
     
+    // Check if it looks conversational (starting with a sentence)
+    if (jsonText.trim().match(/^(I'm|I am|Hello|Hi|Sure|Okay|Let me|Thank you|Thanks)/i)) {
+        console.error('❌ AI returned conversational response instead of JSON');
+        console.error('   Response preview:', jsonText.substring(0, 300));
+        
+        throw new Error(
+            'The AI returned a conversational response instead of structured data. ' +
+            'This usually means:\n' +
+            '• The content provided is too short or unclear\n' +
+            '• The AI needs more detailed information\n' +
+            '• Try providing at least 2-3 sentences with specific details'
+        );
+    }
+    
     try {
         const data = JSON.parse(jsonText);
         
         // Validate the parsed data has expected structure
         if (!data || typeof data !== 'object') {
             throw new Error('Parsed data is not a valid object');
+        }
+        
+        // Check for slides array (for presentation data)
+        if (data.slides !== undefined && (!Array.isArray(data.slides) || data.slides.length === 0)) {
+            throw new Error('Response contains empty or invalid slides array. Please provide more detailed content.');
         }
         
         return data;
@@ -312,15 +331,29 @@ function parseAIResponse(responseText) {
         console.error('Cleaned text preview:', jsonText.substring(0, 500));
         console.error('Original text preview:', responseText.substring(0, 500));
         
+        // Check for common patterns that indicate conversational response
+        if (jsonText.includes('Could you please') || jsonText.includes("I don't see") || jsonText.includes("I need")) {
+            throw new Error(
+                'The AI asked for more information instead of generating slides. ' +
+                'Please provide more detailed content and try again.'
+            );
+        }
+        
         // Try to provide more helpful error message
         if (parseError.message.includes('Unexpected token')) {
             const match = parseError.message.match(/Unexpected token (.+?) in JSON/);
             const token = match ? match[1] : 'unknown';
-            throw new Error(`AI response contains invalid JSON (unexpected ${token}). This usually means the AI didn't format the response correctly. Please try again.`);
+            throw new Error(
+                `AI response contains invalid JSON (unexpected ${token}). ` +
+                `This usually means the AI didn't format the response correctly. ` +
+                `Try providing more detailed content (at least 2-3 sentences) and try again.`
+            );
         } else if (parseError.message.includes('Unexpected end')) {
             throw new Error('AI response is incomplete. The AI might have been interrupted. Please try again.');
+        } else if (parseError.message.includes('empty or invalid slides')) {
+            throw parseError; // Re-throw our custom error
         } else {
-            throw new Error('Failed to parse AI response as JSON. Please try again or check server logs for details.');
+            throw new Error('Failed to parse AI response. Please provide more detailed content and try again.');
         }
     }
 }

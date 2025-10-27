@@ -116,6 +116,125 @@ body {
     height: 700px;
 }
 
+/* Action Row - Two column layout for inputs and buttons */
+.action-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+.input-group-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.input-group-inline label {
+    white-space: nowrap;
+    font-size: 0.85rem;
+    color: #555;
+    font-weight: 600;
+}
+
+/* File List Container */
+.file-list-container {
+    width: 100%;
+    min-height: 40px;
+}
+
+/* File Input Styling */
+.file-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.file-input:hover {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.file-label {
+    font-size: 0.85rem;
+    color: #555;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Number Input Styling */
+.number-input {
+    width: 80px;
+    padding: 0.5rem;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    text-align: center;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.number-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Options Container for checkboxes */
+.options-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* Responsive Grid for AI Idea & Theme Selector */
+.ai-theme-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+/* Modification Grid - Modify Slides and Generate Button */
+.modification-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    width: 100%;
+}
+
+/* Mobile Responsive */
+@media (max-width: 968px) {
+    .main-grid {
+        grid-template-columns: 1fr; /* Stack vertically on tablets/mobile */
+        height: auto; /* Remove fixed height */
+    }
+    
+    .ai-theme-grid {
+        grid-template-columns: 1fr; /* Stack vertically on mobile */
+    }
+    
+    .modification-grid {
+        grid-template-columns: 1fr; /* Stack vertically on mobile */
+    }
+    
+    .action-row {
+        grid-template-columns: 1fr; /* Stack vertically on mobile */
+        gap: 0.75rem;
+    }
+    
+    .input-group-inline {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
 .card {
     background: rgba(255,255,255,0.9);
     border-radius: 12px;

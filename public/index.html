@@ -77,10 +77,16 @@ Our Products
                     </div>
                 </div>
                 
-                <!-- Preview Button -->
-                <button class="btn-primary btn-full btn-large" onclick="window.generatePreview()" id="previewBtn" style="margin-top: 1rem;">
-                    👁️ Generate Preview
-                </button>
+                <!-- Num Slides and Preview Button Row -->
+                <div class="action-row" style="margin-top: 1rem;">
+                    <div class="input-group-inline">
+                        <label class="option-label">Number of slides:</label>
+                        <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
+                    </div>
+                    <button class="btn-primary btn-large" onclick="window.generatePreview()" id="previewBtn">
+                        👁️ Generate Preview
+                    </button>
+                </div>
             </div>
 
                 <!-- Right Panel: Preview -->
@@ -115,7 +121,7 @@ Our Products
         <div id="actionButtonsContainer" style="max-width: none; width: 100%; padding: 0;">
             <!-- Combined Modification and Generation Section (appears after preview) -->
             <div id="modificationSection" style="display: none; margin-bottom: 1rem;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%;">
+                <div class="modification-grid">
                     <!-- Left: Modify Slides -->
                     <div class="card" style="background: #fff8e1; border: 2px solid #ffc107; padding: 1rem;">
                         <strong style="color: #f57c00; display: block; margin-bottom: 0.5rem; font-size: 1.1rem;">✏️ Modify Slides with AI</strong>
@@ -146,7 +152,7 @@ Our Products
         </div>
 
         <!-- AI IDEA GENERATOR & THEME SELECTOR - Below modify slides section, above settings -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
+        <div class="ai-theme-grid">
             <!-- Left: AI Idea Generator -->
             <div class="card idea-generator-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border: 3px solid #ff9a56;">
                 <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 AI Idea Generator</h3>
@@ -155,25 +161,23 @@ Our Products
                 <!-- Idea Input -->
                 <textarea id="ideaInput" class="idea-input" placeholder="Describe your presentation idea...">Create a quarterly business review presentation for Q4 2024 showing sales performance, market trends, and strategic initiatives for the executive team.</textarea>
                 
-                <!-- Expand Idea Button - Right after textarea -->
-                <button class="btn-primary btn-full" onclick="window.generateFromPrompt()" id="promptBtn" style="margin-top: 1rem;">
-                    🚀 Expand Idea into Full Content
-                </button>
+                <!-- File Upload and Expand Button Row -->
+                <div class="action-row" style="margin-top: 1rem;">
+                    <div class="input-group-inline">
+                        <label class="file-label">📎 Upload files:</label>
+                        <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
+                    </div>
+                    <button class="btn-primary btn-large" onclick="window.generateFromPrompt()" id="promptBtn">
+                        🚀 Expand Idea
+                    </button>
+                </div>
                 <p class="helper-text" style="margin-top: 0.5rem;">This creates detailed text content that you can edit above before generating slides</p>
                 
-                <!-- File Upload -->
-                <div class="file-upload-section" style="margin-top: 1.5rem;">
-                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end; margin-bottom: 0.75rem;">
-                        <div>
-                    <label class="file-label">📎 Or upload files (PDF, DOC, TXT, PPT):</label>
-                    <input type="file" id="fileUpload" multiple accept=".txt,.pdf,.doc,.docx,.md,.pptx" class="file-input">
-                        </div>
-                        <div>
-                            <label class="option-label">Number of slides:</label>
-                            <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
-                        </div>
-                    </div>
-                    
+                <!-- File List (Full Width) -->
+                <div id="fileList" class="file-list-container" style="margin-top: 1rem;"></div>
+                
+                <!-- Options Checkboxes (Full Width) -->
+                <div class="options-container" style="margin-top: 1rem;">
                     <!-- Extract Colors Checkbox -->
                     <label class="checkbox-label checkbox-blue">
                         <input type="checkbox" id="extractColors" checked>
@@ -199,9 +203,9 @@ Our Products
                             <strong>📸 Include AI-generated image suggestions in content</strong>
                             <span class="checkbox-desc">AI will include image descriptions in the generated content (descriptions only, not actual images)</span>
                         </span>
-                        </label>
-                    </div>
+                    </label>
                 </div>
+            </div>
 
             <!-- Right: Color Theme & Output Format -->
             <div class="card" id="themeSelector" style="background: #f0fff4; border: 2px solid #82C341;">
