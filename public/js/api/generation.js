@@ -139,7 +139,7 @@ async function generatePresentation() {
 }
 
 /**
- * Modify existing slides
+ * Modify existing slides (opens modal for individual slide editing)
  */
 async function modifySlides() {
     if (!window.currentSlideData) {
@@ -155,6 +155,88 @@ async function modifySlides() {
     
     // Show modification modal
     showSlideModificationModal(window.currentSlideData.slides[0], 0);
+}
+
+/**
+ * Modify slides with AI based on user prompt
+ */
+async function modifySlidesWithAI() {
+    if (!window.currentSlideData) {
+        alert('Please generate a preview first');
+        return;
+    }
+    
+    const modificationPrompt = document.getElementById('modificationPrompt');
+    const prompt = modificationPrompt.value.trim();
+    
+    if (!prompt) {
+        alert('Please enter modification instructions');
+        return;
+    }
+    
+    console.log('🔄 Modifying slides with AI...');
+    console.log('   Prompt:', prompt);
+    
+    const apiKey = (typeof getApiKey === 'function') ? getApiKey() : '';
+    
+    if (!apiKey) {
+        console.log('ℹ️ No API key configured, using default backend provider');
+    }
+    
+    const modifyBtn = document.getElementById('modifyBtn');
+    const originalText = modifyBtn.textContent;
+    modifyBtn.textContent = '🔄 Modifying with AI...';
+    modifyBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/modify-slides', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                slideData: window.currentSlideData,
+                modificationPrompt: prompt,
+                apiKey: apiKey,
+                provider: window.currentProvider || 'anthropic'
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Modification failed');
+        }
+        
+        const result = await response.json();
+        console.log('✅ Slides modified successfully');
+        
+        // Update slide data
+        window.currentSlideData = result.slideData;
+        
+        // Re-render preview
+        if (typeof renderSlidesProgressively === 'function') {
+            renderSlidesProgressively(result.slideData);
+        }
+        
+        // Show success message
+        if (typeof showNotification === 'function') {
+            showNotification('✅ Slides modified successfully! Preview updated.', 'success');
+        }
+        
+        // Clear the modification prompt
+        modificationPrompt.value = '';
+        
+    } catch (error) {
+        console.error('❌ Modification failed:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('❌ Modification failed: ' + error.message, 'error');
+        } else {
+            alert('Modification failed: ' + error.message);
+        }
+    } finally {
+        modifyBtn.textContent = originalText;
+        modifyBtn.disabled = false;
+    }
 }
 
 /**
@@ -216,4 +298,5 @@ function formatFileSize(bytes) {
 // Export functions for use in other modules
 window.generatePresentation = generatePresentation;
 window.modifySlides = modifySlides;
+window.modifySlidesWithAI = modifySlidesWithAI;
 window.showDownloadLink = showDownloadLink;

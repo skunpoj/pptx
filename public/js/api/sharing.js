@@ -62,7 +62,7 @@ async function sharePresentation() {
 }
 
 /**
- * Show share link in a modal popup
+ * Show share link inline (no modal)
  */
 function showShareLinkInline(shareUrl, expiresIn) {
     // Remove loading message
@@ -73,11 +73,14 @@ function showShareLinkInline(shareUrl, expiresIn) {
     const existing = document.getElementById('shareLinkDisplay');
     if (existing) existing.remove();
     
-    // Store the share URL for modal
+    // Store the share URL
     window.currentShareUrl = shareUrl;
     window.shareUrlExpiry = expiresIn;
     
-    // Create the result section with action buttons
+    // Extract shareId from URL
+    const shareId = shareUrl.split('/').pop();
+    
+    // Create the result section - one unified section
     const resultSection = document.createElement('div');
     resultSection.id = 'shareLinkDisplay';
     resultSection.className = 'card';
@@ -88,22 +91,38 @@ function showShareLinkInline(shareUrl, expiresIn) {
         padding: 1.5rem;
     `;
     
-    // Build action buttons on same line
+    // Build unified content with share link and action buttons
     let contentHTML = `
         <h3 style="margin: 0 0 1rem 0; color: #333; font-size: 1.2rem;">🎉 Presentation Generated Successfully!</h3>
+        
+        <!-- Share Link Input -->
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+                <input 
+                    type="text" 
+                    value="${shareUrl}" 
+                    readonly 
+                    id="shareLinkInput"
+                    style="flex: 1; padding: 0.75rem; border: 2px solid #667eea; border-radius: 4px; font-size: 0.95rem; font-family: monospace; background: #f8f9fa;"
+                />
+                <button 
+                    onclick="window.copyShareLink()" 
+                    style="padding: 0.75rem 1.25rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                >📋 Copy Link</button>
+            </div>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #666;">
+                ⏱️ Link expires in ${expiresIn} • Share this link with anyone!
+            </p>
+        </div>
+        
+        <!-- Action Buttons -->
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
-            <button 
-                onclick="window.openShareModal()" 
-                class="btn-primary"
-                style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 1rem;"
-            >🔗 Share Link</button>
-            
             <a 
-                href="/view/${shareUrl.split('/').pop()}" 
+                href="/view/${shareId}" 
                 target="_blank"
                 class="btn-secondary"
                 style="padding: 0.75rem 1.5rem; background: #764ba2; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 1rem; display: inline-block;"
-            >👁️ View Online</button>
+            >👁️ View Online</a>
     `;
     
     // Add download button
@@ -132,9 +151,6 @@ function showShareLinkInline(shareUrl, expiresIn) {
     
     contentHTML += `
         </div>
-        <p style="margin-top: 1rem; font-size: 0.85rem; color: #666;">
-            ⏱️ Share link expires in ${expiresIn}
-        </p>
     `;
     
     resultSection.innerHTML = contentHTML;
@@ -143,12 +159,12 @@ function showShareLinkInline(shareUrl, expiresIn) {
     const optionsDiv = document.querySelector('.presentation-options');
     if (optionsDiv) {
         optionsDiv.appendChild(resultSection);
+        
+        // Scroll to show the result
+        setTimeout(() => {
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
     }
-    
-    // Auto-open share modal
-    setTimeout(() => {
-        openShareModal();
-    }, 500);
 }
 
 /**

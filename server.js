@@ -582,10 +582,14 @@ app.post('/api/preview', async (req, res) => {
 // ========================================
 
 app.post('/api/modify-slides', async (req, res) => {
-    let { currentSlides, modificationRequest, apiKey, provider = 'anthropic' } = req.body;
+    let { slideData, modificationPrompt, currentSlides, modificationRequest, apiKey, provider = 'anthropic' } = req.body;
     
-    if (!currentSlides || !modificationRequest) {
-        return res.status(400).json({ error: 'Current slides and modification request are required' });
+    // Support both old and new parameter names
+    const slides = slideData?.slides || currentSlides;
+    const prompt = modificationPrompt || modificationRequest;
+    
+    if (!slides || !prompt) {
+        return res.status(400).json({ error: 'Slide data and modification prompt are required' });
     }
     
     // If no API key provided, use default backend provider
@@ -597,12 +601,12 @@ app.post('/api/modify-slides', async (req, res) => {
     
     try {
         console.log('✏️ Slide modification request received');
-        console.log('  Current slides:', currentSlides.length);
-        console.log('  Modification:', modificationRequest.substring(0, 100));
+        console.log('  Current slides:', slides.length);
+        console.log('  Modification:', prompt.substring(0, 100));
         console.log('  Provider:', provider);
         
         // Get modification prompt from config/prompts.json
-        const userPrompt = await getSlideModificationPrompt(currentSlides, modificationRequest);
+        const userPrompt = await getSlideModificationPrompt(slides, prompt);
         console.log('  Modification prompt generated');
         
         // Call AI to modify slides
@@ -617,8 +621,11 @@ app.post('/api/modify-slides', async (req, res) => {
         validateSlideData(modifiedData);
         console.log('✅ Modification validation passed');
         
-        // Return modified slides
-        res.json(modifiedData);
+        // Return the complete slide data structure
+        res.json({ 
+            slideData: modifiedData,
+            ...modifiedData  // Also include direct access for backward compatibility
+        });
         
     } catch (error) {
         console.error('❌ Modification error:', error.message);
