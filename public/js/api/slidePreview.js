@@ -108,7 +108,7 @@ async function generatePreview() {
     
     // Show detailed loading state with progress steps
     const preview = document.getElementById('preview');
-    const wordCount = text.split(/\s+/).length;
+    // wordCount already declared at line 74, reuse it here
     const estimatedTime = Math.max(5, Math.min(20, Math.ceil(wordCount / 100)));
     
     preview.innerHTML = `

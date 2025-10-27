@@ -83,6 +83,19 @@
             background: #f0f4ff;
         }
         
+        .btn-success {
+            background: #10B981;
+            color: white;
+            border: 2px solid #10B981;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+            border-color: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
         .slide-viewer {
             background: white;
             border-radius: 12px;
@@ -193,6 +206,9 @@
                         <button class="btn btn-success" onclick="downloadPresentation()">
                             📥 Download PPT
                         </button>
+                        <button class="btn btn-secondary" onclick="generateNewFromModified()" id="generateNewBtn" style="display: none;">
+                            🚀 Generate New Presentation
+                        </button>
                         <button class="btn btn-secondary" onclick="copyShareLink()">
                             📋 Copy Link
                         </button>
@@ -226,7 +242,7 @@
             <div class="slide-viewer" id="pdfViewerContainer" style="display: none;">
                 <div style="background: white; border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1rem;">
                     <p style="margin: 0; color: #666; font-size: 1rem;">
-                        📄 PDF Preview • Use browser's built-in PDF controls to navigate
+                        📄 PDF Preview • Use browser's built-in PDF controls to navigate and download
                     </p>
                 </div>
                 
@@ -238,12 +254,6 @@
                     height="600px"
                     style="border: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: white;">
                 </iframe>
-                
-                <div style="text-align: center; margin-top: 1rem;">
-                    <a href="#" id="pdfDownloadLink" download="AI-Presentation-Pro.pdf" class="btn btn-primary" style="text-decoration: none;">
-                        ⬇️ Download PDF
-                    </a>
-                </div>
             </div>
         </div>
     </div>
@@ -317,9 +327,9 @@
             currentSlideIndex = index;
             const slide = slides[index];
             
-            // Render slide
+            // Render slide preview with modification controls
             const container = document.getElementById('slideContainer');
-            container.innerHTML = window.renderSlidePreviewCard(slide, index, theme);
+            container.innerHTML = renderSlideWithModifyControls(slide, index, theme);
             
             // Update counter
             document.getElementById('slideCounter').textContent = `${index + 1} / ${slides.length}`;
@@ -327,6 +337,64 @@
             // Update button states
             document.getElementById('prevBtn').disabled = index === 0;
             document.getElementById('nextBtn').disabled = index === slides.length - 1;
+        }
+        
+        function renderSlideWithModifyControls(slide, index, theme) {
+            const slidePreview = window.renderSlidePreviewCard ? 
+                window.renderSlidePreviewCard(slide, index, theme) :
+                `<div style="padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="color: ${theme.colorPrimary};">${slide.title}</h3>
+                    ${slide.content ? `<ul>${slide.content.map(c => `<li>${c}</li>`).join('')}</ul>` : ''}
+                </div>`;
+            
+            return `
+                <div style="background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                    <!-- Slide Preview -->
+                    <div style="margin-bottom: 2rem; border: 2px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; background: #f9f9f9;">
+                        ${slidePreview}
+                    </div>
+                    
+                    <!-- Modification Controls -->
+                    <div style="background: linear-gradient(135deg, #f0f4ff, #e8f0ff); border-radius: 8px; padding: 1.5rem; border: 2px solid ${theme.colorPrimary};">
+                        <h4 style="margin: 0 0 1rem 0; color: ${theme.colorPrimary}; font-size: 1.1rem;">
+                            ✏️ Modify This Slide
+                        </h4>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <label for="modifyPrompt${index}" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">
+                                Enter modification prompt:
+                            </label>
+                            <textarea 
+                                id="modifyPrompt${index}" 
+                                rows="3" 
+                                placeholder="e.g., 'Add more details about market trends' or 'Change to bullet points' or 'Make it more concise'"
+                                style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 6px; font-size: 0.95rem; font-family: inherit; resize: vertical;"
+                            ></textarea>
+                        </div>
+                        
+                        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                            <button 
+                                class="btn btn-primary" 
+                                onclick="modifyIndividualSlide(${index})"
+                                style="background: ${theme.colorPrimary}; flex: 1; min-width: 200px;"
+                            >
+                                🔄 Modify This Slide Only
+                            </button>
+                            <button 
+                                class="btn btn-secondary" 
+                                onclick="resetSlideModification(${index})"
+                                style="border-color: ${theme.colorPrimary}; color: ${theme.colorPrimary};"
+                            >
+                                ↺ Reset
+                            </button>
+                        </div>
+                        
+                        <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #666; font-style: italic;">
+                            💡 Tip: Be specific with your modification request for best results
+                        </p>
+                    </div>
+                </div>
+            `;
         }
         
         function previousSlide() {
@@ -353,11 +421,31 @@
         }
         
         async function downloadPresentation() {
-            if (sessionId) {
+            if (!sessionId) {
+                alert('❌ Download not available for this presentation.');
+                return;
+            }
+            
+            try {
                 // Use sessionId to download the original PPTX file
-                window.location.href = `/download/${sessionId}/presentation.pptx`;
-            } else {
-                alert('Download not available for this presentation.');
+                const downloadUrl = `/download/${sessionId}/presentation.pptx`;
+                console.log('📥 Downloading presentation from:', downloadUrl);
+                
+                // Create a temporary link and click it
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = 'AI-Presentation-Pro.pptx';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Show success message
+                setTimeout(() => {
+                    alert('✅ Download started! Check your downloads folder.');
+                }, 500);
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('❌ Download failed. Please try again.');
             }
         }
         
@@ -400,6 +488,146 @@
             });
         }
         
+        async function modifyIndividualSlide(slideIndex) {
+            const promptTextarea = document.getElementById(`modifyPrompt${slideIndex}`);
+            const modificationPrompt = promptTextarea.value.trim();
+            
+            if (!modificationPrompt) {
+                alert('❌ Please enter a modification prompt');
+                return;
+            }
+            
+            if (!window.currentSlideData || !window.currentSlideData.slides[slideIndex]) {
+                alert('❌ Slide data not found');
+                return;
+            }
+            
+            const originalSlide = window.currentSlideData.slides[slideIndex];
+            
+            // Show loading state
+            const modifyBtn = event.target;
+            const originalBtnText = modifyBtn.textContent;
+            modifyBtn.textContent = '⏳ Modifying...';
+            modifyBtn.disabled = true;
+            
+            try {
+                console.log(`🔄 Modifying slide ${slideIndex + 1}:`, modificationPrompt);
+                
+                // Call the modify API with just this one slide
+                const response = await fetch('/api/modify-slides', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        currentSlides: [originalSlide],
+                        modificationRequest: modificationPrompt,
+                        provider: 'bedrock' // Use default backend provider
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Modification failed');
+                }
+                
+                const result = await response.json();
+                const modifiedSlide = result.slideData?.slides?.[0] || result.slides?.[0];
+                
+                if (!modifiedSlide) {
+                    throw new Error('No modified slide returned from API');
+                }
+                
+                // Update the slide in our data
+                window.currentSlideData.slides[slideIndex] = modifiedSlide;
+                
+                // Mark that modifications have been made
+                window.hasModifications = true;
+                
+                // Show the "Generate New Presentation" button
+                document.getElementById('generateNewBtn').style.display = 'inline-flex';
+                
+                // Save modifications to server
+                await saveModifications();
+                
+                // Re-render the slide
+                displaySlide(slideIndex);
+                
+                alert('✅ Slide modified successfully! You can now generate a new presentation with this change.');
+                
+            } catch (error) {
+                console.error('Modification error:', error);
+                alert('❌ Failed to modify slide: ' + error.message);
+                
+                // Restore button
+                modifyBtn.textContent = originalBtnText;
+                modifyBtn.disabled = false;
+            }
+        }
+        
+        function resetSlideModification(slideIndex) {
+            const promptTextarea = document.getElementById(`modifyPrompt${slideIndex}`);
+            promptTextarea.value = '';
+        }
+        
+        async function generateNewFromModified() {
+            if (!window.currentSlideData || !window.hasModifications) {
+                alert('❌ No modifications to generate from');
+                return;
+            }
+            
+            if (!confirm('🚀 Generate a new PowerPoint presentation with your modifications?\n\nThis will create a new downloadable PPTX file.')) {
+                return;
+            }
+            
+            const generateBtn = document.getElementById('generateNewBtn');
+            const originalText = generateBtn.textContent;
+            generateBtn.textContent = '⏳ Generating...';
+            generateBtn.disabled = true;
+            
+            try {
+                console.log('🚀 Generating new presentation from modified slides...');
+                
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        slideData: window.currentSlideData,
+                        provider: 'bedrock'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Generation failed: ' + response.status);
+                }
+                
+                // Get the new session ID from headers
+                const newSessionId = response.headers.get('X-Session-Id');
+                
+                // Download the generated presentation
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'Modified-AI-Presentation.pptx';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                alert('✅ New presentation generated successfully! Check your downloads folder.');
+                
+                // Reset modifications flag
+                window.hasModifications = false;
+                generateBtn.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Generation error:', error);
+                alert('❌ Failed to generate presentation: ' + error.message);
+            } finally {
+                generateBtn.textContent = originalText;
+                generateBtn.disabled = false;
+            }
+        }
+        
         function switchViewMode(mode) {
             const slideViewer = document.getElementById('slideViewerContainer');
             const pdfViewer = document.getElementById('pdfViewerContainer');
@@ -419,12 +647,10 @@
                 
                 // Load PDF in iframe using sessionId (not shareId)
                 const pdfFrame = document.getElementById('pdfFrame');
-                const pdfDownloadLink = document.getElementById('pdfDownloadLink');
                 
                 if (sessionId) {
                     const pdfUrl = `/view-pdf/${sessionId}`;
                     pdfFrame.src = pdfUrl;
-                    pdfDownloadLink.href = `/download/${sessionId}/presentation.pdf`;
                 } else {
                     pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">PDF not available for this presentation.</p>';
                 }
