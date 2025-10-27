@@ -409,14 +409,50 @@ async function handleIncrementalStream(response) {
     
     // Preserve the existing streaming container
     let streamingContainer = document.getElementById('streamingContainer');
+    console.log('🔍 Streaming container found:', !!streamingContainer);
+    
+    if (!streamingContainer) {
+        console.error('❌ streamingContainer not found! Creating new one...');
+        // Create it if it doesn't exist
+        streamingContainer = document.createElement('div');
+        streamingContainer.id = 'streamingContainer';
+        streamingContainer.style.cssText = 'background: #1e1e1e; border: 2px solid #667eea; border-radius: 8px; margin-bottom: 1rem; text-align: left; overflow: hidden;';
+        streamingContainer.innerHTML = `
+            <div style="background: #667eea; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
+                <strong style="color: white; font-size: 0.9rem;">💬 AI Response Stream (Live)</strong>
+                <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
+            </div>
+            <div id="streamingTextBox" style="max-height: 200px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #00ff00; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;">
+                <span style="opacity: 0.6;">Stream starting...</span>
+            </div>
+        `;
+        previewContainer.insertBefore(streamingContainer, previewContainer.firstChild);
+    }
+    
+    // Verify streaming text box exists and ensure it's visible
+    const textBox = document.getElementById('streamingTextBox');
+    console.log('🔍 Streaming text box found:', !!textBox);
+    
+    if (textBox) {
+        // Force it to be visible
+        textBox.style.display = 'block';
+        console.log('✅ Streaming text box display set to block');
+    }
     
     // Clear everything EXCEPT the streaming container
     const children = Array.from(previewContainer.children);
     children.forEach(child => {
         if (child.id !== 'streamingContainer') {
+            console.log('🗑️ Removing child:', child.id || child.className || child.tagName);
             child.remove();
         }
     });
+    
+    // Test streaming text immediately
+    console.log('🧪 Testing appendStreamingText...');
+    appendStreamingText('═══════════════════════════════════\n');
+    appendStreamingText('🔴 STREAM HANDLER STARTED\n');
+    appendStreamingText('═══════════════════════════════════\n\n');
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -453,14 +489,18 @@ async function handleIncrementalStream(response) {
             const chunk = decoder.decode(value, { stream: true });
             buffer += chunk;
             
+            console.log(`📦 Received chunk: ${chunk.length} bytes`);
+            
             // On first chunk, add a marker (don't clear - keep the connection status)
             if (isFirstChunk) {
-                appendStreamingText('\n🔴 LIVE STREAM ACTIVE - Raw SSE Data:\n');
-                appendStreamingText('═══════════════════════════════════\n\n');
+                console.log('🎬 First chunk received! Adding header...');
+                appendStreamingText('\n📡 RECEIVING SSE DATA:\n');
+                appendStreamingText('─────────────────────────────\n');
                 isFirstChunk = false;
             }
             
             // Show raw chunk in streaming text box
+            console.log(`✍️ Appending chunk to display...`);
             appendStreamingText(chunk);
             
             // Process complete lines

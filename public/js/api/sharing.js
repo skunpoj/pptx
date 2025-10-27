@@ -38,17 +38,21 @@ async function sharePresentation() {
         console.log('✅ Share link created:', result.shareUrl);
         
         if (result.shareId && result.shareUrl) {
+            console.log('✅ Share link API response received');
+            
+            // IMPORTANT: Notify progress tracker FIRST (pass the URL)
+            if (window.onShareLinkCreated) {
+                window.onShareLinkCreated(result.shareUrl);
+            }
+            
             // Show success notification
             if (typeof showNotification === 'function') {
                 showNotification('✅ Shareable link created!', 'success');
             }
             
-            // Show share link INLINE next to button
-            showShareLinkInline(result.shareUrl, result.expiresIn);
-            
-            // Notify progress tracker that share link is ready
-            if (window.onShareLinkCreated) {
-                window.onShareLinkCreated();
+            // Show share link INLINE (but only if progress tracker didn't handle it)
+            if (!window.onShareLinkCreated) {
+                showShareLinkInline(result.shareUrl, result.expiresIn);
             }
         } else {
             throw new Error(result.error || 'Sharing failed');

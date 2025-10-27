@@ -350,8 +350,8 @@ body {
 
 .product-hunt-badge img {
     display: block;
-    width: 180px !important;
-    height: 38px !important;
+    width: 140px !important;
+    height: 30px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     border-radius: 6px;
     transition: box-shadow 0.3s ease;
@@ -611,8 +611,8 @@ body {
     }
     
     .product-hunt-badge img {
-        width: 90px !important;
-        height: auto !important;
+        width: 110px !important;
+        height: 24px !important;
     }
     
     .header {
