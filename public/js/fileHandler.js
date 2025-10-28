@@ -352,10 +352,32 @@ async function generateFromPrompt() {
         }
         
         // Call API with streaming or non-streaming based on provider
-        if (window.currentProvider === 'anthropic' && files.length === 0) {
-            await streamContentGeneration(finalPrompt, apiKey, numSlides, generateImages, numImagesToGenerate, textInput);
+        // Pass ALL checkbox selections to the function
+        const apiCallParams = {
+            finalPrompt,
+            apiKey,
+            numSlides,
+            generateImages,
+            numImagesToGenerate,
+            extractColors,
+            useAsTemplate,
+            files: Array.from(files),
+            textInput
+        };
+        
+        if (window.currentProvider === 'anthropic') {
+            console.log('📡 Using streaming content generation (Anthropic)');
+            console.log('  Options:', {
+                numSlides, 
+                generateImages, 
+                extractColors, 
+                useAsTemplate, 
+                filesCount: files.length
+            });
+            await streamContentGeneration(apiCallParams);
         } else {
-            await nonStreamingContentGeneration(finalPrompt, apiKey, numSlides, generateImages, numImagesToGenerate, textInput);
+            console.log('📋 Using non-streaming content generation');
+            await nonStreamingContentGeneration(apiCallParams);
         }
         
         window.showStatus('✅ Content expanded successfully! Review it below, then click "Preview Slides" to see the design.', 'success');
@@ -376,27 +398,53 @@ async function generateFromPrompt() {
 
 /**
  * Streaming content generation (Anthropic only)
- * @param {string} prompt - User prompt
- * @param {string} apiKey - API key
- * @param {number} numSlides - Number of slides
- * @param {boolean} generateImages - Include images
- * @param {number} numImagesToGenerate - Number of images to generate
- * @param {HTMLElement} textInput - Textarea element to update
+ * @param {object} params - All parameters including prompt, apiKey, numSlides, etc.
  */
-async function streamContentGeneration(prompt, apiKey, numSlides, generateImages, numImagesToGenerate, textInput) {
+async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generateImages, numImagesToGenerate, extractColors, useAsTemplate, files, textInput }) {
+    console.log('🚀 Starting streaming content generation...');
+    console.log('  Provider:', window.currentProvider);
+    console.log('  Stream:', true);
+    console.log('  Options:', { numSlides, generateImages, extractColors, useAsTemplate, filesCount: files?.length || 0 });
+    
+    // Build request body with ALL parameters
+    const requestBody = { 
+        prompt: finalPrompt,
+        apiKey, 
+        provider: window.currentProvider,
+        numSlides,
+        generateImages,
+        numImagesToGenerate,
+        extractColors,
+        useAsTemplate,
+        stream: true
+    };
+    
+    // Handle file uploads if present
+    let formData = null;
+    if (files && files.length > 0) {
+        formData = new FormData();
+        formData.append('prompt', finalPrompt);
+        formData.append('apiKey', apiKey);
+        formData.append('provider', window.currentProvider);
+        formData.append('numSlides', numSlides);
+        formData.append('generateImages', generateImages);
+        formData.append('numImagesToGenerate', numImagesToGenerate);
+        formData.append('extractColors', extractColors);
+        formData.append('useAsTemplate', useAsTemplate);
+        formData.append('stream', 'true');
+        
+        Array.from(files).forEach(file => {
+            formData.append('files', file);
+        });
+    }
+    
     const response = await fetch('/api/generate-content', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            prompt, 
-            apiKey, 
-            provider: window.currentProvider,
-            numSlides,
-            generateImages,
-            numImagesToGenerate,
-            stream: true
-        })
+        headers: files && files.length > 0 ? {} : { 'Content-Type': 'application/json' },
+        body: formData || JSON.stringify(requestBody)
     });
+    
+    console.log('📡 Response received:', response.status, response.headers.get('content-type'));
     
     if (!response.ok) {
         let errorMessage = 'Content generation failed';
@@ -419,18 +467,30 @@ async function streamContentGeneration(prompt, apiKey, numSlides, generateImages
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let content = '';
+    let chunkCount = 0;
+    
+    console.log('📖 Reading stream...');
     
     while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+            console.log(`✅ Stream complete. Received ${chunkCount} chunks, ${content.length} characters total`);
+            break;
+        }
         
+        chunkCount++;
         const chunk = decoder.decode(value);
+        console.log(`📦 Chunk ${chunkCount}: ${chunk.length} bytes`);
+        
         const lines = chunk.split('\n');
         
         for (const line of lines) {
             if (line.startsWith('data: ')) {
                 const data = line.slice(6);
-                if (data === '[DONE]') continue;
+                if (data === '[DONE]') {
+                    console.log('✅ Received [DONE] marker');
+                    continue;
+                }
                 
                 try {
                     const parsed = JSON.parse(data);
@@ -438,37 +498,62 @@ async function streamContentGeneration(prompt, apiKey, numSlides, generateImages
                         content += parsed.text;
                         textInput.value = content;
                         textInput.scrollTop = textInput.scrollHeight;
+                        console.log(`✍️ Updated textarea: ${content.length} chars`);
                     }
                 } catch (e) {
-                    // Skip invalid JSON
+                    console.warn('⚠️ Failed to parse SSE data:', line.substring(0, 100));
                 }
             }
         }
     }
+    
+    console.log('✅ Streaming content generation complete');
 }
 
 /**
  * Non-streaming content generation (all providers)
- * @param {string} prompt - User prompt
- * @param {string} apiKey - API key
- * @param {number} numSlides - Number of slides
- * @param {boolean} generateImages - Include images
- * @param {number} numImagesToGenerate - Number of images to generate
- * @param {HTMLElement} textInput - Textarea element to update
+ * @param {object} params - All parameters including prompt, apiKey, numSlides, etc.
  */
-async function nonStreamingContentGeneration(prompt, apiKey, numSlides, generateImages, numImagesToGenerate, textInput) {
+async function nonStreamingContentGeneration({ finalPrompt, apiKey, numSlides, generateImages, numImagesToGenerate, extractColors, useAsTemplate, files, textInput }) {
+    console.log('📋 Non-streaming content generation');
+    console.log('  Options:', { numSlides, generateImages, extractColors, useAsTemplate, filesCount: files?.length || 0 });
+    
+    // Build request body with ALL parameters
+    const requestBody = { 
+        prompt: finalPrompt,
+        apiKey, 
+        provider: window.currentProvider,
+        numSlides,
+        generateImages,
+        numImagesToGenerate,
+        extractColors,
+        useAsTemplate,
+        stream: false
+    };
+    
+    // Handle file uploads if present
+    let formData = null;
+    if (files && files.length > 0) {
+        formData = new FormData();
+        formData.append('prompt', finalPrompt);
+        formData.append('apiKey', apiKey);
+        formData.append('provider', window.currentProvider);
+        formData.append('numSlides', numSlides);
+        formData.append('generateImages', generateImages);
+        formData.append('numImagesToGenerate', numImagesToGenerate);
+        formData.append('extractColors', extractColors);
+        formData.append('useAsTemplate', useAsTemplate);
+        formData.append('stream', 'false');
+        
+        Array.from(files).forEach(file => {
+            formData.append('files', file);
+        });
+    }
+    
     const response = await fetch('/api/generate-content', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            prompt, 
-            apiKey, 
-            provider: window.currentProvider,
-            numSlides,
-            generateImages,
-            numImagesToGenerate,
-            stream: false
-        })
+        headers: files && files.length > 0 ? {} : { 'Content-Type': 'application/json' },
+        body: formData || JSON.stringify(requestBody)
     });
     
     if (!response.ok) {

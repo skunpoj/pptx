@@ -143,17 +143,34 @@ function applyVariables(template, variables) {
  * @param {string} userPrompt - User's input prompt
  * @param {number} numSlides - Number of slides
  * @param {boolean} generateImages - Whether to include image instructions
+ * @param {object} options - Additional options (extractColors, useAsTemplate)
  * @returns {Promise<string>} - Complete AI prompt
  */
-async function getContentGenerationPrompt(userPrompt, numSlides, generateImages = false) {
+async function getContentGenerationPrompt(userPrompt, numSlides, generateImages = false, options = {}) {
+    const { extractColors = false, useAsTemplate = false } = options;
+    
+    console.log('📝 Building content generation prompt');
+    console.log('  Options:', { numSlides, generateImages, extractColors, useAsTemplate });
+    
     const promptConfig = await getPrompt('contentGeneration');
     const imagePrompt = generateImages ? await getPrompt('imageGenerationInstructions') : null;
+    
+    // Build additional instructions based on checkbox selections
+    let additionalInstructions = '';
+    
+    if (extractColors) {
+        additionalInstructions += '\n7. If files are provided, suggest a color theme based on the file content or file type.';
+    }
+    
+    if (useAsTemplate) {
+        additionalInstructions += '\n8. If a PowerPoint file (PPTX) is provided, use its structure and formatting as a template but incorporate new content from the user prompt and uploaded files.';
+    }
     
     const variables = {
         numSlides: numSlides,
         numContentSlides: numSlides - 1,
         userPrompt: userPrompt,
-        imageInstructions: imagePrompt ? imagePrompt.template : ''
+        imageInstructions: (imagePrompt ? imagePrompt.template : '') + additionalInstructions
     };
     
     return applyVariables(promptConfig.template, variables);

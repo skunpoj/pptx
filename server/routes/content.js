@@ -6,21 +6,41 @@ const { getContentGenerationPrompt } = require('../utils/promptManager');
 
 // Content generation endpoint with streaming support
 router.post('/generate-content', async (req, res) => {
-    const { prompt, apiKey, provider = 'anthropic', numSlides = 6, generateImages = false, stream = false } = req.body;
+    // Extract parameters from both JSON body and FormData (for file uploads)
+    const { prompt, apiKey, provider = 'anthropic', numSlides = 6, generateImages = false, 
+            extractColors = false, useAsTemplate = false, stream = false } = req.body;
+    
+    console.log('📝 Content generation request received');
+    console.log('  Options:', { 
+        numSlides, 
+        generateImages, 
+        extractColors, 
+        useAsTemplate, 
+        stream, 
+        provider,
+        hasFiles: !!req.files
+    });
     
     if (!prompt || !apiKey) {
         return res.status(400).json({ error: 'Prompt and API key are required' });
     }
     
     try {
-        // Get prompt from config/prompts.json (no hardcoding!)
-        const userPrompt = await getContentGenerationPrompt(prompt, numSlides, generateImages);
+        // Get prompt from config/prompts.json - pass ALL options including checkboxes
+        const userPrompt = await getContentGenerationPrompt(prompt, numSlides, generateImages, {
+            extractColors,
+            useAsTemplate
+        });
+        
+        console.log('✅ Generated prompt with all user selections applied');
 
         // For streaming, use Anthropic's streaming API
         if (stream && provider === 'anthropic') {
+            console.log('📡 Setting up streaming response for content generation');
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no'); // Critical! Disable nginx buffering
             
             const response = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
@@ -49,11 +69,17 @@ router.post('/generate-content', async (req, res) => {
             const decoder = new TextDecoder();
 
             try {
+                console.log('📡 Starting Anthropic streaming for content generation...');
+                
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done) break;
+                    if (done) {
+                        console.log('✅ Anthropic stream complete');
+                        break;
+                    }
 
                     const chunk = decoder.decode(value);
+                    console.log(`📦 Received ${chunk.length} bytes from Anthropic`);
                     const lines = chunk.split('\n');
 
                     for (const line of lines) {
@@ -65,6 +91,9 @@ router.post('/generate-content', async (req, res) => {
                                 const parsed = JSON.parse(data);
                                 if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
                                     res.write(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`);
+                                    
+                                    // CRITICAL: Flush after each write to prevent buffering!
+                                    if (res.flush) res.flush();
                                 }
                             } catch (e) {
                                 // Skip invalid JSON
