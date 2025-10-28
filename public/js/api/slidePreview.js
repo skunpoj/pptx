@@ -324,12 +324,35 @@ async function generatePreview() {
                 savePreviewCache(text, slideData);
                 window.currentSlideData = slideData;
                 
+                // Stop spinner and show completion
+                const statusBar = document.getElementById('statusBar');
+                if (statusBar) {
+                    statusBar.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    const spinnerContainer = statusBar.querySelector('.spinner');
+                    if (spinnerContainer && spinnerContainer.parentElement) {
+                        spinnerContainer.parentElement.innerHTML = '<div style="font-size: 2.5rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">✅</div>';
+                    }
+                }
+                
+                // Update all status indicators to complete
+                const aiStatus = document.getElementById('aiStatus');
+                const progressBar = document.getElementById('progressBar');
+                const progressPercent = document.getElementById('progressPercent');
+                const countdownEl = document.getElementById('countdown');
+                
+                if (aiStatus) aiStatus.textContent = `✅ Complete! ${slideData.slides.length} slides rendered`;
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressPercent) progressPercent.textContent = '100%';
+                if (countdownEl) countdownEl.textContent = '✅ Done';
+                
                 // Hide initial progress indicator
                 hidePreviewProgress();
                 
-                // Show generation button (no modify section anymore)
-                const generationSection = document.getElementById('generationSection');
-                if (generationSection) generationSection.style.display = 'block';
+                // Show generation button
+                const modificationSection = document.getElementById('modificationSection');
+                const generatePptSection = document.getElementById('generatePptSection');
+                if (modificationSection) modificationSection.style.display = 'block';
+                if (generatePptSection) generatePptSection.style.display = 'block';
                 
                 if (typeof showNotification === 'function') {
                     showNotification('✅ Preview generated successfully!', 'success');
@@ -364,6 +387,17 @@ async function generatePreview() {
                 savePreviewCache(text, slideData);
                 window.currentSlideData = slideData;
                 displayPreview(slideData);
+                
+                // Stop spinner and show completion (for non-streaming mode)
+                const statusBar = document.getElementById('statusBar');
+                if (statusBar) {
+                    statusBar.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    const spinnerContainer = statusBar.querySelector('.spinner');
+                    if (spinnerContainer && spinnerContainer.parentElement) {
+                        spinnerContainer.parentElement.innerHTML = '<div style="font-size: 2.5rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">✅</div>';
+                    }
+                }
+                
                 hidePreviewProgress();
                 
                 if (typeof showNotification === 'function') {
@@ -385,6 +419,15 @@ async function generatePreview() {
         // Cleanup all progress indicators
         if (window.cleanupPreviewProgress) {
             window.cleanupPreviewProgress();
+        }
+        
+        // Stop spinner on error
+        const statusBar = document.getElementById('statusBar');
+        if (statusBar) {
+            const spinnerContainer = statusBar.querySelector('.spinner');
+            if (spinnerContainer && spinnerContainer.parentElement) {
+                spinnerContainer.parentElement.innerHTML = '<div style="font-size: 2.5rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">❌</div>';
+            }
         }
         
         // Get detailed error message
@@ -420,6 +463,11 @@ async function generatePreview() {
         // Restore button state
         previewBtn.textContent = originalText;
         previewBtn.disabled = false;
+        
+        // Final cleanup to ensure spinner is stopped
+        if (window.cleanupPreviewProgress) {
+            window.cleanupPreviewProgress();
+        }
     }
 }
 
@@ -525,9 +573,8 @@ async function handleIncrementalStream(response) {
     
     appendStreamingText('🚀 Stream connection established\n', 'info');
     appendStreamingText(`⏰ Started: ${new Date().toLocaleTimeString()}\n`, 'info');
-    appendStreamingText('⚡ Waiting for AI to generate slides...\n\n', 'info');
-    appendStreamingText('ℹ️  NOTE: AI generates all slides first, then sends them.\n');
-    appendStreamingText('   You\'ll see them arrive rapidly once generation completes.\n\n');
+    appendStreamingText('⚡ LIVE STREAMING from AI...\n', 'info');
+    appendStreamingText('📡 Receiving JSON as it\'s being generated...\n\n', 'info');
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -553,6 +600,35 @@ async function handleIncrementalStream(response) {
                 appendStreamingText(`⏱️ Total duration: ${(duration/1000).toFixed(2)}s\n`);
                 appendStreamingText(`📊 Total data received: ${buffer.length} bytes\n`);
                 appendStreamingText('═'.repeat(50) + '\n');
+                
+                // Stop spinner when stream closes
+                const statusBar = document.getElementById('statusBar');
+                if (statusBar) {
+                    statusBar.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    const spinnerContainer = statusBar.querySelector('.spinner');
+                    if (spinnerContainer && spinnerContainer.parentElement) {
+                        spinnerContainer.parentElement.innerHTML = '<div style="font-size: 2.5rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">✅</div>';
+                    }
+                }
+                
+                // Update status text
+                const aiStatus = document.getElementById('aiStatus');
+                const progressBar = document.getElementById('progressBar');
+                const progressPercent = document.getElementById('progressPercent');
+                const countdownEl = document.getElementById('countdown');
+                
+                if (aiStatus && !aiStatus.textContent.includes('Complete')) {
+                    aiStatus.textContent = `✅ Stream complete!`;
+                }
+                if (progressBar && progressBar.style.width !== '100%') {
+                    progressBar.style.width = '100%';
+                }
+                if (progressPercent && progressPercent.textContent !== '100%') {
+                    progressPercent.textContent = '100%';
+                }
+                if (countdownEl) {
+                    countdownEl.textContent = '✅ Done';
+                }
                 
                 // Keep streaming box visible for user review (no auto-collapse)
                 // User can manually collapse by clicking header
@@ -597,8 +673,22 @@ async function handleIncrementalStream(response) {
                     try {
                         const data = JSON.parse(jsonStr);
                         
+                        // RAW TEXT EVENT - Show streaming JSON generation (TRUE STREAMING!)
+                        if (data.type === 'raw_text') {
+                            // This is the actual AI generating JSON in real-time!
+                            // Show it in the streaming box character by character
+                            const rawSpan = document.createElement('span');
+                            rawSpan.style.color = '#8b949e';
+                            rawSpan.textContent = data.text;
+                            const textBox = document.getElementById('streamingTextBox');
+                            if (textBox) {
+                                textBox.appendChild(rawSpan);
+                                textBox.scrollTop = textBox.scrollHeight;
+                            }
+                        }
+                        
                         // THEME EVENT - Show theme header immediately
-                        if (data.type === 'theme') {
+                        else if (data.type === 'theme') {
                             theme = data.theme;
                             totalSlides = data.totalSlides;
                             console.log(`🎨 Theme received: ${theme.name} (${totalSlides} slides)`);
@@ -720,9 +810,15 @@ async function handleIncrementalStream(response) {
                             if (aiStatus) aiStatus.textContent = `✅ Complete! ${totalSlides} slides rendered`;
                             if (countdownEl) countdownEl.textContent = '✅ Done';
                             
-                            // Change status bar to success style
+                            // Stop the spinner and change status bar to success style
                             if (statusBar) {
                                 statusBar.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                                
+                                // Remove spinner, replace with success icon
+                                const spinnerContainer = statusBar.querySelector('.spinner');
+                                if (spinnerContainer && spinnerContainer.parentElement) {
+                                    spinnerContainer.parentElement.innerHTML = '<div style="font-size: 2.5rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">✅</div>';
+                                }
                             }
                             
                             // Add final streaming message
@@ -763,6 +859,20 @@ async function handleIncrementalStream(response) {
         }
     } finally {
         reader.releaseLock();
+        
+        // Ensure spinner stops and status updates
+        const statusBar = document.getElementById('statusBar');
+        if (statusBar) {
+            const spinnerContainer = statusBar.querySelector('.spinner');
+            if (spinnerContainer && spinnerContainer.parentElement) {
+                spinnerContainer.parentElement.innerHTML = '<div style="font-size: 2.5rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">✅</div>';
+            }
+        }
+        
+        // Cleanup timers
+        if (window.cleanupPreviewProgress) {
+            window.cleanupPreviewProgress();
+        }
     }
     
     // Return complete slideData object

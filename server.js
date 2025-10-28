@@ -468,14 +468,182 @@ app.post('/api/preview', async (req, res) => {
         console.log('  Incremental:', incremental);
         console.log('  Requested slides:', numSlides || 'AI decides');
         
-        // INCREMENTAL MODE: Generate slides ONE BY ONE
-        if (incremental && (provider === 'anthropic' || provider === 'bedrock')) {
-            console.log('🔄 Starting incremental slide generation...');
+        // INCREMENTAL MODE: TRUE STREAMING from AI
+        if (incremental && provider === 'anthropic') {
+            console.log('🔄 Starting TRUE STREAMING slide generation with Anthropic...');
             
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
             res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering for SSE
+            
+            // Get the prompt
+            const themePrompt = await getSlideDesignPrompt(text, numSlides);
+            
+            // Call Anthropic's STREAMING API (like content generation!)
+            console.log('📡 Calling Anthropic streaming API...');
+            const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey.trim(),
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 16000,
+                    stream: true,  // ← REAL STREAMING!
+                    messages: [{
+                        role: "user",
+                        content: themePrompt
+                    }]
+                })
+            });
+
+            if (!anthropicResponse.ok) {
+                const errorData = await anthropicResponse.json().catch(() => ({}));
+                throw new Error(errorData.error?.message || `Anthropic API Error: ${anthropicResponse.status}`);
+            }
+
+            const reader = anthropicResponse.body.getReader();
+            const decoder = new TextDecoder();
+            
+            let jsonBuffer = '';
+            let streamedText = '';
+            let themeSent = false;
+            let slidesSent = 0;
+            
+            console.log('📡 Streaming started, forwarding chunks to client...');
+            
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        console.log('✅ Anthropic stream completed');
+                        break;
+                    }
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') continue;
+                            
+                            try {
+                                const parsed = JSON.parse(data);
+                                
+                                // Extract text from Anthropic's streaming format
+                                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                    const text = parsed.delta.text;
+                                    streamedText += text;
+                                    jsonBuffer += text;
+                                    
+                                    // Send raw text to client for debugging
+                                    res.write(`data: ${JSON.stringify({ 
+                                        type: 'raw_text',
+                                        text: text,
+                                        timestamp: Date.now()
+                                    })}\n\n`);
+                                    if (res.flush) res.flush();
+                                    
+                                    // Try to parse and extract theme if we haven't sent it yet
+                                    if (!themeSent && jsonBuffer.includes('"designTheme"')) {
+                                        try {
+                                            const themeMatch = jsonBuffer.match(/"designTheme"\s*:\s*\{[^}]+\}/);
+                                            if (themeMatch) {
+                                                const fullData = parseAIResponse(jsonBuffer);
+                                                if (fullData.designTheme) {
+                                                    console.log(`  🎨 Theme extracted: ${fullData.designTheme.name}`);
+                                                    res.write(`data: ${JSON.stringify({ 
+                                                        type: 'theme',
+                                                        theme: fullData.designTheme,
+                                                        suggestedThemeKey: fullData.suggestedThemeKey,
+                                                        totalSlides: fullData.slides?.length || 0
+                                                    })}\n\n`);
+                                                    if (res.flush) res.flush();
+                                                    themeSent = true;
+                                                }
+                                            }
+                                        } catch (e) {
+                                            // Not ready yet
+                                        }
+                                    }
+                                    
+                                    // Try to extract complete slides as they arrive
+                                    if (themeSent) {
+                                        try {
+                                            const fullData = parseAIResponse(jsonBuffer);
+                                            if (fullData.slides && fullData.slides.length > slidesSent) {
+                                                // Send any new slides
+                                                for (let i = slidesSent; i < fullData.slides.length; i++) {
+                                                    const slide = fullData.slides[i];
+                                                    console.log(`  ✓ Slide ${i + 1} extracted, sending to client: ${slide.title}`);
+                                                    
+                                                    res.write(`data: ${JSON.stringify({ 
+                                                        type: 'slide', 
+                                                        slide: slide,
+                                                        index: i,
+                                                        current: i + 1,
+                                                        total: fullData.slides.length
+                                                    })}\n\n`);
+                                                    if (res.flush) res.flush();
+                                                    slidesSent++;
+                                                }
+                                            }
+                                        } catch (e) {
+                                            // JSON not complete yet
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON
+                            }
+                        }
+                    }
+                }
+                
+                // Parse final complete JSON
+                console.log('📊 Parsing final complete JSON...');
+                const fullData = parseAIResponse(streamedText);
+                
+                // Send any remaining slides
+                if (fullData.slides && fullData.slides.length > slidesSent) {
+                    console.log(`  📤 Sending remaining ${fullData.slides.length - slidesSent} slides...`);
+                    for (let i = slidesSent; i < fullData.slides.length; i++) {
+                        const slide = fullData.slides[i];
+                        console.log(`  ✓ Final slide ${i + 1}: ${slide.title}`);
+                        
+                        res.write(`data: ${JSON.stringify({ 
+                            type: 'slide', 
+                            slide: slide,
+                            index: i,
+                            current: i + 1,
+                            total: fullData.slides.length
+                        })}\n\n`);
+                        if (res.flush) res.flush();
+                    }
+                }
+                
+                // Send completion
+                console.log(`✅ All ${fullData.slides.length} slides sent via TRUE STREAMING`);
+                res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
+                res.write('data: [DONE]\n\n');
+                res.end();
+                
+            } catch (streamError) {
+                console.error('❌ Stream error:', streamError);
+                throw streamError;
+            }
+            
+        } else if (incremental && provider === 'bedrock') {
+            console.log('🔄 Starting slide generation with Bedrock (buffered mode)...');
+            
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
+            res.setHeader('X-Accel-Buffering', 'no');
             
             // Get theme suggestion first - pass numSlides
             const themePrompt = await getSlideDesignPrompt(text, numSlides);
@@ -486,7 +654,7 @@ app.post('/api/preview', async (req, res) => {
             const theme = fullData.designTheme;
             const suggestedThemeKey = fullData.suggestedThemeKey;
             
-            console.log(`  📝 Will generate ${totalSlides} slides incrementally`);
+            console.log(`  📝 Generated ${totalSlides} slides (buffered)`);
             console.log(`  🎨 Theme: ${theme.name}`);
             
             // Send theme info first

@@ -542,8 +542,9 @@ function showVerifiedShareLink(shareUrl, shareId, expiresIn) {
             <a 
                 href="/view-pdf/${window.currentSessionId}" 
                 target="_blank"
-                style="padding: 0.6rem 0.8rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.85rem; white-space: nowrap;"
-            >📄 PDF</a>
+                id="pdfButtonIndex"
+                style="padding: 0.6rem 0.8rem; background: #999; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.85rem; white-space: nowrap; opacity: 0.6; pointer-events: none;"
+            >⏳ PDF...</a>
         </div>
         <p style="margin: 0.75rem 0 0 0; font-size: 0.75rem; color: #666;">
             ✅ All links verified and ready • Link expires in ${expiresIn}
@@ -553,10 +554,100 @@ function showVerifiedShareLink(shareUrl, shareId, expiresIn) {
     successCard.innerHTML = html;
     resultsCard.appendChild(successCard);
     
+    console.log('✅ Share link interface displayed');
+    
+    // Start automatic PDF availability checking for the orange PDF button in index.html
+    if (window.currentSessionId) {
+        startAutoPDFCheckForIndex(window.currentSessionId);
+    }
+    
     // Scroll to show
     setTimeout(() => {
         successCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
+}
+
+/**
+ * Automatically check PDF availability and enable orange PDF button (for index.html)
+ */
+async function startAutoPDFCheckForIndex(sessionId) {
+    const pdfButton = document.getElementById('pdfButtonIndex');
+    if (!pdfButton) {
+        console.log('⏳ PDF button not found in index.html');
+        return;
+    }
+    
+    const pdfUrl = `/view-pdf/${sessionId}`;
+    let attempts = 0;
+    const maxAttempts = 60; // Check for up to 60 seconds
+    
+    console.log('⏳ Starting automatic PDF check for index.html orange button...');
+    
+    const checkInterval = setInterval(async () => {
+        attempts++;
+        
+        try {
+            // Check if PDF is ready with HEAD request (lightweight)
+            const response = await fetch(pdfUrl, { method: 'HEAD' });
+            
+            if (response.ok) {
+                // ✅ PDF IS READY!
+                clearInterval(checkInterval);
+                
+                console.log(`✅ PDF ready for index.html after ${attempts} checks (${attempts} seconds)`);
+                
+                // Update button to enabled state - ORANGE color
+                pdfButton.textContent = '📄 PDF';
+                pdfButton.style.background = '#e67e22'; // Orange
+                pdfButton.style.opacity = '1';
+                pdfButton.style.pointerEvents = 'auto';
+                pdfButton.style.cursor = 'pointer';
+                
+                // Make it clickable - opens in new window
+                pdfButton.onclick = (e) => {
+                    e.preventDefault();
+                    window.open(pdfUrl, '_blank');
+                    console.log('✅ PDF opened in new window from index.html');
+                };
+                
+                return;
+            }
+        } catch (error) {
+            // PDF not ready yet, continue checking
+            if (attempts % 10 === 0) {
+                console.log(`⏳ PDF check ${attempts}/${maxAttempts} - still generating...`);
+            }
+        }
+        
+        // Update button text to show progress every 10 seconds
+        if (attempts % 10 === 0) {
+            pdfButton.textContent = `⏳ ${attempts}s`;
+        }
+        
+        // Timeout after max attempts
+        if (attempts >= maxAttempts) {
+            clearInterval(checkInterval);
+            console.warn('⚠️ PDF not ready after 60 seconds in index.html');
+            
+            // Change to manual trigger with yellow background
+            pdfButton.textContent = '🔄 PDF';
+            pdfButton.style.background = '#ffc107'; // Yellow
+            pdfButton.style.opacity = '1';
+            pdfButton.style.pointerEvents = 'auto';
+            pdfButton.onclick = (e) => {
+                e.preventDefault();
+                // Try to generate and open
+                fetch(`/api/convert-to-pdf/${sessionId}`, { method: 'POST' })
+                    .then(() => {
+                        alert('PDF generation started. Opening in 3 seconds...');
+                        setTimeout(() => window.open(pdfUrl, '_blank'), 3000);
+                    })
+                    .catch(err => {
+                        alert('❌ PDF generation failed. LibreOffice may not be installed.');
+                    });
+            };
+        }
+    }, 1000); // Check every second
 }
 
 /**

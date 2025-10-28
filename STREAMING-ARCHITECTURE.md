@@ -313,22 +313,36 @@ function extractCompleteSlides(jsonBuffer) {
 
 ## Current Status
 
-### ✅ What We Have Now:
-- Incremental rendering on client (slides appear one-by-one)
-- SSE streaming infrastructure in place
-- Live code stream showing each slide event
+### ✅ What We Have Now (IMPLEMENTED TRUE STREAMING!):
+- **TRUE STREAMING for Anthropic provider** - AI generates JSON and we forward it character-by-character!
+- Live code stream shows AI generating JSON in real-time
+- Incremental slide extraction and rendering as JSON completes
+- SSE streaming infrastructure fully functional
 - Progress tracking and visual feedback
+- Raw text events showing JSON being built
 
-### ❌ What's Missing for True Streaming:
-- Server waits for AI to generate ALL slides before sending
-- User sees nothing during AI generation time (30-60s for 100 slides)
-- Code stream is quiet during generation
+### 🎯 How It Works Now (Anthropic):
+1. Client sends request
+2. Server calls Anthropic with `stream: true`
+3. **Anthropic sends JSON character by character** ← REAL-TIME!
+4. Server forwards each character to client as `raw_text` events
+5. Server also parses JSON incrementally
+6. When theme is detected → sends theme event
+7. When new slides are parsed → sends slide events immediately
+8. Client shows raw JSON streaming + renders slides as they're extracted
 
-### 🔧 Quick Fix (Done):
-- Removed artificial 50ms delay between slides
-- Added debug info showing slides are buffered
+### 📊 Provider Comparison:
+- **Anthropic**: ✅ TRUE STREAMING (implemented)
+- **Bedrock**: ⚠️  Buffered mode (fallback)
+- **OpenAI/Gemini**: ⚠️  Buffered mode (not implemented yet)
+
+### 🔧 What Was Fixed:
+- Implemented Anthropic streaming API (same as content generation)
+- Added `raw_text` event type to show JSON being generated
+- Incremental JSON parsing to extract slides as they complete
+- Removed artificial delays
 - Fixed "Finalizing" status getting stuck
-- Added notice to code stream explaining the limitation
+- Added character-by-character streaming display
 
 ---
 
