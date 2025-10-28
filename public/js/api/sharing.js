@@ -38,22 +38,68 @@ async function sharePresentation() {
         console.log('✅ Share link created:', result.shareUrl);
         
         if (result.shareId && result.shareUrl) {
-            console.log('✅ Share link API response received');
+            // CRITICAL VERIFICATION: Test that the share link actually works before showing it
+            console.log('🔍 Verifying share link is accessible...');
             
-            // IMPORTANT: Notify progress tracker FIRST (pass the URL)
+            const shareId = result.shareId;
+            let verified = false;
+            let attemptCount = 0;
+            const maxAttempts = 10; // Try for up to 10 seconds
+            
+            // Keep trying until share link is accessible
+            while (!verified && attemptCount < maxAttempts) {
+                attemptCount++;
+                
+                try {
+                    const verifyResponse = await fetch(`/api/shared-presentation/${shareId}`);
+                    
+                    if (verifyResponse.ok) {
+                        const shareData = await verifyResponse.json();
+                        
+                        // Verify the data is complete and valid
+                        if (shareData.slideData && 
+                            shareData.slideData.slides && 
+                            shareData.slideData.slides.length > 0 &&
+                            shareData.sessionId) {
+                            
+                            console.log(`✅ Share link VERIFIED (attempt ${attemptCount}): ${shareData.slideData.slides.length} slides, sessionId: ${shareData.sessionId}`);
+                            verified = true;
+                            break;
+                        } else {
+                            console.log(`⏳ Share data incomplete (attempt ${attemptCount}), retrying...`);
+                        }
+                    } else {
+                        console.log(`⏳ Share link not ready yet (attempt ${attemptCount}), retrying...`);
+                    }
+                } catch (e) {
+                    console.log(`⏳ Verification attempt ${attemptCount} failed:`, e.message);
+                }
+                
+                // Wait 1 second before next attempt
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            // If not verified after all attempts, throw error
+            if (!verified) {
+                throw new Error('Share link created but not accessible after 10 attempts. Server may be slow. Please try generating again.');
+            }
+            
+            // GUARANTEED TO WORK NOW!
+            console.log('✅ Share link GUARANTEED accessible');
+            
+            // Show success notification
+            if (typeof showNotification === 'function') {
+                showNotification('✅ Shareable link verified and ready!', 'success');
+            }
+            
+            // Notify progress tracker
             if (window.onShareLinkCreated) {
                 window.onShareLinkCreated(result.shareUrl);
             }
             
-            // Show success notification
-            if (typeof showNotification === 'function') {
-                showNotification('✅ Shareable link created!', 'success');
-            }
+            // Show share link INLINE
+            showShareLinkInline(result.shareUrl, result.expiresIn);
             
-            // Show share link INLINE (but only if progress tracker didn't handle it)
-            if (!window.onShareLinkCreated) {
-                showShareLinkInline(result.shareUrl, result.expiresIn);
-            }
         } else {
             throw new Error(result.error || 'Sharing failed');
         }
@@ -61,6 +107,11 @@ async function sharePresentation() {
     } catch (error) {
         console.error('❌ Sharing failed:', error);
         console.error('   Error details:', error.message);
+        
+        // Notify progress tracker of failure
+        if (window.onShareLinkFailed) {
+            window.onShareLinkFailed(error);
+        }
         
         if (typeof showNotification === 'function') {
             showNotification('❌ Sharing failed: ' + error.message, 'error');
@@ -71,9 +122,22 @@ async function sharePresentation() {
 }
 
 /**
- * Show share link inline - replaces loading message in right card
+ * Show share link inline - DEPRECATED, replaced by showVerifiedShareLink in generation.js
+ * Kept for backward compatibility only
  */
 function showShareLinkInline(shareUrl, expiresIn) {
+    console.warn('⚠️ showShareLinkInline() called - this function is deprecated');
+    console.warn('   Use showVerifiedShareLink() instead for guaranteed loading');
+    
+    // For now, just log and do nothing
+    // The new showVerifiedShareLink() in generation.js handles everything
+    return;
+}
+
+/**
+ * OLD implementation below - DISABLED to prevent duplicate UI
+ */
+function showShareLinkInline_OLD_DISABLED(shareUrl, expiresIn) {
     // Store the share URL
     window.currentShareUrl = shareUrl;
     window.shareUrlExpiry = expiresIn;

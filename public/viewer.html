@@ -217,46 +217,25 @@
                 <div class="viewer-actions">
                     <!-- Primary Actions -->
                     <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
-                        <button class="btn btn-primary" onclick="switchViewMode('slides')" id="viewModeSlides">
-                            👁️ View Slides
-                        </button>
-                        <button class="btn btn-secondary" onclick="switchViewMode('pdf')" id="viewModePDF">
-                            📄 View PDF
-                        </button>
                         <button class="btn btn-success" onclick="downloadPresentation()">
                             📥 Download PPT
                         </button>
+                        <a class="btn btn-secondary" id="viewPDFLink" href="#" target="_blank" style="text-decoration: none;">
+                            📄 View PDF
+                        </a>
                         <button class="btn btn-secondary" onclick="copyShareLink()">
                             📋 Copy Link
                         </button>
-                        <a href="/" class="btn btn-secondary">
+                        <a href="/" class="btn btn-secondary" style="text-decoration: none;">
                             ✨ Create New
                         </a>
                     </div>
                 </div>
             </div>
             
-            <!-- Slide Viewer (default) - All slides in one page -->
+            <!-- Slide Viewer - All slides in one page -->
             <div class="slide-viewer" id="slideViewerContainer">
                 <div id="allSlidesContainer" style="display: flex; flex-direction: column; gap: 2rem;"></div>
-            </div>
-            
-            <!-- PDF Viewer (hidden by default) -->
-            <div class="slide-viewer" id="pdfViewerContainer" style="display: none;">
-                <div style="background: white; border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1rem;">
-                    <p style="margin: 0; color: #666; font-size: 1rem;">
-                        📄 PDF Preview • Use browser's built-in PDF controls to navigate and download
-                    </p>
-                </div>
-                
-                <!-- Standard HTML iframe for PDF viewing -->
-                <iframe 
-                    id="pdfFrame"
-                    type="application/pdf"
-                    width="100%" 
-                    height="600px"
-                    style="border: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); background: white;">
-                </iframe>
             </div>
         </div>
     </div>
@@ -273,25 +252,55 @@
         let presentationData = null;
         let sessionId = null;  // Store sessionId for PDF and download access
         
-        // Load shared presentation
+        // Load shared presentation with GUARANTEED retry logic
         async function loadSharedPresentation() {
-            try {
-                const response = await fetch(`/api/shared-presentation/${shareId}`);
-                
-                if (!response.ok) {
-                    throw new Error('Presentation not found or has expired');
+            const maxAttempts = 5; // Try 5 times
+            let lastError = null;
+            
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                    console.log(`📥 Loading presentation (attempt ${attempt}/${maxAttempts})...`);
+                    
+                    const response = await fetch(`/api/shared-presentation/${shareId}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Server returned ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // CRITICAL: Verify data is complete
+                    if (!data.slideData || !data.slideData.slides || data.slideData.slides.length === 0) {
+                        throw new Error('Incomplete presentation data received');
+                    }
+                    
+                    console.log(`✅ Presentation loaded successfully on attempt ${attempt}`);
+                    console.log(`   Slides: ${data.slideData.slides.length}`);
+                    console.log(`   SessionId: ${data.sessionId || 'none'}`);
+                    
+                    presentationData = data;
+                    sessionId = data.sessionId;  // Store sessionId for PDF access
+                    
+                    // Display presentation
+                    displayPresentation(data);
+                    return; // SUCCESS - exit function
+                    
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
+                    
+                    // If this is the last attempt, show error
+                    if (attempt === maxAttempts) {
+                        console.error('❌ All attempts failed:', error);
+                        showError(`Failed to load presentation after ${maxAttempts} attempts.\n\nError: ${error.message}\n\nPlease refresh the page or contact support.`);
+                        return;
+                    }
+                    
+                    // Wait before retry (exponential backoff)
+                    const waitTime = attempt * 1000; // 1s, 2s, 3s, 4s
+                    console.log(`   Waiting ${waitTime}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
                 }
-                
-                const data = await response.json();
-                presentationData = data;
-                sessionId = data.sessionId;  // Store sessionId for PDF access
-                
-                // Display presentation
-                displayPresentation(data);
-                
-            } catch (error) {
-                console.error('Load error:', error);
-                showError(error.message);
             }
         }
         
@@ -313,6 +322,25 @@
             
             // Store slide data globally
             window.currentSlideData = data.slideData;
+            
+            // Set up PDF link to open directly in new window (like in index.html)
+            const pdfLink = document.getElementById('viewPDFLink');
+            if (pdfLink && sessionId) {
+                pdfLink.href = `/view-pdf/${sessionId}`;
+                pdfLink.onclick = (e) => {
+                    e.preventDefault();
+                    openPDFInNewWindow();
+                };
+                console.log('✅ PDF link configured to open in new window:', pdfLink.href);
+            } else if (pdfLink) {
+                // No sessionId - disable the link
+                pdfLink.style.opacity = '0.5';
+                pdfLink.style.cursor = 'not-allowed';
+                pdfLink.onclick = (e) => {
+                    e.preventDefault();
+                    alert('❌ PDF not available - no session ID found.');
+                };
+            }
             
             // Display all slides
             displayAllSlides();
@@ -642,102 +670,63 @@
             }
         }
         
-        async function switchViewMode(mode) {
-            const slideViewer = document.getElementById('slideViewerContainer');
-            const pdfViewer = document.getElementById('pdfViewerContainer');
-            const slidesBtn = document.getElementById('viewModeSlides');
-            const pdfBtn = document.getElementById('viewModePDF');
+        async function openPDFInNewWindow() {
+            if (!sessionId) {
+                alert('❌ PDF not available - no session ID found.');
+                return;
+            }
             
-            if (mode === 'slides') {
-                slideViewer.style.display = 'block';
-                pdfViewer.style.display = 'none';
-                slidesBtn.className = 'btn btn-primary';
-                pdfBtn.className = 'btn btn-secondary';
-            } else if (mode === 'pdf') {
-                slideViewer.style.display = 'none';
-                pdfViewer.style.display = 'block';
-                slidesBtn.className = 'btn btn-secondary';
-                pdfBtn.className = 'btn btn-primary';
+            console.log('📄 Opening PDF in new window for session:', sessionId);
+            
+            const pdfUrl = `/view-pdf/${sessionId}`;
+            
+            try {
+                // Check if PDF exists first
+                const checkResponse = await fetch(pdfUrl, { method: 'HEAD' });
                 
-                // Load PDF in iframe using sessionId (not shareId)
-                const pdfFrame = document.getElementById('pdfFrame');
-                
-                if (!sessionId) {
-                    pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #666;">PDF not available - no session ID found.</p>';
-                    return;
-                }
-                
-                console.log('📄 Loading PDF for session:', sessionId);
-                
-                // Show loading message
-                pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #667eea;">⏳ Loading PDF...</p>';
-                
-                try {
-                    // Try to load PDF directly first (optimistic approach)
-                    const pdfUrl = `/view-pdf/${sessionId}`;
-                    
-                    // Check if PDF exists with timeout
-                    const checkResponse = await Promise.race([
-                        fetch(pdfUrl, { method: 'HEAD' }),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
-                    ]);
-                    
-                    if (checkResponse.ok) {
-                        // PDF exists, load it with cache-busting
-                        pdfFrame.src = `${pdfUrl}?t=${Date.now()}`;
-                        console.log('✅ PDF loaded successfully');
+                if (checkResponse.ok) {
+                    // PDF exists - open it directly in new window
+                    window.open(pdfUrl, '_blank');
+                    console.log('✅ PDF opened in new window');
+                } else if (checkResponse.status === 404) {
+                    // PDF doesn't exist - generate it first
+                    if (!confirm('PDF needs to be generated first. This may take up to 30 seconds.\n\nDo you want to generate it now?')) {
                         return;
                     }
                     
-                    // PDF doesn't exist, generate it
-                    console.log('⏳ PDF not found, generating...');
-                    pdfFrame.innerHTML = '<p style="padding: 2rem; text-align: center; color: #667eea;">⏳ Generating PDF... Please wait (up to 30 seconds)</p>';
+                    console.log('⏳ Generating PDF...');
                     
                     const generateResponse = await fetch(`/api/convert-to-pdf/${sessionId}`, {
                         method: 'POST'
                     });
                     
-                    if (generateResponse.ok) {
-                        console.log('✅ PDF generated successfully');
-                        
-                        // Wait for file to be written
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        
-                        // Verify it's really there
-                        const verifyResponse = await fetch(pdfUrl, { method: 'HEAD' });
-                        
-                        if (verifyResponse.ok) {
-                            // Load with cache-busting
-                            pdfFrame.src = `${pdfUrl}?t=${Date.now()}`;
-                            console.log('✅ PDF verified and loaded');
-                        } else {
-                            throw new Error('PDF generated but not accessible');
-                        }
-                    } else {
+                    if (!generateResponse.ok) {
                         const errorData = await generateResponse.json();
-                        throw new Error(errorData.error || errorData.message || 'PDF generation failed');
+                        throw new Error(errorData.error || 'PDF generation failed');
                     }
                     
-                } catch (error) {
-                    console.error('PDF loading error:', error);
-                    pdfFrame.innerHTML = `
-                        <div style="padding: 2rem; text-align: center; color: #dc2626;">
-                            <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
-                            <h3 style="margin: 0 0 0.5rem 0;">PDF Not Available</h3>
-                            <p style="margin: 0; font-size: 0.9rem;">${error.message}</p>
-                            <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #666;">
-                                This may happen if LibreOffice is not installed on the server.<br>
-                                Try clicking "View PDF" button again, or download the PowerPoint file instead.
-                            </p>
-                            <button 
-                                onclick="switchViewMode('pdf')" 
-                                style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                            >
-                                🔄 Retry PDF Load
-                            </button>
-                        </div>
-                    `;
+                    console.log('⏳ Waiting for PDF to be written...');
+                    
+                    // Wait for file to be fully written
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Verify it's accessible
+                    const verifyResponse = await fetch(pdfUrl, { method: 'HEAD' });
+                    
+                    if (verifyResponse.ok) {
+                        // Open in new window
+                        window.open(pdfUrl, '_blank');
+                        console.log('✅ PDF generated and opened in new window');
+                    } else {
+                        throw new Error('PDF generated but not accessible. Please try again.');
+                    }
+                } else {
+                    throw new Error(`Unexpected response: ${checkResponse.status}`);
                 }
+                
+            } catch (error) {
+                console.error('PDF error:', error);
+                alert('❌ PDF Error: ' + error.message + '\n\nLibreOffice may not be installed on the server. You can download the PowerPoint file instead.');
             }
         }
         

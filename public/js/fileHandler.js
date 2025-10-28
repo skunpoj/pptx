@@ -210,16 +210,24 @@ async function extractColorsFromFiles(files) {
 /**
  * Generates presentation content from prompt and/or uploaded files
  * Main orchestrator function for content expansion
+ * 
+ * Parameters sent to backend:
+ * - numSlides: Controls how many slides the AI generates
+ * - numImagesToGenerate: Controls how many image placeholders AI adds to content
+ * - generateImages: Whether to include image descriptions at all
  */
 async function generateFromPrompt() {
     const prompt = document.getElementById('ideaInput').value.trim();
     const numSlides = parseInt(document.getElementById('numSlides').value) || 6;
     const generateImages = document.getElementById('generateImages').checked;
+    const numImagesToGenerate = parseInt(document.getElementById('numImagesToGenerate')?.value) || 3;
     const extractColors = document.getElementById('extractColors').checked;
     const useAsTemplate = document.getElementById('useAsTemplate').checked;
     const apiKey = window.getApiKey();
     const fileInput = document.getElementById('fileUpload');
     const files = fileInput.files;
+    
+    console.log(`📊 Generation parameters: ${numSlides} slides, ${numImagesToGenerate} images, generateImages: ${generateImages}`);
     
     // Validation
     if (!apiKey) {
@@ -345,9 +353,9 @@ async function generateFromPrompt() {
         
         // Call API with streaming or non-streaming based on provider
         if (window.currentProvider === 'anthropic' && files.length === 0) {
-            await streamContentGeneration(finalPrompt, apiKey, numSlides, generateImages, textInput);
+            await streamContentGeneration(finalPrompt, apiKey, numSlides, generateImages, numImagesToGenerate, textInput);
         } else {
-            await nonStreamingContentGeneration(finalPrompt, apiKey, numSlides, generateImages, textInput);
+            await nonStreamingContentGeneration(finalPrompt, apiKey, numSlides, generateImages, numImagesToGenerate, textInput);
         }
         
         window.showStatus('✅ Content expanded successfully! Review it below, then click "Preview Slides" to see the design.', 'success');
@@ -372,9 +380,10 @@ async function generateFromPrompt() {
  * @param {string} apiKey - API key
  * @param {number} numSlides - Number of slides
  * @param {boolean} generateImages - Include images
+ * @param {number} numImagesToGenerate - Number of images to generate
  * @param {HTMLElement} textInput - Textarea element to update
  */
-async function streamContentGeneration(prompt, apiKey, numSlides, generateImages, textInput) {
+async function streamContentGeneration(prompt, apiKey, numSlides, generateImages, numImagesToGenerate, textInput) {
     const response = await fetch('/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -384,6 +393,7 @@ async function streamContentGeneration(prompt, apiKey, numSlides, generateImages
             provider: window.currentProvider,
             numSlides,
             generateImages,
+            numImagesToGenerate,
             stream: true
         })
     });
@@ -443,9 +453,10 @@ async function streamContentGeneration(prompt, apiKey, numSlides, generateImages
  * @param {string} apiKey - API key
  * @param {number} numSlides - Number of slides
  * @param {boolean} generateImages - Include images
+ * @param {number} numImagesToGenerate - Number of images to generate
  * @param {HTMLElement} textInput - Textarea element to update
  */
-async function nonStreamingContentGeneration(prompt, apiKey, numSlides, generateImages, textInput) {
+async function nonStreamingContentGeneration(prompt, apiKey, numSlides, generateImages, numImagesToGenerate, textInput) {
     const response = await fetch('/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -455,6 +466,7 @@ async function nonStreamingContentGeneration(prompt, apiKey, numSlides, generate
             provider: window.currentProvider,
             numSlides,
             generateImages,
+            numImagesToGenerate,
             stream: false
         })
     });

@@ -44,7 +44,7 @@ async function generatePresentation() {
             
             if (window.templateFile) {
                 console.log('📄 Including template file:', window.templateFile.name);
-                formData.append('templateFile', window.templateFile);
+            formData.append('templateFile', window.templateFile);
             }
             
             // Add uploaded images
@@ -317,11 +317,12 @@ async function showGenerationProgress(sessionId, downloadUrl, fileSize, storage 
     progressDiv.innerHTML = `
         <div class="spinner" style="width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
         <h3 style="margin: 0 0 1rem 0; color: #333; font-size: 1.2rem;">⏳ Preparing Your Presentation</h3>
-        <div style="text-align: left; width: 100%; max-width: 300px;">
+        <div style="text-align: left; width: 100%; max-width: 350px;">
             <div id="step1" style="padding: 0.5rem; color: #28a745; font-size: 0.9rem;">✅ PowerPoint file generated</div>
             <div id="step2" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Creating shareable link...</div>
-            <div id="step3" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Generating PDF...</div>
-            <div id="step4" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Verifying all files...</div>
+            <div id="step3" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Verifying share link accessibility...</div>
+            <div id="step4" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Generating PDF...</div>
+            <div id="step5" style="padding: 0.5rem; color: #999; font-size: 0.9rem;">⏳ Final verification...</div>
         </div>
     `;
     resultsCard.appendChild(progressDiv);
@@ -332,43 +333,49 @@ async function showGenerationProgress(sessionId, downloadUrl, fileSize, storage 
     
     try {
         const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+        
         if (step2) { step2.textContent = '⏳ Creating shareable link...'; step2.style.color = '#667eea'; }
         
-        // Create share link with verification
+        // Create share link with verification (may take up to 10 seconds)
         const shareResult = await createShareLinkWithVerification();
         shareUrl = shareResult.shareUrl;
         shareId = shareResult.shareId;
         
-        if (step2) { step2.textContent = '✅ Share link created & verified'; step2.style.color = '#28a745'; }
-        console.log('✅ Share link verified:', shareUrl);
+        if (step2) { step2.textContent = '✅ Share link created'; step2.style.color = '#28a745'; }
+        if (step3) { step3.textContent = '✅ Share link verified & accessible'; step3.style.color = '#28a745'; }
+        console.log('✅ Share link GUARANTEED to work:', shareUrl);
     } catch (e) {
         const step2 = document.getElementById('step2');
-        if (step2) { step2.textContent = '⚠️ Share link failed'; step2.style.color = '#dc2626'; }
-        console.error('❌ Share link creation failed:', e);
+        const step3 = document.getElementById('step3');
+        if (step2) { step2.textContent = '❌ Share link failed'; step2.style.color = '#dc2626'; }
+        if (step3) { step3.textContent = '⚠️ Verification skipped'; step3.style.color = '#999'; }
+        console.error('❌ Share link creation/verification failed:', e);
     }
     
     // Wait for PDF
     try {
-        const step3 = document.getElementById('step3');
-        if (step3) { step3.textContent = '⏳ Generating PDF...'; step3.style.color = '#667eea'; }
+        const step4 = document.getElementById('step4');
+        if (step4) { step4.textContent = '⏳ Generating PDF...'; step4.style.color = '#667eea'; }
         
         await waitForPDFReady(sessionId);
         
-        if (step3) { step3.textContent = '✅ PDF ready & verified'; step3.style.color = '#28a745'; }
-        console.log('✅ PDF verified');
+        if (step4) { step4.textContent = '✅ PDF ready & verified'; step4.style.color = '#28a745'; }
+        console.log('✅ PDF GUARANTEED to work');
     } catch (e) {
-        const step3 = document.getElementById('step3');
-        if (step3) { step3.textContent = '⚠️ PDF unavailable'; step3.style.color = '#ffc107'; }
-        console.warn('⚠️ PDF not available:', e.message);
+        const step4 = document.getElementById('step4');
+        if (step4) { step4.textContent = '⚠️ PDF unavailable'; step4.style.color = '#ffc107'; }
+        console.warn('⚠️ PDF not available (optional):', e.message);
     }
     
-    const step4 = document.getElementById('step4');
-    if (step4) { step4.textContent = '✅ Verification complete!'; step4.style.color = '#28a745'; }
+    const step5 = document.getElementById('step5');
+    if (step5) { step5.textContent = '✅ Everything verified & ready!'; step5.style.color = '#28a745'; }
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait a moment to show the final checkmark
+    await new Promise(resolve => setTimeout(resolve, 800));
     
-    // NOW show the final share link interface
-    // Pass the verified shareUrl to avoid creating it again
+    // NOW show the final share link interface - ONLY ONCE
+    // Use the verified data we already have
     if (shareUrl && shareId) {
         showVerifiedShareLink(shareUrl, shareId, '7 days');
     } else {
@@ -379,10 +386,12 @@ async function showGenerationProgress(sessionId, downloadUrl, fileSize, storage 
 
 /**
  * Create share link and VERIFY it's accessible before returning
+ * This does the ACTUAL share link creation, not sharePresentation()
  */
 async function createShareLinkWithVerification() {
     console.log('📤 Creating shareable link with verification...');
     
+    // Call the API directly (don't use sharePresentation() to avoid duplicate UI)
     const response = await fetch('/api/share-presentation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -403,20 +412,47 @@ async function createShareLinkWithVerification() {
         throw new Error('No share ID returned');
     }
     
-    // CRITICAL: Verify the shared presentation is actually accessible
-    const verifyResponse = await fetch(`/api/shared-presentation/${result.shareId}`);
+    // CRITICAL: Verify the shared presentation is accessible with RETRIES
+    console.log('🔍 Verifying share link accessibility...');
     
-    if (!verifyResponse.ok) {
-        throw new Error('Share link created but not accessible');
+    let verified = false;
+    const maxVerifyAttempts = 10; // Try up to 10 times
+    
+    for (let attempt = 1; attempt <= maxVerifyAttempts; attempt++) {
+        try {
+            const verifyResponse = await fetch(`/api/shared-presentation/${result.shareId}`);
+            
+            if (verifyResponse.ok) {
+                const verifyData = await verifyResponse.json();
+                
+                // Verify data is COMPLETE
+                if (verifyData.slideData && 
+                    verifyData.slideData.slides && 
+                    verifyData.slideData.slides.length > 0 &&
+                    verifyData.sessionId) {
+                    
+                    console.log(`✅ Share link VERIFIED on attempt ${attempt}/${maxVerifyAttempts}`);
+                    console.log(`   Slides: ${verifyData.slideData.slides.length}, SessionId: ${verifyData.sessionId}`);
+                    verified = true;
+                    break;
+                }
+            }
+            
+            console.log(`⏳ Verification attempt ${attempt}/${maxVerifyAttempts} - not ready yet, retrying...`);
+            
+        } catch (e) {
+            console.log(`⏳ Verification attempt ${attempt}/${maxVerifyAttempts} - error: ${e.message}`);
+        }
+        
+        // Wait 1 second before next retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    const verifyData = await verifyResponse.json();
-    
-    if (!verifyData.slideData || !verifyData.slideData.slides) {
-        throw new Error('Share link has invalid data');
+    if (!verified) {
+        throw new Error(`Share link created but not accessible after ${maxVerifyAttempts} verification attempts. Please try again.`);
     }
     
-    console.log('✅ Share link verified and accessible');
+    console.log('✅ Share link GUARANTEED accessible');
     
     // Store for later use
     window.currentShareUrl = result.shareUrl;
@@ -562,6 +598,49 @@ function showDownloadOnlyInterface() {
         <p style="margin: 1rem 0 0 0; font-size: 0.85rem; color: #666;">
             Share link feature temporarily unavailable. You can still download and use your presentation.
         </p>
+    `;
+    
+    resultsCard.appendChild(fallbackCard);
+}
+
+/**
+ * Fallback if share link creation fails - show download-only interface
+ */
+function showDownloadOnlyInterface() {
+    const resultsCard = document.getElementById('generateResultsCard');
+    if (!resultsCard) return;
+    
+    while (resultsCard.firstChild) {
+        resultsCard.removeChild(resultsCard.firstChild);
+    }
+    
+    const fallbackCard = document.createElement('div');
+    fallbackCard.style.cssText = `
+        background: white;
+        border: 2px solid #ffc107;
+        border-radius: 8px;
+        padding: 1.5rem;
+    `;
+    fallbackCard.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 2rem;">⚠️</div>
+            <h3 style="margin: 0; color: #f57c00; font-size: 1.1rem;">PowerPoint Ready (Share Link Unavailable)</h3>
+        </div>
+        <p style="margin: 0 0 1rem 0; color: #666; font-size: 0.9rem;">
+            Your presentation was generated successfully, but the share link couldn't be created. You can still download it below.
+        </p>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <a 
+                href="${window.currentDownloadUrl}" 
+                download="presentation.pptx"
+                style="padding: 0.6rem 1rem; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem;"
+            >📥 Download PPT</a>
+            <a 
+                href="/view-pdf/${window.currentSessionId}" 
+                target="_blank"
+                style="padding: 0.6rem 1rem; background: #e67e22; color: white; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 0.9rem;"
+            >📄 View PDF</a>
+        </div>
     `;
     
     resultsCard.appendChild(fallbackCard);

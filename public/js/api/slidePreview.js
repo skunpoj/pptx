@@ -101,46 +101,107 @@ async function generatePreview() {
     const estimatedTime = Math.max(5, Math.min(20, Math.ceil(wordCount / 100)));
     
     preview.innerHTML = `
-        <!-- Streaming Text Box (Always Visible from Start) -->
-        <div id="streamingContainer" style="background: #1e1e1e; border: 2px solid #667eea; border-radius: 8px; margin-bottom: 1rem; text-align: left; overflow: hidden;">
-            <div style="background: #667eea; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
-                <strong style="color: white; font-size: 0.9rem;">💬 AI Response Stream (Live)</strong>
-                <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
-            </div>
-            <div id="streamingTextBox" style="max-height: 200px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #00ff00; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;">
-                <span style="opacity: 0.6;">⏳ Connecting to AI... Waiting for response stream...</span>
-            </div>
-        </div>
-        
-        <div id="streamingStatus" style="text-align: center; padding: 2rem; max-width: 600px; margin: 0 auto;">
-            <div style="position: relative; width: 80px; height: 80px; margin: 0 auto;">
-                <span class="spinner" style="width: 80px; height: 80px; border-width: 4px; border-color: #667eea; border-top-color: transparent; display: inline-block; width: 80px; height: 80px; border: 4px solid #667eea; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span>
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem;">🤖</div>
-            </div>
-            
-            <p style="margin-top: 1.5rem; color: #333; font-size: 1.2rem; font-weight: 700;">AI is Processing Your Content</p>
-            <p id="aiStatus" style="margin-top: 0.5rem; color: #667eea; font-size: 1rem; font-weight: 600;">
-                Analyzing ${wordCount} words...
-            </p>
-            
-            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #667eea; padding: 1rem; border-radius: 8px; margin: 1.5rem 0; text-align: left;">
-                <p style="margin: 0; font-size: 0.95rem; color: #555; line-height: 1.6;">
-                    <strong style="color: #667eea;">⏱️ What's happening:</strong><br>
-                    <span id="currentStep">1️⃣ Sending content to AI for analysis</span>
-                </p>
-                <div id="progressSteps" style="margin-top: 1rem; font-size: 0.85rem; color: #777; line-height: 1.8;">
-                    <div id="step1" style="opacity: 0.5;">⏳ Analyzing content structure & themes</div>
-                    <div id="step2" style="opacity: 0.5;">⏳ Determining optimal slide count</div>
-                    <div id="step3" style="opacity: 0.5;">⏳ Creating slide layout & design</div>
-                    <div id="step4" style="opacity: 0.5;">⏳ Extracting data for charts & visuals</div>
-                    <div id="step5" style="opacity: 0.5;">⏳ Rendering slide previews</div>
+        <!-- Compact Status Bar (Always Visible) -->
+        <div id="statusBar" style="position: sticky; top: 0; z-index: 100; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 1rem; color: white; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3); margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
+                <div style="position: relative; width: 40px; height: 40px; flex-shrink: 0;">
+                    <span class="spinner" style="width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite; display: block;"></span>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1rem;">🎨</div>
+                </div>
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1rem; font-weight: 700;">✨ AI Design Studio</h3>
+                            <p id="aiStatus" style="margin: 0; opacity: 0.9; font-size: 0.85rem;">Crafting ${wordCount}-word presentation...</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <div id="progressPercent" style="font-size: 1.5rem; font-weight: 700; line-height: 1;">0%</div>
+                            <div style="font-size: 0.7rem; opacity: 0.8;">⏱️ <span id="countdown">${estimatedTime}s</span></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <p id="slideCount" style="margin-top: 1rem; color: #999; font-size: 0.9rem;">
-                Estimated completion: <span id="countdown">${estimatedTime}</span> seconds
-            </p>
+            <div style="background: rgba(0,0,0,0.15); height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 0.75rem;">
+                <div id="progressBar" style="background: linear-gradient(90deg, #4ade80, #22c55e); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+            </div>
+            
+            <div id="progressSteps" style="display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.75rem;">
+                <div id="step1" style="opacity: 0.5; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>⏳</span><span>Structure</span>
+                </div>
+                <div id="step2" style="opacity: 0.5; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>⏳</span><span>Layout</span>
+                </div>
+                <div id="step3" style="opacity: 0.5; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>⏳</span><span>Design</span>
+                </div>
+                <div id="step4" style="opacity: 0.5; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>⏳</span><span>Charts</span>
+                </div>
+                <div id="step5" style="opacity: 0.5; display: flex; align-items: center; gap: 0.25rem;">
+                    <span>⏳</span><span>Rendering</span>
+                </div>
+            </div>
         </div>
+        
+        <!-- Live Code Stream (Always Visible, Collapsible) -->
+        <div id="streamingContainer" style="background: #0d1117; border: 2px solid #30363d; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-bottom: 1rem;">
+            <div style="background: linear-gradient(90deg, #238636, #2ea043); padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 8px; height: 8px; background: #4ade80; border-radius: 50%; animation: pulse 2s ease-in-out infinite;"></div>
+                    <strong style="color: white; font-size: 0.85rem;">📡 Live Code Stream</strong>
+                    <span style="font-size: 0.7rem; background: rgba(0,0,0,0.3); padding: 0.15rem 0.5rem; border-radius: 3px;">Real-time SSE</span>
+                </div>
+                <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
+            </div>
+            <div id="streamingTextBox" style="max-height: 250px; overflow-y: auto; padding: 0.75rem; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.65rem; color: #58a6ff; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; background: #0d1117;">
+                <div style="color: #8b949e; font-style: italic;">⚡ Initializing connection...</div>
+                <div style="color: #8b949e; font-style: italic;">🔌 Waiting for stream...</div>
+            </div>
+        </div>
+        
+        <!-- Slides Render Here (Incrementally, Below) -->
+        <div id="slidesContainer" style="margin-top: 1rem;">
+            <div id="slideSkeleton" style="text-align: center; padding: 2rem 1rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px dashed #0ea5e9; border-radius: 12px;">
+                <div style="font-size: 3rem; margin-bottom: 0.75rem; animation: float 3s ease-in-out infinite;">🎬</div>
+                <h3 style="color: #0369a1; margin: 0 0 0.5rem 0; font-size: 1.2rem; font-weight: 700;">Your Slides Will Appear Here</h3>
+                <p style="color: #0c4a6e; margin: 0; font-size: 0.9rem;">Watch them materialize one-by-one as AI generates them...</p>
+                <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <div style="background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); animation: slideIn 0.5s ease-out;">
+                        <div style="font-size: 1.5rem;">🎨</div>
+                        <div style="font-size: 0.75rem; color: #0369a1; font-weight: 600;">Themes</div>
+                    </div>
+                    <div style="background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); animation: slideIn 0.5s ease-out 0.1s; animation-fill-mode: both;">
+                        <div style="font-size: 1.5rem;">📊</div>
+                        <div style="font-size: 0.75rem; color: #0369a1; font-weight: 600;">Charts</div>
+                    </div>
+                    <div style="background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); animation: slideIn 0.5s ease-out 0.2s; animation-fill-mode: both;">
+                        <div style="font-size: 1.5rem;">✨</div>
+                        <div style="font-size: 0.75rem; color: #0369a1; font-weight: 600;">Layout</div>
+                    </div>
+                    <div style="background: white; padding: 0.75rem 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); animation: slideIn 0.5s ease-out 0.3s; animation-fill-mode: both;">
+                        <div style="font-size: 1.5rem;">🎯</div>
+                        <div style="font-size: 0.75rem; color: #0369a1; font-weight: 600;">Content</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <style>
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+            }
+            @keyframes slideIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.5; transform: scale(1.2); }
+            }
+        </style>
     `;
     
     // Start countdown timer
@@ -158,26 +219,30 @@ async function generatePreview() {
         }
     }, 1000);
     
-    // Simulate progress steps
+    // Simulate progress steps with progress bar updates
     const steps = [
-        { time: 1000, status: '1️⃣ AI is analyzing your content structure...', stepEl: 'step1' },
-        { time: 3000, status: '2️⃣ AI is determining optimal slide layout...', stepEl: 'step2' },
-        { time: 5000, status: '3️⃣ AI is creating slide designs...', stepEl: 'step3' },
-        { time: 7000, status: '4️⃣ AI is extracting data for visualizations...', stepEl: 'step4' }
+        { time: 1000, stepEl: 'step1', progress: 20 },
+        { time: 3000, stepEl: 'step2', progress: 40 },
+        { time: 5000, stepEl: 'step3', progress: 60 },
+        { time: 7000, stepEl: 'step4', progress: 80 }
     ];
     
     const progressTimeouts = [];
     steps.forEach(step => {
         const timeout = setTimeout(() => {
-            const currentStepEl = document.getElementById('currentStep');
             const stepEl = document.getElementById(step.stepEl);
-            if (currentStepEl) currentStepEl.textContent = step.status;
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = document.getElementById('progressPercent');
+            
             if (stepEl) {
                 stepEl.style.opacity = '1';
-                stepEl.style.color = '#667eea';
                 stepEl.style.fontWeight = '600';
-                stepEl.innerHTML = stepEl.innerHTML.replace('⏳', '✅');
+                const icon = stepEl.querySelector('span:first-child');
+                if (icon) icon.textContent = '✅';
             }
+            
+            if (progressBar) progressBar.style.width = step.progress + '%';
+            if (progressPercent) progressPercent.textContent = step.progress + '%';
         }, step.time);
         progressTimeouts.push(timeout);
     });
@@ -378,21 +443,43 @@ function toggleStreamingText() {
 }
 
 /**
- * Append text to streaming text box
+ * Append text to streaming text box with syntax highlighting
  */
-function appendStreamingText(text) {
+function appendStreamingText(text, type = 'data') {
     const textBox = document.getElementById('streamingTextBox');
     if (!textBox) {
         console.warn('⚠️ streamingTextBox not found!');
         return;
     }
     
-    // Debug log
     console.log('📝 Appending to stream:', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
     
-    // Append new text (no need to clear, handled by handleIncrementalStream)
-    const textNode = document.createTextNode(text);
-    textBox.appendChild(textNode);
+    // Color coding based on content type
+    let color = '#58a6ff'; // Default blue
+    let icon = '';
+    
+    if (text.includes('data:')) {
+        color = '#79c0ff'; // Lighter blue for data
+        icon = '📦 ';
+    } else if (text.includes('[DONE]')) {
+        color = '#3fb950'; // Green for completion
+        icon = '✅ ';
+    } else if (text.includes('"type":"theme"')) {
+        color = '#d2a8ff'; // Purple for theme
+        icon = '🎨 ';
+    } else if (text.includes('"type":"slide"')) {
+        color = '#ffa657'; // Orange for slides
+        icon = '📄 ';
+    } else if (text.includes('error') || text.includes('Error')) {
+        color = '#f85149'; // Red for errors
+        icon = '❌ ';
+    }
+    
+    // Create colored span
+    const span = document.createElement('span');
+    span.style.color = color;
+    span.textContent = icon + text;
+    textBox.appendChild(span);
     
     // Auto-scroll to bottom
     textBox.scrollTop = textBox.scrollHeight;
@@ -407,52 +494,40 @@ async function handleIncrementalStream(response) {
         throw new Error('Preview container not found');
     }
     
-    // Preserve the existing streaming container
-    let streamingContainer = document.getElementById('streamingContainer');
-    console.log('🔍 Streaming container found:', !!streamingContainer);
-    
-    if (!streamingContainer) {
-        console.error('❌ streamingContainer not found! Creating new one...');
-        // Create it if it doesn't exist
-        streamingContainer = document.createElement('div');
-        streamingContainer.id = 'streamingContainer';
-        streamingContainer.style.cssText = 'background: #1e1e1e; border: 2px solid #667eea; border-radius: 8px; margin-bottom: 1rem; text-align: left; overflow: hidden;';
-        streamingContainer.innerHTML = `
-            <div style="background: #667eea; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="window.toggleStreamingText()">
-                <strong style="color: white; font-size: 0.9rem;">💬 AI Response Stream (Live)</strong>
-                <span id="streamToggleIcon" style="color: white; font-size: 0.8rem;">▼</span>
-            </div>
-            <div id="streamingTextBox" style="max-height: 200px; overflow-y: auto; padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.75rem; color: #00ff00; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word;">
-                <span style="opacity: 0.6;">Stream starting...</span>
-            </div>
-        `;
-        previewContainer.insertBefore(streamingContainer, previewContainer.firstChild);
+    // Get the slides container (where slides will be appended)
+    const slidesContainer = document.getElementById('slidesContainer');
+    if (!slidesContainer) {
+        console.error('❌ slidesContainer not found!');
+        throw new Error('Slides container not found');
     }
     
-    // Verify streaming text box exists and ensure it's visible
-    const textBox = document.getElementById('streamingTextBox');
-    console.log('🔍 Streaming text box found:', !!textBox);
+    console.log('✅ Slides container found, slides will render here');
     
-    if (textBox) {
-        // Force it to be visible
-        textBox.style.display = 'block';
-        console.log('✅ Streaming text box display set to block');
+    // Verify streaming text box exists
+    let verifyTextBox = document.getElementById('streamingTextBox');
+    console.log('🔍 Streaming text box found:', !!verifyTextBox);
+    
+    if (verifyTextBox) {
+        verifyTextBox.style.display = 'block';
+        console.log('✅ Streaming text box is visible');
     }
     
-    // Clear everything EXCEPT the streaming container
-    const children = Array.from(previewContainer.children);
-    children.forEach(child => {
-        if (child.id !== 'streamingContainer') {
-            console.log('🗑️ Removing child:', child.id || child.className || child.tagName);
-            child.remove();
-        }
-    });
+    // Clear only the skeleton from slidesContainer
+    const skeleton = document.getElementById('slideSkeleton');
+    console.log('🔍 Skeleton placeholder found:', !!skeleton);
     
-    // Test streaming text immediately
-    console.log('🧪 Testing appendStreamingText...');
-    appendStreamingText('═══════════════════════════════════\n');
-    appendStreamingText('🔴 STREAM HANDLER STARTED\n');
-    appendStreamingText('═══════════════════════════════════\n\n');
+    // Clear initial status messages and show stream start
+    let streamTextBox = document.getElementById('streamingTextBox');
+    if (streamTextBox) {
+        streamTextBox.innerHTML = '';
+    }
+    
+    // Track stream start time
+    window.streamStartTime = Date.now();
+    
+    appendStreamingText('🚀 Stream connection established\n', 'info');
+    appendStreamingText(`⏰ Started: ${new Date().toLocaleTimeString()}\n`, 'info');
+    appendStreamingText('⚡ Receiving data in real-time...\n\n', 'info');
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -470,17 +545,17 @@ async function handleIncrementalStream(response) {
             
             if (done) {
                 console.log('📡 Stream closed');
-                appendStreamingText('\n\n✅ Stream complete!');
+                const endTime = Date.now();
+                const duration = endTime - (window.streamStartTime || endTime);
                 
-                // Auto-collapse streaming text box after 3 seconds
-                setTimeout(() => {
-                    const textBox = document.getElementById('streamingTextBox');
-                    const toggleIcon = document.getElementById('streamToggleIcon');
-                    if (textBox && toggleIcon) {
-                        textBox.style.display = 'none';
-                        toggleIcon.textContent = '▶';
-                    }
-                }, 3000);
+                appendStreamingText('\n\n' + '═'.repeat(50) + '\n');
+                appendStreamingText('✅ STREAM COMPLETE!\n');
+                appendStreamingText(`⏱️ Total duration: ${(duration/1000).toFixed(2)}s\n`);
+                appendStreamingText(`📊 Total data received: ${buffer.length} bytes\n`);
+                appendStreamingText('═'.repeat(50) + '\n');
+                
+                // Keep streaming box visible for user review (no auto-collapse)
+                // User can manually collapse by clicking header
                 
                 break;
             }
@@ -491,16 +566,19 @@ async function handleIncrementalStream(response) {
             
             console.log(`📦 Received chunk: ${chunk.length} bytes`);
             
-            // On first chunk, add a marker (don't clear - keep the connection status)
+            // On first chunk, add separator
             if (isFirstChunk) {
-                console.log('🎬 First chunk received! Adding header...');
-                appendStreamingText('\n📡 RECEIVING SSE DATA:\n');
-                appendStreamingText('─────────────────────────────\n');
+                console.log('🎬 First chunk received!');
+                const sep = document.createElement('div');
+                sep.style.cssText = 'color: #8b949e; margin: 0.5rem 0; border-top: 1px solid #30363d; padding-top: 0.5rem;';
+                sep.textContent = '─'.repeat(50);
+                const textBox = document.getElementById('streamingTextBox');
+                if (textBox) textBox.appendChild(sep);
                 isFirstChunk = false;
             }
             
-            // Show raw chunk in streaming text box
-            console.log(`✍️ Appending chunk to display...`);
+            // Show raw chunk in streaming text box with color coding
+            console.log(`✍️ Appending chunk (${chunk.length} bytes)...`);
             appendStreamingText(chunk);
             
             // Process complete lines
@@ -525,15 +603,15 @@ async function handleIncrementalStream(response) {
                             totalSlides = data.totalSlides;
                             console.log(`🎨 Theme received: ${theme.name} (${totalSlides} slides)`);
                             
-                            // Clear initial loading UI
-                            previewContainer.innerHTML = '';
-                            
-                            // Cleanup progress indicators
-                            if (window.cleanupPreviewProgress) {
-                                window.cleanupPreviewProgress();
+                            // Remove skeleton
+                            const skeleton = document.getElementById('slideSkeleton');
+                            if (skeleton) {
+                                skeleton.style.transition = 'opacity 0.3s ease';
+                                skeleton.style.opacity = '0';
+                                setTimeout(() => skeleton.remove(), 300);
                             }
                             
-                            // Show theme banner
+                            // Show theme banner in slides container
                             const themeDiv = document.createElement('div');
                             themeDiv.style.cssText = `
                                 background: linear-gradient(135deg, ${theme.colorPrimary}, ${theme.colorSecondary});
@@ -547,52 +625,73 @@ async function handleIncrementalStream(response) {
                                 <h3 style="margin: 0 0 0.5rem 0; color: white;">🎨 ${theme.name}</h3>
                                 <p style="margin: 0; opacity: 0.9;">${theme.description}</p>
                             `;
-                            previewContainer.appendChild(themeDiv);
+                            slidesContainer.appendChild(themeDiv);
                             
                             // Add progress counter
                             progressDiv = document.createElement('div');
                             progressDiv.id = 'slideProgress';
                             progressDiv.style.cssText = `
                                 background: #e3f2fd;
-                                padding: 1rem;
+                                padding: 0.75rem 1rem;
                                 border-radius: 8px;
                                 margin-bottom: 1rem;
                                 text-align: center;
                                 font-weight: bold;
                                 color: #1976d2;
-                                font-size: 1.1rem;
+                                font-size: 1rem;
                             `;
                             progressDiv.innerHTML = `⏳ Generating ${totalSlides} slides... <span id="slideProgressCount">0/${totalSlides}</span>`;
-                            previewContainer.appendChild(progressDiv);
+                            slidesContainer.appendChild(progressDiv);
                         }
                         
-                        // SLIDE EVENT - Render slide immediately as it arrives!
+                        // SLIDE EVENT - Render slide immediately as it arrives! (INCREMENTAL RENDERING)
                         else if (data.type === 'slide') {
                             slides.push(data.slide);
                             console.log(`📄 Slide ${data.current}/${data.total}: ${data.slide.title}`);
                             
-                            // Update progress counter in real-time
+                            // Update progress counter and progress bar in real-time
                             const progressCount = document.getElementById('slideProgressCount');
+                            const progressBar = document.getElementById('progressBar');
+                            const progressPercent = document.getElementById('progressPercent');
+                            const aiStatus = document.getElementById('aiStatus');
+                            
                             if (progressCount) {
                                 progressCount.textContent = `${data.current}/${data.total}`;
                             }
                             
-                            // Mark step 5 as active when first slide arrives
+                            // Calculate and update progress percentage (80% to 100% range for slides)
+                            const slideProgress = 80 + Math.floor((data.current / data.total) * 20);
+                            if (progressBar) progressBar.style.width = slideProgress + '%';
+                            if (progressPercent) progressPercent.textContent = slideProgress + '%';
+                            if (aiStatus) aiStatus.textContent = `Rendering slide ${data.current} of ${data.total}...`;
+                            
+                            // Add streaming update
+                            appendStreamingText(`\n📊 Progress: ${data.current}/${data.total} slides (${Math.floor((data.current/data.total)*100)}%)\n`);
+                            
+                            // Mark step 5 as active and hide skeleton when first slide arrives
                             if (data.current === 1) {
                                 const step5 = document.getElementById('step5');
                                 if (step5) {
                                     step5.style.opacity = '1';
-                                    step5.style.color = '#667eea';
                                     step5.style.fontWeight = '600';
-                                    step5.innerHTML = '✅ Rendering slide previews';
+                                    const icon = step5.querySelector('span:first-child');
+                                    if (icon) icon.textContent = '✅';
+                                }
+                                
+                                // Hide the skeleton placeholder
+                                const skeleton = document.getElementById('slideSkeleton');
+                                if (skeleton) {
+                                    skeleton.style.transition = 'opacity 0.3s ease';
+                                    skeleton.style.opacity = '0';
+                                    setTimeout(() => skeleton.remove(), 300);
                                 }
                             }
                             
-                            // Render THIS slide right now (not waiting for others!)
+                            // Render THIS slide right now (not waiting for others!) - APPEND TO SLIDES CONTAINER
                             const slideDiv = createSlidePreviewCard(data.slide, data.index, theme);
                             slideDiv.style.opacity = '0';
                             slideDiv.style.transform = 'translateY(20px)';
-                            previewContainer.appendChild(slideDiv);
+                            slidesContainer.appendChild(slideDiv);
                             
                             // Animate in
                             requestAnimationFrame(() => {
@@ -600,11 +699,28 @@ async function handleIncrementalStream(response) {
                                 slideDiv.style.opacity = '1';
                                 slideDiv.style.transform = 'translateY(0)';
                             });
+                            
+                            // Auto-scroll to latest slide (smooth scroll)
+                            slideDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                         }
                         
                         // COMPLETE EVENT - Finalize
                         else if (data.type === 'complete') {
                             console.log('✅ Stream complete event received');
+                            
+                            // Update progress to 100%
+                            const progressBar = document.getElementById('progressBar');
+                            const progressPercent = document.getElementById('progressPercent');
+                            const aiStatus = document.getElementById('aiStatus');
+                            
+                            if (progressBar) progressBar.style.width = '100%';
+                            if (progressPercent) progressPercent.textContent = '100%';
+                            if (aiStatus) aiStatus.textContent = `✅ Complete! ${totalSlides} slides rendered`;
+                            
+                            // Add final streaming message
+                            appendStreamingText('\n\n🎉 GENERATION COMPLETE!\n');
+                            appendStreamingText(`✅ Total slides: ${totalSlides}\n`);
+                            appendStreamingText(`⏱️ Stream duration: ${Date.now() - (window.streamStartTime || Date.now())}ms\n`);
                             
                             // Cleanup countdown and timers
                             if (window.cleanupPreviewProgress) {
