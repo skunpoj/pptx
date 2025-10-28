@@ -371,10 +371,10 @@ async function generateFromPrompt() {
         console.log('  Is Anthropic?', window.currentProvider === 'anthropic');
         console.log('  Is Bedrock?', window.currentProvider === 'bedrock');
         console.log('  Files count:', files.length);
-        console.log('  Will use streaming?', window.currentProvider === 'anthropic' || window.currentProvider === 'bedrock');
+        console.log('  Will use streaming?', true); // All providers now support streaming
         console.log('═══════════════════════════════════════════════════');
         
-        if (window.currentProvider === 'anthropic' || window.currentProvider === 'bedrock') {
+        if (true) { // All providers now support streaming
             console.log(`📡 Using streaming content generation (${window.currentProvider})`);
             console.log('  Options:', {
                 numSlides, 

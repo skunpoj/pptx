@@ -181,8 +181,8 @@ app.post('/api/generate-content', async (req, res) => {
     try {
         const userPrompt = await getContentGenerationPrompt(prompt, numSlides, generateImages);
 
-        // Streaming for Anthropic and Bedrock
-        if (stream && (provider === 'anthropic' || provider === 'bedrock')) {
+        // Streaming for all providers
+        if (stream) {
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
@@ -192,7 +192,9 @@ app.post('/api/generate-content', async (req, res) => {
                 const bedrockApiKey = process.env.bedrock || apiKey;
                 const modelIds = [
                     'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
-                    'us.anthropic.claude-sonnet-4-5-20250929-v1:0'
+                    'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+                    'amazon.nova-lite-v1:0',
+                    'amazon.nova-pro-v1:0'
                 ];
                 
                 let response = null;
@@ -202,7 +204,11 @@ app.post('/api/generate-content', async (req, res) => {
                     try {
                         console.log(`🔄 Calling Bedrock stream model: ${modelId}`);
                         
-                        response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse-stream`, {
+                        const baseUrl = modelId.startsWith('global.') 
+                            ? 'https://bedrock-runtime.amazonaws.com' 
+                            : 'https://bedrock-runtime.us-east-1.amazonaws.com';
+                        
+                        response = await fetch(`${baseUrl}/model/${modelId}/converse-stream`, {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
@@ -212,7 +218,11 @@ app.post('/api/generate-content', async (req, res) => {
                                 messages: [{
                                     role: "user",
                                     content: [{ text: userPrompt }]
-                                }]
+                                }],
+                                inferenceConfig: {
+                                    maxTokens: 4000,
+                                    temperature: 0.7
+                                }
                             })
                         });
 
@@ -237,31 +247,62 @@ app.post('/api/generate-content', async (req, res) => {
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                
+                let chunkCount = 0;
+                let totalBytesReceived = 0;
 
                 try {
                     while (true) {
                         const { done, value } = await reader.read();
-                        if (done) break;
+                        if (done) {
+                            console.log('✅ Bedrock stream completed');
+                            break;
+                        }
 
-                        const chunk = decoder.decode(value);
-                        const lines = chunk.split('\n');
-
+                        chunkCount++;
+                        const chunk = decoder.decode(value, { stream: true });
+                        totalBytesReceived += chunk.length;
+                        console.log(`📦 Chunk ${chunkCount}: ${chunk.length} bytes from Bedrock (total: ${totalBytesReceived} bytes)`);
+                        console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 150)}..."`);
+                        
+                        // Log the full chunk for first few chunks for debugging
+                        if (chunkCount <= 3) {
+                            console.log(`  📋 Full chunk content:`, chunk);
+                        }
+                        
+                        // Bedrock returns JSON Lines format (one JSON object per line)
+                        const lines = chunk.split('\n').filter(line => line.trim());
+                        
                         for (const line of lines) {
-                            if (line.trim() === '') continue;
-                            
                             try {
-                                const parsed = JSON.parse(line);
+                                const data = JSON.parse(line);
+                                console.log(`  📊 Parsed Bedrock line, keys:`, Object.keys(data));
                                 
-                                // Bedrock stream format
-                                if (parsed.contentBlockDelta && parsed.contentBlockDelta.delta && parsed.contentBlockDelta.delta.text) {
-                                    res.write(`data: ${JSON.stringify({ text: parsed.contentBlockDelta.delta.text })}\n\n`);
+                                // Handle both Claude and Nova response formats
+                                let text = null;
+                                if (data.contentBlockDelta?.delta?.text) {
+                                    text = data.contentBlockDelta.delta.text;
+                                } else if (data.contentBlockDelta?.delta?.textDelta) {
+                                    text = data.contentBlockDelta.delta.textDelta;
+                                }
+                                
+                                if (text) {
+                                    console.log(`  ✅ Sending text: "${text.substring(0, 50)}..."`);
+                                    res.write(`data: ${JSON.stringify({ text: text })}\n\n`);
+                                } else {
+                                    console.log(`  ⚠️ No text content found in data. Structure:`, Object.keys(data));
+                                    console.log(`  📋 Full parsed data:`, JSON.stringify(data, null, 2).substring(0, 500));
                                 }
                             } catch (e) {
-                                // Skip invalid JSON
+                                console.log(`  ⏭️ Failed to parse line: ${e.message}`);
+                                console.log(`  📄 Line content: "${line.substring(0, 200)}"`);
                             }
                         }
                     }
                 } finally {
+                    console.log(`✅ Content generation complete`);
+                    console.log(`   Total chunks received: ${chunkCount}`);
+                    console.log(`   Total bytes received: ${totalBytesReceived}`);
                     res.write('data: [DONE]\n\n');
                     res.end();
                 }
@@ -307,6 +348,168 @@ app.post('/api/generate-content', async (req, res) => {
                                     const parsed = JSON.parse(data);
                                     if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
                                         res.write(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`);
+                                    }
+                                } catch (e) {
+                                    // Skip invalid JSON
+                                }
+                            }
+                        }
+                    }
+                } finally {
+                    res.write('data: [DONE]\n\n');
+                    res.end();
+                }
+            } else if (provider === 'openai') {
+                // OpenAI streaming
+                console.log(`🔄 Starting streaming with OpenAI...`);
+                const response = await fetch("https://api.openai.com/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey.trim()}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4o",
+                        messages: [{ role: "user", content: userPrompt }],
+                        max_tokens: 4000,
+                        stream: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.choices?.[0]?.delta?.content) {
+                                        res.write(`data: ${JSON.stringify({ text: parsed.choices[0].delta.content })}\n\n`);
+                                    }
+                                } catch (e) {
+                                    // Skip invalid JSON
+                                }
+                            }
+                        }
+                    }
+                } finally {
+                    res.write('data: [DONE]\n\n');
+                    res.end();
+                }
+            } else if (provider === 'gemini') {
+                // Gemini streaming
+                console.log(`🔄 Starting streaming with Gemini...`);
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:streamGenerateContent?key=${apiKey.trim()}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: userPrompt }]
+                        }],
+                        generationConfig: {
+                            maxOutputTokens: 4000
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.candidates?.[0]?.content?.parts?.[0]?.text) {
+                                        res.write(`data: ${JSON.stringify({ text: parsed.candidates[0].content.parts[0].text })}\n\n`);
+                                    }
+                                } catch (e) {
+                                    // Skip invalid JSON
+                                }
+                            }
+                        }
+                    }
+                } finally {
+                    res.write('data: [DONE]\n\n');
+                    res.end();
+                }
+            } else if (provider === 'openrouter') {
+                // OpenRouter streaming
+                console.log(`🔄 Starting streaming with OpenRouter...`);
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${apiKey.trim()}`,
+                        "HTTP-Referer": "http://localhost:3000",
+                        "X-Title": "AI Text2PPT Pro"
+                    },
+                    body: JSON.stringify({
+                        model: "anthropic/claude-3.5-sonnet",
+                        max_tokens: 4000,
+                        messages: [{ role: "user", content: userPrompt }],
+                        stream: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = line.slice(6);
+                                if (data === '[DONE]') continue;
+                                
+                                try {
+                                    const parsed = JSON.parse(data);
+                                    if (parsed.choices?.[0]?.delta?.content) {
+                                        res.write(`data: ${JSON.stringify({ text: parsed.choices[0].delta.content })}\n\n`);
                                     }
                                 } catch (e) {
                                     // Skip invalid JSON
@@ -497,7 +700,7 @@ app.post('/api/preview', async (req, res) => {
         
         // INCREMENTAL MODE: TRUE STREAMING from AI
         if (incremental && provider === 'anthropic') {
-            console.log('🔄 Starting TRUE STREAMING slide generation with Anthropic...');
+            console.log(`🔄 Starting TRUE STREAMING slide generation with ${provider}...`);
             
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
@@ -665,7 +868,7 @@ app.post('/api/preview', async (req, res) => {
             }
             
         } else if (incremental && provider === 'bedrock') {
-            console.log('🔄 Starting TRUE STREAMING slide generation with Bedrock Converse API...');
+            console.log(`🔄 Starting TRUE STREAMING slide generation with ${provider}...`);
             
             res.setHeader('Content-Type', 'text/event-stream');
             res.setHeader('Cache-Control', 'no-cache');
