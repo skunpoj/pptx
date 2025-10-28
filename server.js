@@ -226,8 +226,13 @@ app.post('/api/generate-content', async (req, res) => {
                             })
                         });
 
+                        console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+                        console.log(`📡 Response headers:`, Object.fromEntries(response.headers.entries()));
+                        
                         if (response.ok) {
                             console.log(`✅ Stream success with model: ${modelId}`);
+                            console.log(`📊 Response body type:`, typeof response.body);
+                            console.log(`📊 Response body:`, response.body ? 'present' : 'null');
                             break; // Success, exit loop
                         } else {
                             const errorData = await response.json().catch(() => ({}));
