@@ -645,22 +645,22 @@ body {
     justify-content: flex-end;
 }
 
-/* GitHub button - perfect center alignment, match Product Hunt badge height */
+/* GitHub button - slightly larger than Product Hunt for visual equality */
 .github-button {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    height: 24px !important;
+    height: 25px !important;
     line-height: 0 !important;
     vertical-align: middle !important;
     margin: 0 !important;
     padding: 0 !important;
 }
 
-/* Force GitHub iframe to be small size to match badge */
+/* Force GitHub iframe to be slightly larger to match visual weight */
 .github-button iframe {
     display: block !important;
-    height: 24px !important;
+    height: 25px !important;
     width: auto !important;
     vertical-align: middle !important;
 }

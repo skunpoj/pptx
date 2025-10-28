@@ -680,7 +680,11 @@ app.post('/api/preview', async (req, res) => {
                 throw new Error('Bedrock API key not found');
             }
             
-            // Try models in order of preference (same as content.js)
+            // For slide preview, use NON-STREAMING to get complete JSON
+            // Bedrock streaming has HTTP/2 issues that are difficult to parse
+            // Get complete response, then simulate streaming by sending slides one by one
+            console.log('⚠️  Using NON-STREAMING mode for slide preview (simulating streaming)');
+            
             const modelIds = [
                 'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
                 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
@@ -688,14 +692,14 @@ app.post('/api/preview', async (req, res) => {
                 'amazon.nova-pro-v1:0'
             ];
             
-            let bedrockResponse = null;
+            let fullResponse = null;
             let lastError = null;
             
             for (const modelId of modelIds) {
                 try {
                     console.log(`📤 SERVER: Trying Bedrock model: ${modelId}`);
                     
-                    bedrockResponse = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse-stream`, {
+                    const response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -712,14 +716,21 @@ app.post('/api/preview', async (req, res) => {
                         })
                     });
                     
-                    if (bedrockResponse.ok) {
-                        console.log(`✅ SERVER: Success with model: ${modelId}`);
-                        break;
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.output && data.output.message && data.output.message.content) {
+                            const content = data.output.message.content;
+                            if (Array.isArray(content) && content.length > 0 && content[0].text) {
+                                fullResponse = content[0].text.trim();
+                                console.log(`✅ SERVER: Success with model: ${modelId}`);
+                                break;
+                            }
+                        }
+                        throw new Error('Unexpected Bedrock response format');
                     } else {
-                        const errorData = await bedrockResponse.json().catch(() => ({}));
-                        console.log(`❌ SERVER: Model ${modelId} failed: ${errorData.error?.message || bedrockResponse.status}`);
-                        lastError = new Error(errorData.error?.message || `HTTP ${bedrockResponse.status}`);
-                        bedrockResponse = null;
+                        const errorData = await response.json().catch(() => ({}));
+                        console.log(`❌ SERVER: Model ${modelId} failed: ${errorData.error?.message || response.status}`);
+                        lastError = new Error(errorData.error?.message || `HTTP ${response.status}`);
                         continue;
                     }
                 } catch (error) {
@@ -729,144 +740,64 @@ app.post('/api/preview', async (req, res) => {
                 }
             }
             
-            if (!bedrockResponse || !bedrockResponse.ok) {
+            if (!fullResponse) {
                 throw lastError || new Error('All Bedrock models failed');
             }
             
-            console.log('📨 SERVER: Bedrock response status:', bedrockResponse.status, bedrockResponse.statusText);
+            console.log(`📝 SERVER: Received full Bedrock response (${fullResponse.length} chars)`);
             
-            if (!bedrockResponse.body) {
-                throw new Error('Bedrock response body is null');
+            // Parse the AI response
+            const fullData = parseAIResponse(fullResponse);
+            const totalSlides = fullData.slides.length;
+            const theme = fullData.designTheme;
+            const suggestedThemeKey = fullData.suggestedThemeKey;
+            
+            console.log(`  📝 Generated ${totalSlides} slides`);
+            console.log(`  🎨 Theme: ${theme.name}`);
+            
+            // Send theme info first
+            res.write(`data: ${JSON.stringify({ 
+                type: 'theme',
+                theme: theme,
+                suggestedThemeKey: suggestedThemeKey,
+                totalSlides: totalSlides
+            })}\n\n`);
+            if (res.flush) res.flush();
+            
+            // Simulate streaming by sending slides one by one
+            console.log(`  📤 Now sending ${totalSlides} slides incrementally...`);
+            
+            for (let i = 0; i < totalSlides; i++) {
+                const slide = fullData.slides[i];
+                
+                try {
+                    validateSlideData({ slides: [slide], designTheme: theme });
+                    
+                    console.log(`  ✓ Sending slide ${i + 1}/${totalSlides}: ${slide.title}`);
+                    
+                    res.write(`data: ${JSON.stringify({ 
+                        type: 'slide', 
+                        slide: slide,
+                        index: i,
+                        current: i + 1,
+                        total: totalSlides
+                    })}\n\n`);
+                    
+                    if (res.flush) res.flush();
+                    
+                } catch (validateError) {
+                    console.error(`  ❌ Slide ${i + 1} validation failed:`, validateError.message);
+                }
             }
             
-            console.log('📖 SERVER: Getting reader from Bedrock response...');
-            const reader = bedrockResponse.body.getReader();
-            const decoder = new TextDecoder();
+            console.log(`  ✅ All ${totalSlides} slides sent to client`);
             
-            let jsonBuffer = '';
-            let streamedText = '';
-            let themeSent = false;
-            let slidesSent = 0;
+            // Send completion
+            res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
             
-            console.log('📡 SERVER: Starting to read Bedrock stream...');
-            
-            try {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        console.log('✅ SERVER: Bedrock stream completed');
-                        break;
-                    }
-                    
-                    const chunk = decoder.decode(value, { stream: true });
-                    streamedText += chunk;
-                    jsonBuffer += chunk;
-                    
-                    console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 100)}..."`);
-                    
-                    // Bedrock returns JSON Lines format (one JSON object per line)
-                    // Split into lines and process each JSON object
-                    const lines = chunk.split('\n').filter(line => line.trim());
-                    
-                    for (const line of lines) {
-                        // Try to send raw text to client for debugging
-                        try {
-                            const data = JSON.parse(line);
-                            if (data.contentBlockDelta?.delta?.text) {
-                                res.write(`data: ${JSON.stringify({ 
-                                    type: 'raw_text',
-                                    text: data.contentBlockDelta.delta.text,
-                                    timestamp: Date.now()
-                                })}\n\n`);
-                                if (res.flush) res.flush();
-                            }
-                        } catch (e) {
-                            // Not a contentBlockDelta event or invalid JSON
-                        }
-                    }
-                    
-                    // Try to parse and extract theme if we haven't sent it yet
-                    if (!themeSent && jsonBuffer.includes('"designTheme"')) {
-                        try {
-                            const themeMatch = jsonBuffer.match(/"designTheme"\s*:\s*\{[^}]+\}/);
-                            if (themeMatch) {
-                                const fullData = parseAIResponse(jsonBuffer);
-                                if (fullData.designTheme) {
-                                    console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
-                                    res.write(`data: ${JSON.stringify({ 
-                                        type: 'theme',
-                                        theme: fullData.designTheme,
-                                        suggestedThemeKey: fullData.suggestedThemeKey,
-                                        totalSlides: fullData.slides?.length || 0
-                                    })}\n\n`);
-                                    if (res.flush) res.flush();
-                                    themeSent = true;
-                                }
-                            }
-                        } catch (e) {
-                            // Not ready yet
-                        }
-                    }
-                    
-                    // Try to extract complete slides as they arrive
-                    if (themeSent) {
-                        try {
-                            const fullData = parseAIResponse(jsonBuffer);
-                            if (fullData.slides && fullData.slides.length > slidesSent) {
-                                // Send any new slides
-                                for (let i = slidesSent; i < fullData.slides.length; i++) {
-                                    const slide = fullData.slides[i];
-                                    console.log(`  ✓ SERVER: Slide ${i + 1} extracted, sending to client: ${slide.title}`);
-                                    
-                                    res.write(`data: ${JSON.stringify({ 
-                                        type: 'slide', 
-                                        slide: slide,
-                                        index: i,
-                                        current: i + 1,
-                                        total: fullData.slides.length
-                                    })}\n\n`);
-                                    if (res.flush) res.flush();
-                                    slidesSent++;
-                                }
-                            }
-                        } catch (e) {
-                            // JSON not complete yet
-                        }
-                    }
-                }
-                
-                // Parse final complete JSON
-                console.log('📊 SERVER: Parsing final complete JSON...');
-                const fullData = parseAIResponse(streamedText);
-                
-                // Send any remaining slides
-                if (fullData.slides && fullData.slides.length > slidesSent) {
-                    console.log(`  📤 SERVER: Sending remaining ${fullData.slides.length - slidesSent} slides...`);
-                    for (let i = slidesSent; i < fullData.slides.length; i++) {
-                        const slide = fullData.slides[i];
-                        console.log(`  ✓ SERVER: Final slide ${i + 1}: ${slide.title}`);
-                        
-                        res.write(`data: ${JSON.stringify({ 
-                            type: 'slide', 
-                            slide: slide,
-                            index: i,
-                            current: i + 1,
-                            total: fullData.slides.length
-                        })}\n\n`);
-                        if (res.flush) res.flush();
-                    }
-                }
-                
-                // Send completion
-                console.log(`✅ SERVER: All ${fullData.slides.length} slides sent via TRUE STREAMING`);
-                res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
-                res.write('data: [DONE]\n\n');
-                res.end();
-                
-            } catch (streamError) {
-                console.error('❌ SERVER: Stream error:', streamError);
-                throw streamError;
-            }
+            console.log('✅ SERVER: Incremental generation complete');
             
         } else {
             // NON-INCREMENTAL MODE (all at once)
