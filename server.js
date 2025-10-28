@@ -8,6 +8,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs').promises;
 const multer = require('multer');
+const { auth } = require('express-openid-connect');
 
 // Import utilities
 const { SERVER_CONFIG } = require('./server/config/constants');
@@ -57,10 +58,31 @@ const imageRoutes = require('./server/routes/images');
 const app = express();
 const PORT = 3000;
 
+// Auth0 Configuration
+const config = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: process.env.AUTH0_SECRET || 'a long, randomly-generated string stored in env', // Should use openssl rand -hex 32
+  baseURL: process.env.AUTH0_BASE_URL || 'https://genis.ai',
+  clientID: 'N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9',
+  issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com'
+};
+
+// Auth router attaches /login, /logout, and /callback routes to the baseURL
+app.use(auth(config));
+
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use(express.static('public'));
+
+// Auth check endpoint for frontend
+app.get('/api/user', (req, res) => {
+  res.json({
+    authenticated: req.oidc.isAuthenticated(),
+    user: req.oidc.user || null
+  });
+});
 
 // Landing page route
 app.get('/landing', (req, res) => {

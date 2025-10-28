@@ -32,9 +32,14 @@
                         <span class="header-feature">🎨 8+ Themes</span>
                         <span class="header-feature">🔗 Share Links</span>
                     </div>
-                    <div class="free-badge">
-                        <span class="badge-icon">🎁</span>
-                        <span class="badge-text">100% FREE</span>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <a href="/login" class="login-btn" id="authBtn">
+                            <span>🔐 Login</span>
+                        </a>
+                        <div class="free-badge">
+                            <span class="badge-icon">🎁</span>
+                            <span class="badge-text">100% FREE</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -921,6 +926,25 @@ Our Products
                 testGeneratePreview();
                 console.log('');
                 testExpandIdea();
+            }
+        });
+        
+        // Check authentication state and update login button
+        window.addEventListener('load', async function() {
+            try {
+                const response = await fetch('/api/user');
+                const data = await response.json();
+                const authBtn = document.getElementById('authBtn');
+                
+                if (data.authenticated) {
+                    authBtn.href = '/logout';
+                    authBtn.querySelector('span').textContent = '🔓 Logout';
+                } else {
+                    authBtn.href = '/login';
+                    authBtn.querySelector('span').textContent = '🔐 Login';
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
             }
         });
     </script>

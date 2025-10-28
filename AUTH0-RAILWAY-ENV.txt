@@ -1,0 +1,8 @@
+# Copy these environment variables to Railway
+
+# Auth0 Secret (generated)
+AUTH0_SECRET=41c415c9213a9e8725c007a1d1f65a90b4032462823eae7d3df7b3526b597095
+
+# Auth0 Base URL
+AUTH0_BASE_URL=https://genis.ai
+
