@@ -113,6 +113,15 @@ Our Products
                             >
                             </stripe-buy-button>
                         </div>
+                        <div id="promptPayContainer" style="display: none; margin-top: 0.5rem;">
+                            <button id="promptPayBtn" onclick="createPromptPaySubscription()" 
+                                    style="display: inline-block; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                🇹🇭 Pay with PromptPay
+                            </button>
+                            <div id="promptPayWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404; margin-top: 0.5rem;">
+                                ⚠️ <strong>Important:</strong> PromptPay is single-use. You'll need to add a credit card for automatic renewals.
+                            </div>
+                        </div>
                         <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
                             ⚠️ <strong>Subscription not found:</strong> No active subscription found for your email. Please subscribe to access premium features.
                         </div>
@@ -973,6 +982,58 @@ Our Products
         });
         
         // Check authentication state and update UI
+        // Function to create PromptPay subscription
+        async function createPromptPaySubscription() {
+            try {
+                const promptPayBtn = document.getElementById('promptPayBtn');
+                const promptPayWarning = document.getElementById('promptPayWarning');
+                
+                // Show loading state
+                promptPayBtn.textContent = '🔄 Creating PromptPay Session...';
+                promptPayBtn.disabled = true;
+                
+                const response = await fetch('/api/promptpay/subscription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: 29900, // 299 THB
+                        interval: 'month',
+                        productName: 'GENIS.AI Premium Subscription',
+                        description: 'AI-powered presentation generation service'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.url) {
+                    // Show warning before redirecting
+                    promptPayWarning.style.display = 'block';
+                    promptPayWarning.innerHTML = `
+                        ⚠️ <strong>Important:</strong> PromptPay is single-use. You'll need to add a credit card for automatic renewals.
+                        <br><br>Redirecting to PromptPay checkout...
+                    `;
+                    
+                    // Redirect to Stripe checkout
+                    setTimeout(() => {
+                        window.location.href = data.url;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Failed to create PromptPay session');
+                }
+                
+            } catch (error) {
+                console.error('Error creating PromptPay subscription:', error);
+                alert('Failed to create PromptPay subscription: ' + error.message);
+                
+                // Reset button
+                const promptPayBtn = document.getElementById('promptPayBtn');
+                promptPayBtn.textContent = '🇹🇭 Pay with PromptPay';
+                promptPayBtn.disabled = false;
+            }
+        }
+
         // Function to check subscription status
         async function checkSubscriptionStatus() {
             try {
@@ -983,6 +1044,7 @@ Our Products
                 const subscriptionBadge = document.getElementById('subscriptionBadge');
                 const emailMismatchWarning = document.getElementById('emailMismatchWarning');
                 const stripeBuyButton = document.querySelector('stripe-buy-button');
+                const promptPayContainer = document.getElementById('promptPayContainer');
                 
                 if (subscriptionData.hasActiveSubscription) {
                     // User has active subscription - hide buy button

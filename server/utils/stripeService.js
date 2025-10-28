@@ -209,6 +209,134 @@ function validateEmailDomain(auth0Email, stripeEmail) {
     return auth0Domain === stripeDomain;
 }
 
+/**
+ * Create a PromptPay Checkout Session for subscriptions
+ * @param {string} customerEmail - Customer email
+ * @param {Object} subscriptionData - Subscription details
+ * @returns {Object} - Checkout session
+ */
+async function createPromptPayCheckoutSession(customerEmail, subscriptionData) {
+    try {
+        console.log(`🔄 Creating PromptPay checkout session for: ${customerEmail}`);
+        
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['promptpay', 'card'], // Support both PromptPay and cards
+            mode: 'subscription',
+            customer_email: customerEmail,
+            line_items: [{
+                price_data: {
+                    currency: 'thb',
+                    product_data: {
+                        name: subscriptionData.productName || 'GENIS.AI Premium Subscription',
+                        description: subscriptionData.description || 'AI-powered presentation generation service'
+                    },
+                    unit_amount: subscriptionData.amount || 29900, // Default 299 THB
+                    recurring: {
+                        interval: subscriptionData.interval || 'month'
+                    }
+                },
+                quantity: 1
+            }],
+            success_url: `${process.env.BASE_URL || 'https://genis.ai'}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.BASE_URL || 'https://genis.ai'}/cancel`,
+            // Important: Set up automatic collection for renewals
+            payment_method_collection: 'always', // Always collect payment method
+            subscription_data: {
+                metadata: {
+                    customer_email: customerEmail,
+                    service: 'genis-ai',
+                    payment_type: 'promptpay_subscription'
+                }
+            },
+            metadata: {
+                customer_email: customerEmail,
+                service: 'genis-ai',
+                payment_type: 'promptpay_subscription'
+            }
+        });
+        
+        console.log(`✅ PromptPay checkout session created: ${session.id}`);
+        console.log(`⚠️  Note: PromptPay is single-use. Customer will need to add a card for automatic renewals.`);
+        return session;
+        
+    } catch (error) {
+        console.error('❌ Error creating PromptPay checkout session:', error);
+        throw error;
+    }
+}
+
+/**
+ * Create a PromptPay Payment Session for one-time payments
+ * @param {string} customerEmail - Customer email
+ * @param {Object} paymentData - Payment details
+ * @returns {Object} - Payment session
+ */
+async function createPromptPayPaymentSession(customerEmail, paymentData) {
+    try {
+        console.log(`🔄 Creating PromptPay payment session for: ${customerEmail}`);
+        
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['promptpay', 'card'],
+            mode: 'payment',
+            customer_email: customerEmail,
+            line_items: [{
+                price_data: {
+                    currency: 'thb',
+                    product_data: {
+                        name: paymentData.productName || 'GENIS.AI Service',
+                        description: paymentData.description || 'AI-powered presentation generation'
+                    },
+                    unit_amount: paymentData.amount || 9900 // Default 99 THB
+                },
+                quantity: paymentData.quantity || 1
+            }],
+            success_url: `${process.env.BASE_URL || 'https://genis.ai'}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.BASE_URL || 'https://genis.ai'}/cancel`,
+            metadata: {
+                customer_email: customerEmail,
+                service: 'genis-ai',
+                payment_type: 'one-time'
+            }
+        });
+        
+        console.log(`✅ PromptPay payment session created: ${session.id}`);
+        return session;
+        
+    } catch (error) {
+        console.error('❌ Error creating PromptPay payment session:', error);
+        throw error;
+    }
+}
+
+/**
+ * Create a PromptPay PaymentIntent for direct API integration
+ * @param {string} customerEmail - Customer email
+ * @param {Object} paymentData - Payment details
+ * @returns {Object} - PaymentIntent
+ */
+async function createPromptPayPaymentIntent(customerEmail, paymentData) {
+    try {
+        console.log(`🔄 Creating PromptPay PaymentIntent for: ${customerEmail}`);
+        
+        const paymentIntent = await stripe.paymentIntents.create({
+            payment_method_types: ['promptpay'],
+            amount: paymentData.amount || 9900,
+            currency: 'thb',
+            metadata: {
+                customer_email: customerEmail,
+                service: 'genis-ai'
+            }
+        });
+        
+        console.log(`✅ PromptPay PaymentIntent created: ${paymentIntent.id}`);
+        return paymentIntent;
+        
+    } catch (error) {
+        console.error('❌ Error creating PromptPay PaymentIntent:', error);
+        throw error;
+    }
+}
+
 module.exports = {
     findCustomerByEmail,
     getCustomerSubscriptions,
