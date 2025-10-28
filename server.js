@@ -319,11 +319,11 @@ app.post('/api/generate-content', async (req, res) => {
                                     if (data.delta?.text) {
                                         console.log(`  ✅ Sending text: "${data.delta.text}"`);
                                         res.write(`data: ${JSON.stringify({ text: data.delta.text })}\n\n`);
-                                    }
-                                } catch (e) {
+                                }
+                            } catch (e) {
                                     console.log(`  ⏭️ Failed to parse JSON: ${e.message}`);
                                     console.log(`  📄 JSON attempt: "${jsonStr.substring(0, 100)}..."`);
-                                }
+                            }
                             }
                         } else {
                             // Debug: show what we're actually getting
@@ -729,14 +729,6 @@ app.post('/api/preview', async (req, res) => {
         console.log('  Incremental:', incremental);
         console.log('  Requested slides:', numSlides || 'AI decides');
         
-        // Send initial provider info to frontend
-        res.write(`data: ${JSON.stringify({ 
-            type: 'provider_info',
-            provider: provider,
-            numSlides: numSlides || 'AI decides',
-            timestamp: Date.now()
-        })}\n\n`);
-        
         // INCREMENTAL MODE: TRUE STREAMING from AI
         if (incremental) {
             if (provider === 'anthropic' || provider === 'bedrock') {
@@ -756,6 +748,14 @@ app.post('/api/preview', async (req, res) => {
             res.setHeader('Cache-Control', 'no-cache');
             res.setHeader('Connection', 'keep-alive');
             res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering for SSE
+            
+            // Send initial provider info to frontend
+            res.write(`data: ${JSON.stringify({ 
+                type: 'provider_info',
+                provider: provider,
+                numSlides: numSlides || 'AI decides',
+                timestamp: Date.now()
+            })}\n\n`);
             
             // Get the prompt
             const themePrompt = await getSlideDesignPrompt(text, numSlides);
@@ -936,6 +936,14 @@ app.post('/api/preview', async (req, res) => {
             res.setHeader('Connection', 'keep-alive');
             res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering for SSE
             
+            // Send initial provider info to frontend
+            res.write(`data: ${JSON.stringify({ 
+                type: 'provider_info',
+                provider: provider,
+                numSlides: numSlides || 'AI decides',
+                timestamp: Date.now()
+            })}\n\n`);
+            
             // Get the prompt
             const themePrompt = await getSlideDesignPrompt(text, numSlides);
             
@@ -1056,20 +1064,20 @@ app.post('/api/preview', async (req, res) => {
                             try {
                                 const data = JSON.parse(jsonStr);
                                 console.log(`  📊 SERVER: Parsed Bedrock event, keys:`, Object.keys(data));
-                                
-                                // Send raw text to client
+                            
+                            // Send raw text to client
                                 if (data.delta?.text) {
                                     const text = data.delta.text;
                                     streamedText += text;  // Accumulate pure text
                                     console.log(`  ✅ SERVER: Sending text: "${text}"`);
-                                    res.write(`data: ${JSON.stringify({ 
-                                        type: 'raw_text',
-                                        text: text,
-                                        timestamp: Date.now()
-                                    })}\n\n`);
-                                    if (res.flush) res.flush();
-                                }
-                            } catch (e) {
+                                res.write(`data: ${JSON.stringify({ 
+                                    type: 'raw_text',
+                                    text: text,
+                                    timestamp: Date.now()
+                                })}\n\n`);
+                                if (res.flush) res.flush();
+                            }
+                        } catch (e) {
                                 console.log(`  ⏭️ SERVER: Failed to parse JSON: ${e.message}`);
                                 console.log(`  📄 SERVER: JSON attempt: "${jsonStr.substring(0, 100)}..."`);
                             }
@@ -1104,34 +1112,34 @@ app.post('/api/preview', async (req, res) => {
                                     
                                     // Send theme if not sent yet
                                     if (!themeSent && fullData.designTheme) {
-                                        console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
-                                        res.write(`data: ${JSON.stringify({ 
-                                            type: 'theme',
-                                            theme: fullData.designTheme,
-                                            suggestedThemeKey: fullData.suggestedThemeKey,
-                                            totalSlides: fullData.slides?.length || 0
-                                        })}\n\n`);
-                                        if (res.flush) res.flush();
-                                        themeSent = true;
-                                    }
-                                    
+                                console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
+                                res.write(`data: ${JSON.stringify({ 
+                                    type: 'theme',
+                                    theme: fullData.designTheme,
+                                    suggestedThemeKey: fullData.suggestedThemeKey,
+                                    totalSlides: fullData.slides?.length || 0
+                                })}\n\n`);
+                                if (res.flush) res.flush();
+                                themeSent = true;
+                    }
+                    
                                     // Send any new slides that are complete
-                                    if (fullData.slides && fullData.slides.length > slidesSent) {
+                            if (fullData.slides && fullData.slides.length > slidesSent) {
                                         const newSlidesCount = fullData.slides.length - slidesSent;
                                         console.log(`  📤 SERVER: Sending ${newSlidesCount} new slides (${slidesSent + 1}-${fullData.slides.length})`);
                                         
-                                        for (let i = slidesSent; i < fullData.slides.length; i++) {
-                                            const slide = fullData.slides[i];
+                                for (let i = slidesSent; i < fullData.slides.length; i++) {
+                                    const slide = fullData.slides[i];
                                             console.log(`  ✓ SERVER: Slide ${i + 1}: ${slide.title}`);
-                                            
-                                            res.write(`data: ${JSON.stringify({ 
-                                                type: 'slide', 
-                                                slide: slide,
-                                                index: i,
-                                                current: i + 1,
-                                                total: fullData.slides.length
-                                            })}\n\n`);
-                                            if (res.flush) res.flush();
+                                    
+                                    res.write(`data: ${JSON.stringify({ 
+                                        type: 'slide', 
+                                        slide: slide,
+                                        index: i,
+                                        current: i + 1,
+                                        total: fullData.slides.length
+                                    })}\n\n`);
+                                    if (res.flush) res.flush();
                                         }
                                         slidesSent = fullData.slides.length;
                                     }
@@ -1148,32 +1156,32 @@ app.post('/api/preview', async (req, res) => {
                 console.log(`📊 SERVER: Streamed text length: ${streamedText.length} characters`);
                 
                 try {
-                    const fullData = parseAIResponse(streamedText);
+                const fullData = parseAIResponse(streamedText);
                     console.log(`📊 SERVER: Final parse successful, slides: ${fullData.slides?.length || 0}`);
-                    
-                    // Send any remaining slides
-                    if (fullData.slides && fullData.slides.length > slidesSent) {
+                
+                // Send any remaining slides
+                if (fullData.slides && fullData.slides.length > slidesSent) {
                         const remainingSlides = fullData.slides.length - slidesSent;
                         console.log(`  📤 SERVER: Sending final ${remainingSlides} slides...`);
                         
-                        for (let i = slidesSent; i < fullData.slides.length; i++) {
-                            const slide = fullData.slides[i];
-                            console.log(`  ✓ SERVER: Final slide ${i + 1}: ${slide.title}`);
-                            
-                            res.write(`data: ${JSON.stringify({ 
-                                type: 'slide', 
-                                slide: slide,
-                                index: i,
-                                current: i + 1,
-                                total: fullData.slides.length
-                            })}\n\n`);
-                            if (res.flush) res.flush();
-                        }
+                    for (let i = slidesSent; i < fullData.slides.length; i++) {
+                        const slide = fullData.slides[i];
+                        console.log(`  ✓ SERVER: Final slide ${i + 1}: ${slide.title}`);
+                        
+                        res.write(`data: ${JSON.stringify({ 
+                            type: 'slide', 
+                            slide: slide,
+                            index: i,
+                            current: i + 1,
+                            total: fullData.slides.length
+                        })}\n\n`);
+                        if (res.flush) res.flush();
                     }
-                    
-                    // Send completion
-                    console.log(`✅ SERVER: All ${fullData.slides.length} slides sent via TRUE STREAMING`);
-                    res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
+                }
+                
+                // Send completion
+                console.log(`✅ SERVER: All ${fullData.slides.length} slides sent via TRUE STREAMING`);
+                res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
                 } catch (e) {
                     console.error(`❌ SERVER: Failed to parse final JSON: ${e.message}`);
                     console.error(`📄 SERVER: Streamed text preview: "${streamedText.substring(0, 500)}..."`);
