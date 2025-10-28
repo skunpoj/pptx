@@ -68,7 +68,7 @@ router.post('/api/promptpay/subscription', async (req, res) => {
     res.json({
       sessionId: session.id,
       url: session.url,
-      warning: 'PromptPay is single-use. You will need to add a credit card for automatic renewals.'
+      warning: 'PromptPay is single-use. This is a one-time payment for premium access.'
     });
   } catch (error) {
     console.error('Error creating PromptPay subscription:', error);

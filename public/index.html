@@ -127,7 +127,6 @@ Our Products
                         <stripe-buy-button
                             buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
                             publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
-                            style="flex: 0 0 auto;"
                         >
                         </stripe-buy-button>
                     </div>
@@ -136,7 +135,7 @@ Our Products
                 <!-- Warning Messages Row -->
                 <div style="margin-top: 0.5rem;">
                     <div id="promptPayWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
-                        ⚠️ <strong>Important:</strong> PromptPay is single-use. You'll need to add a credit card for automatic renewals.
+                        ⚠️ <strong>Important:</strong> PromptPay is single-use. This is a one-time payment for premium access.
                     </div>
                     <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
                         ⚠️ <strong>Subscription not found:</strong> No active subscription found for your email. Please subscribe to access premium features.
@@ -1023,7 +1022,7 @@ Our Products
                     // Show warning before redirecting
                     promptPayWarning.style.display = 'block';
                     promptPayWarning.innerHTML = `
-                        ⚠️ <strong>Important:</strong> PromptPay is single-use. You'll need to add a credit card for automatic renewals.
+                        ⚠️ <strong>Important:</strong> PromptPay is single-use. This is a one-time payment for premium access.
                         <br><br>Redirecting to PromptPay checkout...
                     `;
                     

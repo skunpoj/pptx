@@ -1140,34 +1140,34 @@ app.post('/api/preview', async (req, res) => {
                                     
                                     // Send theme if not sent yet
                                     if (!themeSent && fullData.designTheme) {
-                                        console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
-                                        res.write(`data: ${JSON.stringify({ 
-                                            type: 'theme',
-                                            theme: fullData.designTheme,
-                                            suggestedThemeKey: fullData.suggestedThemeKey,
-                                            totalSlides: fullData.slides?.length || 0
-                                        })}\n\n`);
-                                        if (res.flush) res.flush();
-                                        themeSent = true;
-                                    }
-                                    
+                                console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
+                                res.write(`data: ${JSON.stringify({ 
+                                    type: 'theme',
+                                    theme: fullData.designTheme,
+                                    suggestedThemeKey: fullData.suggestedThemeKey,
+                                    totalSlides: fullData.slides?.length || 0
+                                })}\n\n`);
+                                if (res.flush) res.flush();
+                                themeSent = true;
+                    }
+                    
                                     // Send any new slides that are complete
-                                    if (fullData.slides && fullData.slides.length > slidesSent) {
+                            if (fullData.slides && fullData.slides.length > slidesSent) {
                                         const newSlidesCount = fullData.slides.length - slidesSent;
                                         console.log(`  📤 SERVER: Sending ${newSlidesCount} new slides (${slidesSent + 1}-${fullData.slides.length})`);
                                         
-                                        for (let i = slidesSent; i < fullData.slides.length; i++) {
-                                            const slide = fullData.slides[i];
+                                for (let i = slidesSent; i < fullData.slides.length; i++) {
+                                    const slide = fullData.slides[i];
                                             console.log(`  ✓ SERVER: Slide ${i + 1}: ${slide.title}`);
-                                            
-                                            res.write(`data: ${JSON.stringify({ 
-                                                type: 'slide', 
-                                                slide: slide,
-                                                index: i,
-                                                current: i + 1,
-                                                total: fullData.slides.length
-                                            })}\n\n`);
-                                            if (res.flush) res.flush();
+                                    
+                                    res.write(`data: ${JSON.stringify({ 
+                                        type: 'slide', 
+                                        slide: slide,
+                                        index: i,
+                                        current: i + 1,
+                                        total: fullData.slides.length
+                                    })}\n\n`);
+                                    if (res.flush) res.flush();
                                         }
                                         slidesSent = fullData.slides.length;
                                     }
@@ -1196,6 +1196,8 @@ app.post('/api/preview', async (req, res) => {
                 // Final parsing to ensure all slides are sent
                 console.log('📊 SERVER: Final parsing to ensure all slides are sent...');
                 console.log(`📊 SERVER: Streamed text length: ${streamedText.length} characters`);
+                console.log(`📊 SERVER: Streamed text sample: "${streamedText.substring(0, 500)}..."`);
+                console.log(`📊 SERVER: Streamed text ends with: "${streamedText.substring(Math.max(0, streamedText.length - 200))}"`);
                 
                 try {
                     // Clean up the streamed text to extract valid JSON
@@ -1245,11 +1247,21 @@ app.post('/api/preview', async (req, res) => {
                     
                     if (!reconstructedJson) {
                         console.log(`❌ SERVER: Could not reconstruct valid JSON, trying fallback parsing`);
+                        console.log(`📊 SERVER: Fallback text preview: "${cleanedText.substring(0, 300)}..."`);
                         reconstructedJson = cleanedText;
                     }
                     
+                    console.log(`📊 SERVER: About to parse JSON (${reconstructedJson.length} chars)`);
+                    console.log(`📊 SERVER: JSON preview: "${reconstructedJson.substring(0, 200)}..."`);
+                    
                     const fullData = parseAIResponse(reconstructedJson);
                     console.log(`📊 SERVER: Final parse successful, slides: ${fullData.slides?.length || 0}`);
+                    console.log(`📊 SERVER: Full data structure:`, {
+                        hasDesignTheme: !!fullData.designTheme,
+                        hasSlides: !!fullData.slides,
+                        slidesLength: fullData.slides?.length || 0,
+                        themeName: fullData.designTheme?.name || 'none'
+                    });
                 
                 // Send any remaining slides
                 if (fullData.slides && fullData.slides.length > slidesSent) {
@@ -1287,7 +1299,20 @@ app.post('/api/preview', async (req, res) => {
                 
                 } catch (e) {
                     console.error(`❌ SERVER: Failed to parse final JSON: ${e.message}`);
+                    console.error(`📄 SERVER: Error details:`, e);
                     console.error(`📄 SERVER: Streamed text preview: "${streamedText.substring(0, 500)}..."`);
+                    console.error(`📄 SERVER: Streamed text length: ${streamedText.length}`);
+                    
+                    // Try to send a basic error response to frontend
+                    try {
+                        res.write(`data: ${JSON.stringify({ 
+                            type: 'error',
+                            message: 'Failed to parse AI response',
+                            details: e.message
+                        })}\n\n`);
+                    } catch (writeError) {
+                        console.error(`❌ SERVER: Failed to write error response: ${writeError.message}`);
+                    }
                 }
                 
                 res.write('data: [DONE]\n\n');
