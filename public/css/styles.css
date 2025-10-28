@@ -2327,6 +2327,33 @@ textarea:focus {
         font-size: 13px;
     }
     
+    /* Hide GitHub star on very small screens */
+    .github-shield-badge {
+        display: none !important;
+    }
+    
+    /* Adjust header layout for mobile */
+    .header-badges-row {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    /* Make brand name smaller on mobile */
+    .brand-name {
+        font-size: 1.5rem;
+    }
+    
+    /* Adjust header features */
+    .header-features {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    
+    .header-feature {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+    
     .card {
         padding: 0.75rem;
         border-radius: 12px;

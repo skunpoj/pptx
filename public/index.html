@@ -96,15 +96,19 @@ Our Products
                     </div>
                 </div>
                 
-                <!-- Number of Slides Input -->
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; white-space: nowrap;">
-                    <label class="option-label" style="margin: 0;">Number of slides:</label>
-                    <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
-                    <span id="userSlideCount" style="font-size: 0.85rem; color: #667eea; font-weight: 600; margin-left: 0.5rem;"></span>
+                <!-- Number of Slides Input and Generate Preview Button Row -->
+                <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
+                        <label class="option-label" style="margin: 0;">Number of slides:</label>
+                        <input type="number" id="numSlides" value="6" min="3" max="20" class="number-input">
+                    </div>
+                    <button class="btn-primary" onclick="window.generatePreview()" id="previewBtn" style="flex: 1; min-width: 150px;">
+                        👁️ Generate Preview
+                    </button>
                 </div>
 
-                <!-- Stripe Buy Button and Generate Preview Button Row -->
-                <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem;">
+                <!-- Buy Buttons, Slide Count, and Warning Row -->
+                <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap;">
                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                         <div id="stripeButtonContainer">
                             <stripe-buy-button
@@ -123,13 +127,17 @@ Our Products
                                 ⚠️ <strong>Important:</strong> PromptPay is single-use. You'll need to add a credit card for automatic renewals.
                             </div>
                         </div>
-                        <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
-                            ⚠️ <strong>Subscription not found:</strong> No active subscription found for your email. Please subscribe to access premium features.
-                        </div>
                     </div>
-                    <button class="btn-primary btn-large" onclick="window.generatePreview()" id="previewBtn" style="flex: 1; min-width: 200px;">
-                        👁️ Generate Preview
-                    </button>
+                    
+                    <!-- Slide Count Display -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span id="userSlideCount" style="font-size: 0.85rem; color: #667eea; font-weight: 600;"></span>
+                    </div>
+                    
+                    <!-- Warning Messages -->
+                    <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404; flex: 1; min-width: 200px;">
+                        ⚠️ <strong>Subscription not found:</strong> No active subscription found for your email. Please subscribe to access premium features.
+                    </div>
                 </div>
             </div>
 
@@ -146,9 +154,9 @@ Our Products
                         🖼️ Image Gallery
                     </button>
                     <div style="margin-left: auto; display: flex; align-items: center; gap: 0.75rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
+                        <label id="autoImageGenLabel" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer; font-size: 0.85rem; white-space: nowrap;">
                             <input type="checkbox" id="autoImageGenCheckbox" checked onchange="window.toggleAutoImageGen()">
-                            <span style="color: #667eea; font-weight: 600;">🤖 Auto Generate Images</span>
+                            <span style="color: #667eea; font-weight: 600;">🤖 Auto Images</span>
                         </label>
                         <button class="btn-secondary" id="manualGenerateBtn" onclick="window.generateImagesForSlides()" style="padding: 0.5rem 1rem; font-size: 0.85rem; display: none; white-space: nowrap;">
                             🎨 Generate All Images

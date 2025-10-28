@@ -1105,21 +1105,35 @@ app.post('/api/preview', async (req, res) => {
                             if (jsonStart !== -1) {
                                 console.log(`  🔍 SERVER: Found JSON start at position ${jsonStart}`);
                                 
-                                // Find the end of the JSON object by counting braces
-                                let braceCount = 0;
-                                let jsonEnd = -1;
-                                for (let i = jsonStart; i < streamedText.length; i++) {
-                                    if (streamedText[i] === '{') braceCount++;
-                                    if (streamedText[i] === '}') braceCount--;
-                                    if (braceCount === 0) {
-                                        jsonEnd = i;
-                                        break;
+                                // Look for the complete presentation structure, not just the first object
+                                let presentationStart = -1;
+                                let presentationEnd = -1;
+                                
+                                // Look for the main presentation object that contains both theme and slides
+                                const themeIndex = streamedText.indexOf('"designTheme"');
+                                const slidesIndex = streamedText.indexOf('"slides"');
+                                
+                                if (themeIndex !== -1 && slidesIndex !== -1) {
+                                    // Find the start of the main object containing both theme and slides
+                                    presentationStart = streamedText.lastIndexOf('{', Math.min(themeIndex, slidesIndex));
+                                    
+                                    if (presentationStart !== -1) {
+                                        // Find the matching closing brace
+                                        let braceCount = 0;
+                                        for (let i = presentationStart; i < streamedText.length; i++) {
+                                            if (streamedText[i] === '{') braceCount++;
+                                            if (streamedText[i] === '}') braceCount--;
+                                            if (braceCount === 0) {
+                                                presentationEnd = i;
+                                                break;
+                                            }
+                                        }
                                     }
                                 }
                                 
-                                if (jsonEnd !== -1) {
-                                    const jsonStr = streamedText.substring(jsonStart, jsonEnd + 1);
-                                    console.log(`  🔍 SERVER: Extracted JSON for periodic parse: "${jsonStr.substring(0, 100)}..."`);
+                                if (presentationStart !== -1 && presentationEnd !== -1) {
+                                    const jsonStr = streamedText.substring(presentationStart, presentationEnd + 1);
+                                    console.log(`  🔍 SERVER: Extracted complete presentation JSON for periodic parse: "${jsonStr.substring(0, 100)}..."`);
                                     
                                     const fullData = parseAIResponse(jsonStr);
                                     console.log(`  📊 SERVER: Periodic parse successful, slides: ${fullData.slides?.length || 0}`);
@@ -1158,7 +1172,7 @@ app.post('/api/preview', async (req, res) => {
                                         slidesSent = fullData.slides.length;
                                     }
                                 } else {
-                                    console.log(`  ⏭️ SERVER: Could not find JSON end for periodic parse`);
+                                    console.log(`  ⏭️ SERVER: Could not find complete presentation structure for periodic parse`);
                                 }
                             } else {
                                 console.log(`  ⏭️ SERVER: No JSON start found for periodic parse`);
@@ -1194,24 +1208,39 @@ app.post('/api/preview', async (req, res) => {
                     if (jsonStart !== -1) {
                         console.log(`📊 SERVER: Found JSON start at position ${jsonStart}`);
                         
-                        // Find the end by counting braces
-                        let braceCount = 0;
-                        let jsonEnd = -1;
-                        for (let i = jsonStart; i < cleanedText.length; i++) {
-                            if (cleanedText[i] === '{') braceCount++;
-                            if (cleanedText[i] === '}') braceCount--;
-                            if (braceCount === 0) {
-                                jsonEnd = i;
-                                break;
+                        // Look for the complete presentation structure, not just the first object
+                        // We need to find the main object that contains "designTheme" and "slides"
+                        let presentationStart = -1;
+                        let presentationEnd = -1;
+                        
+                        // Look for the main presentation object that contains both theme and slides
+                        const themeIndex = cleanedText.indexOf('"designTheme"');
+                        const slidesIndex = cleanedText.indexOf('"slides"');
+                        
+                        if (themeIndex !== -1 && slidesIndex !== -1) {
+                            // Find the start of the main object containing both theme and slides
+                            presentationStart = cleanedText.lastIndexOf('{', Math.min(themeIndex, slidesIndex));
+                            
+                            if (presentationStart !== -1) {
+                                // Find the matching closing brace
+                                let braceCount = 0;
+                                for (let i = presentationStart; i < cleanedText.length; i++) {
+                                    if (cleanedText[i] === '{') braceCount++;
+                                    if (cleanedText[i] === '}') braceCount--;
+                                    if (braceCount === 0) {
+                                        presentationEnd = i;
+                                        break;
+                                    }
+                                }
                             }
                         }
                         
-                        if (jsonEnd !== -1) {
-                            cleanedText = cleanedText.substring(jsonStart, jsonEnd + 1);
-                            console.log(`📊 SERVER: Extracted JSON length: ${cleanedText.length} characters`);
+                        if (presentationStart !== -1 && presentationEnd !== -1) {
+                            cleanedText = cleanedText.substring(presentationStart, presentationEnd + 1);
+                            console.log(`📊 SERVER: Extracted complete presentation JSON length: ${cleanedText.length} characters`);
                             console.log(`📊 SERVER: Extracted JSON preview: "${cleanedText.substring(0, 200)}..."`);
                         } else {
-                            console.log(`❌ SERVER: Could not find JSON end - incomplete JSON`);
+                            console.log(`❌ SERVER: Could not find complete presentation structure (theme: ${themeIndex}, slides: ${slidesIndex})`);
                         }
                     } else {
                         console.log(`❌ SERVER: No JSON start found in streamed text`);
