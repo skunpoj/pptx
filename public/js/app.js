@@ -9,7 +9,7 @@
 
 // Slide data and generation state
 window.currentSlideData = null;
-window.currentProvider = 'anthropic'; // Default provider shown in UI
+window.currentProvider = 'bedrock'; // Default provider shown in UI
 window.currentView = 'list';
 window.selectedTheme = null;
 window.templateFile = null;
@@ -56,7 +56,7 @@ function initializeAPIKeys() {
  * Loads saved provider selection
  */
 function initializeProviderSelection() {
-    const savedProvider = localStorage.getItem('ai_provider') || 'anthropic';
+    const savedProvider = localStorage.getItem('ai_provider') || 'bedrock';
     
     window.currentProvider = savedProvider;
     selectProvider(savedProvider);
@@ -248,6 +248,9 @@ function toggleSettingsSection() {
 function selectProvider(provider) {
     window.currentProvider = provider;
     localStorage.setItem('ai_provider', provider);
+    
+    console.log(`✅ Provider selected: ${provider}`);
+    console.log('🔍 Current provider state:', window.currentProvider);
     
     // Update button styles
     document.querySelectorAll('.provider-btn').forEach(btn => {

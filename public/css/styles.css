@@ -349,8 +349,7 @@ body {
 
 .product-hunt-badge img {
     display: block;
-    width: 110px;
-    height: 24px;
+    width: auto;
     border-radius: 4px;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
@@ -563,8 +562,20 @@ body {
 
 /* Ensure badges align perfectly with logo */
 .product-hunt-badge,
-.github-button {
+.github-button,
+.github-shield-badge {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    height: 32px; /* Match the row height */
+}
+
+/* Make both badge images the same height and vertically centered */
+.product-hunt-badge img,
+.github-shield-badge img {
+    height: 24px;
+    width: auto;
+    display: block;
 }
 
 .brand-tagline {

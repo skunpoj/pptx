@@ -427,6 +427,8 @@ async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generat
     console.log('  Prompt length:', finalPrompt?.length || 0, 'characters');
     console.log('  API Key present:', !!apiKey);
     console.log('  Textarea element:', textInput?.id || 'NOT FOUND');
+    console.log('  Textarea exists:', !!textInput);
+    console.log('  Textarea type:', typeof textInput);
     console.log('═══════════════════════════════════════════════════');
     
     // Build request body with ALL parameters
@@ -465,6 +467,7 @@ async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generat
     console.log('  Method: POST');
     console.log('  Has files:', !!files && files.length > 0);
     console.log('  Request body type:', formData ? 'FormData' : 'JSON');
+    console.log('  textInput element passed:', !!textInput, 'type:', typeof textInput);
     
     const response = await fetch('/api/generate-content', {
         method: 'POST',
@@ -543,9 +546,15 @@ async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generat
             lineCount += lines.length;
             
             for (const line of lines) {
+                // Skip empty lines
+                if (!line.trim()) continue;
+                
+                console.log(`  🔍 CLIENT: Processing line (${line.length} chars): "${line.substring(0, 60)}${line.length > 60 ? '...' : ''}"`);
+                
                 // Handle both 'data:' and 'data: ' formats
                 if (line.startsWith('data:')) {
                     const jsonStr = line.substring(5).trim();
+                    console.log(`  📝 CLIENT: Extracted JSON string: "${jsonStr.substring(0, 60)}${jsonStr.length > 60 ? '...' : ''}"`);
                     
                     if (jsonStr === '[DONE]') {
                         console.log('✅ CLIENT: Received [DONE] marker');
@@ -561,9 +570,20 @@ async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generat
                         
                         if (parsed.text) {
                             content += parsed.text;
-                            textInput.value = content;
-                            textInput.scrollTop = textInput.scrollHeight;
-                            console.log(`  ✍️ CLIENT: Updated textarea! Total chars: ${content.length}, last text: "${parsed.text.substring(0, 30)}..."`);
+                            console.log(`  📝 CLIENT: Content updated, total length now: ${content.length}`);
+                            console.log(`  🔍 CLIENT: textInput check - exists: ${!!textInput}, type: ${typeof textInput}`);
+                            
+                            if (textInput && typeof textInput.value !== 'undefined') {
+                                textInput.value = content;
+                                textInput.scrollTop = textInput.scrollHeight;
+                                console.log(`  ✍️ CLIENT: Updated textarea! Total chars: ${content.length}, last text: "${parsed.text.substring(0, 30)}..."`);
+                                console.log(`  ✅ CLIENT: textarea.value.length after update: ${textInput.value.length}`);
+                            } else {
+                                console.error('  ❌ CLIENT: textInput element is null or invalid!', {
+                                    textInput,
+                                    hasValue: typeof textInput?.value !== 'undefined'
+                                });
+                            }
                         } else {
                             console.warn(`  ⚠️ CLIENT: No 'text' field in parsed data. Fields:`, Object.keys(parsed));
                         }
