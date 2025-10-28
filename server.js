@@ -1046,8 +1046,10 @@ app.post('/api/preview', async (req, res) => {
                     chunkCount++;
                     const chunk = decoder.decode(value, { stream: true });
                     
-                    console.log(`📦 SERVER: Chunk ${chunkCount}: ${chunk.length} bytes from Bedrock`);
-                    console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 150)}..."`);
+                    // Reduced logging to avoid rate limits
+                    if (chunkCount <= 5 || chunkCount % 50 === 0) {
+                        console.log(`📦 SERVER: Chunk ${chunkCount}: ${chunk.length} bytes from Bedrock`);
+                    }
                     
                     // Bedrock returns EventStream format (binary)
                     // More flexible JSON extraction - look for any JSON object containing contentBlockIndex
@@ -1075,14 +1077,17 @@ app.post('/api/preview', async (req, res) => {
                                 if (data.delta?.text) {
                                     const text = data.delta.text;
                                     streamedText += text;  // Accumulate pure text
-                                    console.log(`  ✅ SERVER: Sending text: "${text}"`);
-                                res.write(`data: ${JSON.stringify({ 
-                                    type: 'raw_text',
-                                    text: text,
-                                    timestamp: Date.now()
-                                })}\n\n`);
-                                if (res.flush) res.flush();
-                            }
+                                    // Reduced logging
+                                    if (chunkCount <= 5 || chunkCount % 50 === 0) {
+                                        console.log(`  ✅ SERVER: Sending text: "${text}"`);
+                                    }
+                                    res.write(`data: ${JSON.stringify({ 
+                                        type: 'raw_text',
+                                        text: text,
+                                        timestamp: Date.now()
+                                    })}\n\n`);
+                                    if (res.flush) res.flush();
+                                }
                         } catch (e) {
                                 console.log(`  ⏭️ SERVER: Failed to parse JSON: ${e.message}`);
                                 console.log(`  📄 SERVER: JSON attempt: "${jsonStr.substring(0, 100)}..."`);
@@ -1182,13 +1187,15 @@ app.post('/api/preview', async (req, res) => {
                             console.log(`  ⏭️ SERVER: Periodic parse failed: ${e.message}`);
                         }
                     } else {
-                        // Debug why periodic parsing isn't attempted
-                        if (streamedText.length <= 1000) {
-                            console.log(`  ⏭️ SERVER: Periodic parse skipped - not enough content (${streamedText.length} chars)`);
-                        } else if (!streamedText.includes('"slides"')) {
-                            console.log(`  ⏭️ SERVER: Periodic parse skipped - no slides found in text`);
-                        } else if (!streamedText.includes('}')) {
-                            console.log(`  ⏭️ SERVER: Periodic parse skipped - no closing brace found`);
+                        // Reduced logging for periodic parse skipping
+                        if (chunkCount % 20 === 0) {
+                            if (streamedText.length <= 1000) {
+                                console.log(`  ⏭️ SERVER: Periodic parse skipped - not enough content (${streamedText.length} chars)`);
+                            } else if (!streamedText.includes('"slides"')) {
+                                console.log(`  ⏭️ SERVER: Periodic parse skipped - no slides found in text`);
+                            } else if (!streamedText.includes('}')) {
+                                console.log(`  ⏭️ SERVER: Periodic parse skipped - no closing brace found`);
+                            }
                         }
                     }
                 }
@@ -1248,7 +1255,19 @@ app.post('/api/preview', async (req, res) => {
                     if (!reconstructedJson) {
                         console.log(`❌ SERVER: Could not reconstruct valid JSON, trying fallback parsing`);
                         console.log(`📊 SERVER: Fallback text preview: "${cleanedText.substring(0, 300)}..."`);
-                        reconstructedJson = cleanedText;
+                        
+                        // Try to clean up the malformed text
+                        // Remove common corruption patterns
+                        let cleanedFallback = cleanedText
+                            .replace(/gestedThemeKey/g, 'suggestedThemeKey')
+                            .replace(/"designTh\s+/g, '"designTheme": ')
+                            .replace(/"colorPrimary":\s*"#1C2833",\s*"colorPrimary":\s*"#1C2833"/g, '"colorPrimary": "#1C2833"')
+                            .replace(/,\s*,/g, ',')  // Remove double commas
+                            .replace(/,\s*}/g, '}')  // Remove trailing commas before closing braces
+                            .replace(/,\s*]/g, ']'); // Remove trailing commas before closing brackets
+                        
+                        console.log(`📊 SERVER: Cleaned fallback preview: "${cleanedFallback.substring(0, 300)}..."`);
+                        reconstructedJson = cleanedFallback;
                     }
                     
                     console.log(`📊 SERVER: About to parse JSON (${reconstructedJson.length} chars)`);
