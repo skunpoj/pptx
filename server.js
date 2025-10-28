@@ -1290,6 +1290,12 @@ app.post('/api/preview', async (req, res) => {
                             .replace(/"colorTexttype":/g, '"colorText": "#1d1d1d", "type":')
                             // Fix malformed object boundaries
                             .replace(/"colorBackground":\s*"#FFFFFF",\s*"colorTexttype":/g, '"colorBackground": "#FFFFFF", "colorText": "#1d1d1d", "type":')
+                            // Fix specific corruption patterns from the logs
+                            .replace(/"graphics\s+"roundRect"/g, '"graphics": [{"type": "roundRect"')
+                            .replace(/"position":\s*"bottom-right",\s*"color":\s*"accent[^"]*$/g, '"position": "bottom-right", "color": "accent", "opacity": 0.1}]')
+                            .replace(/"color":\s*"accent[^"]*$/g, '"color": "accent", "opacity": 0.1}')
+                            // Fix incomplete strings at end of lines
+                            .replace(/"([^"]*?)\s*$/g, '"$1"')
                             // Try to reconstruct the main object structure
                             .replace(/^[^{]*/, '') // Remove everything before first {
                             .replace(/[^}]*$/, ''); // Remove everything after last }
@@ -1428,6 +1434,68 @@ app.post('/api/preview', async (req, res) => {
                     console.error(`📄 SERVER: Error details:`, e);
                     console.error(`📄 SERVER: Streamed text preview: "${streamedText.substring(0, 500)}..."`);
                     console.error(`📄 SERVER: Streamed text length: ${streamedText.length}`);
+                    
+                    // Try to fix common JSON errors
+                    if (e.message.includes('unexpected c') || e.message.includes('unexpected token')) {
+                        console.log(`🔧 SERVER: Attempting to fix JSON syntax errors`);
+                        
+                        // Try to fix common syntax issues
+                        let fixedText = streamedText
+                            .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+                            .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
+                            .replace(/,\s*,/g, ',')  // Remove double commas
+                            .replace(/"([^"]*?)\s*$/g, '"$1"')  // Fix incomplete strings
+                            .replace(/"graphics\s+"roundRect"/g, '"graphics": [{"type": "roundRect"')
+                            .replace(/"color":\s*"accent[^"]*$/g, '"color": "accent", "opacity": 0.1}');
+                        
+                        try {
+                            const fixedData = parseAIResponse(fixedText);
+                            console.log(`✅ SERVER: Successfully fixed JSON, slides: ${fixedData.slides?.length || 0}`);
+                            
+                            // Send the fixed data
+                            if (fixedData.slides && fixedData.slides.length > 0) {
+                                // Send theme if available
+                                if (fixedData.designTheme) {
+                                    res.write(`data: ${JSON.stringify({ 
+                                        type: 'theme',
+                                        theme: fixedData.designTheme,
+                                        suggestedThemeKey: fixedData.suggestedThemeKey,
+                                        totalSlides: fixedData.slides.length
+                                    })}\n\n`);
+                                }
+                                
+                                // Send all slides
+                                for (let i = 0; i < fixedData.slides.length; i++) {
+                                    const slide = fixedData.slides[i];
+                                    res.write(`data: ${JSON.stringify({ 
+                                        type: 'slide', 
+                                        slide: slide,
+                                        index: i,
+                                        current: i + 1,
+                                        total: fixedData.slides.length
+                                    })}\n\n`);
+                                }
+                                
+                                // Send completion
+                                res.write(`data: ${JSON.stringify({ type: 'complete', data: fixedData })}\n\n`);
+                                
+                                // Track slide generation
+                                if (req.oidc.isAuthenticated() && req.oidc.user) {
+                                    try {
+                                        const userId = req.oidc.user.sub || req.oidc.user.email;
+                                        await updateUserTracking(userId, fixedData.slides.length);
+                                    } catch (error) {
+                                        console.error('Failed to track slide generation:', error);
+                                    }
+                                }
+                                
+                                console.log(`✅ SERVER: Successfully sent ${fixedData.slides.length} slides after JSON fix`);
+                                return; // Exit successfully
+                            }
+                        } catch (fixError) {
+                            console.error(`❌ SERVER: JSON fix attempt failed: ${fixError.message}`);
+                        }
+                    }
                     
                     // Try to send a basic error response to frontend
                     try {

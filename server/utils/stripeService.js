@@ -218,20 +218,15 @@ function validateEmailDomain(auth0Email, stripeEmail) {
 async function createPromptPayCheckoutSession(customerEmail, subscriptionData) {
     try {
         console.log(`🔄 Creating PromptPay checkout session for: ${customerEmail}`);
+        console.log(`📦 Using active product ID: prod_TJiubB9Eq7c68h`);
+        console.log(`💰 Using price ID: price_1SN5z9GfwbNFFG53MZKQw2qX`);
         
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['promptpay', 'card'], // Support both PromptPay and cards
             mode: 'payment', // Changed from 'subscription' to 'payment' since PromptPay doesn't support subscriptions
             customer_email: customerEmail,
             line_items: [{
-                price_data: {
-                    currency: 'thb',
-                    product_data: {
-                        name: subscriptionData.productName || 'GENIS.AI Premium Subscription',
-                        description: subscriptionData.description || 'AI-powered presentation generation service'
-                    },
-                    unit_amount: subscriptionData.amount || 29900 // Default 299 THB
-                },
+                price: 'price_1SN5z9GfwbNFFG53MZKQw2qX', // Use the active product's price ID
                 quantity: 1
             }],
             success_url: `${process.env.BASE_URL || 'https://genis.ai'}/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -239,7 +234,8 @@ async function createPromptPayCheckoutSession(customerEmail, subscriptionData) {
             metadata: {
                 customer_email: customerEmail,
                 service: 'genis-ai',
-                payment_type: 'promptpay_one_time'
+                payment_type: 'promptpay_one_time',
+                product_id: 'prod_TJiubB9Eq7c68h' // Active product ID
             }
         });
         
@@ -268,14 +264,7 @@ async function createPromptPayPaymentSession(customerEmail, paymentData) {
             mode: 'payment',
             customer_email: customerEmail,
             line_items: [{
-                price_data: {
-                    currency: 'thb',
-                    product_data: {
-                        name: paymentData.productName || 'GENIS.AI Service',
-                        description: paymentData.description || 'AI-powered presentation generation'
-                    },
-                    unit_amount: paymentData.amount || 9900 // Default 99 THB
-                },
+                price: 'price_1SN5z9GfwbNFFG53MZKQw2qX', // Use the active product's price ID
                 quantity: paymentData.quantity || 1
             }],
             success_url: `${process.env.BASE_URL || 'https://genis.ai'}/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -283,7 +272,8 @@ async function createPromptPayPaymentSession(customerEmail, paymentData) {
             metadata: {
                 customer_email: customerEmail,
                 service: 'genis-ai',
-                payment_type: 'one-time'
+                payment_type: 'one-time',
+                product_id: 'prod_TJiubB9Eq7c68h' // Active product ID
             }
         });
         

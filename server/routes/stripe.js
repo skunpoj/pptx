@@ -59,8 +59,9 @@ router.post('/api/promptpay/subscription', async (req, res) => {
     const subscriptionData = {
       amount: parseInt(amount),
       interval,
-      productName: productName || 'GENIS.AI Premium Subscription',
-      description: description || 'AI-powered presentation generation service'
+      productName: productName || 'GENIS.AI Subscription',
+      description: description || 'AI-powered presentation generation service',
+      productId: 'prod_TJiubB9Eq7c68h' // Active product ID
     };
     
     const session = await createPromptPayCheckoutSession(userEmail, subscriptionData);

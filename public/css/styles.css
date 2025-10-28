@@ -2320,14 +2320,14 @@ textarea:focus {
     }
 }
 
-/* Small mobile devices (480px and below) */
-@media (max-width: 480px) {
+/* Small mobile devices (640px and below) */
+@media (max-width: 640px) {
     body {
         padding: 0.25rem;
         font-size: 13px;
     }
     
-    /* Hide GitHub star on very small screens */
+    /* Hide GitHub star on small screens */
     .github-shield-badge {
         display: none !important;
     }

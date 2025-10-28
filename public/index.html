@@ -145,8 +145,8 @@ Our Products
                     <div id="promptPayWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
                         ⚠️ <strong>Important:</strong> PromptPay is single-use. This is a one-time payment for premium access.
                     </div>
-                    <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
-                        ⚠️ <strong>Subscription not found:</strong> No active subscription found for your email. Please subscribe to access premium features.
+                    <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.75rem; color: #856404; max-width: 300px;">
+                        ⚠️ <strong>Subscription not found:</strong> You may have subscribed using a different email address.
                     </div>
                 </div>
             </div>
@@ -1126,38 +1126,31 @@ Our Products
             const toast = document.createElement('div');
             toast.style.cssText = `
                 position: fixed;
-                top: 20px;
-                right: 20px;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
                 background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
                 border: 2px solid #ffc107;
-                border-radius: 12px;
-                padding: 1.5rem;
-                max-width: 400px;
+                border-radius: 8px;
+                padding: 1rem;
+                max-width: 300px;
                 box-shadow: 0 8px 32px rgba(0,0,0,0.2);
                 z-index: 10000;
                 font-family: 'Inter', sans-serif;
-                animation: slideInRight 0.3s ease-out;
+                animation: fadeInScale 0.3s ease-out;
             `;
             
             toast.innerHTML = `
-                <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
-                    <div style="font-size: 1.5rem;">⚠️</div>
+                <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+                    <div style="font-size: 1.2rem;">⚠️</div>
                     <div style="flex: 1;">
-                        <h4 style="margin: 0 0 0.5rem 0; color: #856404; font-size: 1rem; font-weight: 700;">Subscription Not Found</h4>
-                        <p style="margin: 0 0 0.75rem 0; color: #856404; font-size: 0.9rem; line-height: 1.4;">
-                            We couldn't find an active subscription for your email address. This could mean:
-                        </p>
-                        <ul style="margin: 0 0 0.75rem 0; padding-left: 1.2rem; color: #856404; font-size: 0.85rem; line-height: 1.4;">
-                            <li>You haven't subscribed yet</li>
-                            <li>Your subscription expired</li>
-                            <li>You subscribed with a different email</li>
-                        </ul>
-                        <p style="margin: 0; color: #856404; font-size: 0.85rem; font-weight: 600;">
-                            💡 <strong>Solution:</strong> Use the payment buttons to subscribe and get premium access!
+                        <h4 style="margin: 0 0 0.5rem 0; color: #856404; font-size: 0.9rem; font-weight: 700;">Subscription Not Found</h4>
+                        <p style="margin: 0; color: #856404; font-size: 0.8rem; line-height: 1.3;">
+                            You may have subscribed using a different email address. Use the payment buttons to subscribe.
                         </p>
                     </div>
                     <button onclick="this.parentElement.parentElement.remove()" 
-                            style="background: none; border: none; font-size: 1.2rem; color: #856404; cursor: pointer; padding: 0; margin: 0;">
+                            style="background: none; border: none; font-size: 1rem; color: #856404; cursor: pointer; padding: 0; margin: 0;">
                         ✕
                     </button>
                 </div>
@@ -1263,7 +1256,7 @@ Our Products
                     
                     // Hide buy button and show subscription management link
                     const stripeButtonContainer = document.getElementById('stripeButtonContainer');
-                    if (stripeButtonContainer) {
+                    if (stripeButtonContainer && !stripeButtonContainer.innerHTML.includes('Manage Subscription')) {
                         stripeButtonContainer.innerHTML = `
                             <a href="https://billing.stripe.com/p/login/cNi3cv1GIcNT44zbzldnW00" 
                                target="_blank" 
@@ -1279,14 +1272,13 @@ Our Products
                     // Show email mismatch warning if emails don't match exactly
                     if (subscriptionData.emailMismatchWarning && !subscriptionData.exactEmailMatch) {
                         emailMismatchWarning.innerHTML = `
-                            ⚠️ <strong>Subscription not found:</strong> Cannot find subscription for your email. 
-                            You may have subscribed using a different email address.
+                            ⚠️ <strong>Subscription not found:</strong> You may have subscribed using a different email address.
                         `;
                         emailMismatchWarning.style.display = 'block';
                         
                         // Show buy button instead of manage subscription for email mismatch
                         const stripeButtonContainer = document.getElementById('stripeButtonContainer');
-                        if (stripeButtonContainer) {
+                        if (stripeButtonContainer && !stripeButtonContainer.innerHTML.includes('stripe-buy-button')) {
                             stripeButtonContainer.innerHTML = `
                                 <stripe-buy-button
                                     buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
@@ -1331,8 +1323,7 @@ Our Products
                     // Show email mismatch warning if emails don't match exactly
                     if (subscriptionData.emailMismatchWarning && !subscriptionData.exactEmailMatch) {
                         emailMismatchWarning.innerHTML = `
-                            ⚠️ <strong>Email Mismatch:</strong> Your Stripe account uses a different email (${subscriptionData.customerEmail}). 
-                            Please use the same email for both Auth0 and Stripe to avoid confusion.
+                            ⚠️ <strong>Subscription not found:</strong> You may have subscribed using a different email address.
                         `;
                         emailMismatchWarning.style.display = 'block';
                     } else {
@@ -1369,8 +1360,7 @@ Our Products
                     
                     // Show email mismatch warning
                     emailMismatchWarning.innerHTML = `
-                        ⚠️ <strong>No Stripe Account Found:</strong> No subscription found for your email (${subscriptionData.email}). 
-                        If you have a subscription under a different email, please contact support.
+                        ⚠️ <strong>Subscription not found:</strong> You may have subscribed using a different email address.
                     `;
                     emailMismatchWarning.style.display = 'block';
                 }
