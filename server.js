@@ -73,6 +73,23 @@ const config = {
 // Auth router attaches /login, /logout, and /callback routes to the baseURL
 app.use(auth(config));
 
+// Stripe Success Page Handler
+app.get('/success', (req, res) => {
+    const sessionId = req.query.session_id;
+    console.log(`🎉 Stripe payment success - Session ID: ${sessionId}`);
+    
+    // Redirect to main page with success message
+    res.redirect(`/?payment=success&session_id=${sessionId}`);
+});
+
+// Stripe Cancel Page Handler  
+app.get('/cancel', (req, res) => {
+    console.log(`❌ Stripe payment cancelled`);
+    
+    // Redirect to main page with cancel message
+    res.redirect(`/?payment=cancelled`);
+});
+
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.raw({ type: 'application/octet-stream', limit: '50mb' }));
@@ -95,7 +112,9 @@ app.get('/api/user', async (req, res) => {
   if (userData.authenticated && userData.user) {
     try {
       const userId = userData.user.sub || userData.user.email;
+      console.log(`🔍 Getting slide count for user: ${userId}`);
       const slideCount = await getUserSlideCount(userId);
+      console.log(`📊 Slide count retrieved: ${slideCount}`);
       userData.user.slideCount = slideCount;
     } catch (error) {
       console.error('Failed to get user slide count:', error);
@@ -1101,7 +1120,7 @@ app.post('/api/preview', async (req, res) => {
                     // Parse accumulated text periodically to extract slides as they become available
                     // This gives better UX by showing slides in batches rather than all at once
                     // Only try parsing when we have substantial content and it looks like JSON is complete
-                    if (streamedText.length > 1000 && streamedText.includes('"slides"') && streamedText.includes('}')) {
+                    if (streamedText.length > 1000 && (streamedText.includes('"slides"') || streamedText.includes('"type":') || streamedText.includes('"title":')) && streamedText.includes('}')) {
                         console.log(`  🔍 SERVER: Attempting periodic parse (${streamedText.length} chars, contains slides: ${streamedText.includes('"slides"')}, contains closing brace: ${streamedText.includes('}')})`);
                         
                         try {
@@ -1287,26 +1306,70 @@ app.post('/api/preview', async (req, res) => {
                                 cleanedFallback = cleanedFallback.substring(firstBrace, lastBrace + 1);
                                 console.log(`📊 SERVER: Extracted JSON from position ${firstBrace} to ${lastBrace}`);
                             } else {
-                                // Last resort: try to construct a minimal valid structure
-                                console.log(`📊 SERVER: Constructing minimal JSON structure`);
-                                cleanedFallback = `{
-                                    "designTheme": {
-                                        "name": "Professional Corporate",
-                                        "description": "Clean and professional theme",
-                                        "colorPrimary": "#1C2833",
-                                        "colorSecondary": "#2E4053",
-                                        "colorAccent": "#3498DB",
-                                        "colorBackground": "#FFFFFF",
-                                        "colorText": "#1d1d1d"
-                                    },
-                                    "slides": [
-                                        {
-                                            "type": "title",
-                                            "title": "Presentation",
-                                            "subtitle": "Generated Content"
-                                        }
-                                    ]
-                                }`;
+                                // Try to extract actual slides from the malformed text before falling back
+                                console.log(`📊 SERVER: Attempting to extract actual slides from malformed text`);
+                                
+                                // Look for slide patterns in the text
+                                const slideMatches = cleanedText.match(/"type":\s*"(title|content|chart|image)"/g);
+                                const titleMatches = cleanedText.match(/"title":\s*"[^"]*"/g);
+                                
+                                if (slideMatches && slideMatches.length > 0) {
+                                    console.log(`📊 SERVER: Found ${slideMatches.length} potential slides in text`);
+                                    
+                                    // Try to extract theme information
+                                    const themeName = cleanedText.match(/"name":\s*"[^"]*"/)?.[0]?.replace(/"/g, '').replace('name: ', '') || 'Professional Corporate';
+                                    const colorPrimary = cleanedText.match(/"colorPrimary":\s*"[^"]*"/)?.[0]?.replace(/"/g, '').replace('colorPrimary: ', '') || '#1C2833';
+                                    
+                                    // Construct slides array from found patterns
+                                    const extractedSlides = [];
+                                    for (let i = 0; i < slideMatches.length; i++) {
+                                        const slideType = slideMatches[i].match(/"type":\s*"([^"]*)"/)?.[1] || 'content';
+                                        const slideTitle = titleMatches?.[i]?.match(/"title":\s*"([^"]*)"/)?.[1] || `Slide ${i + 1}`;
+                                        
+                                        extractedSlides.push({
+                                            "type": slideType,
+                                            "title": slideTitle,
+                                            "subtitle": slideType === 'title' ? 'Generated Content' : '',
+                                            "content": slideType === 'content' ? ['Generated content'] : []
+                                        });
+                                    }
+                                    
+                                    cleanedFallback = `{
+                                        "designTheme": {
+                                            "name": "${themeName}",
+                                            "description": "Clean and professional theme",
+                                            "colorPrimary": "${colorPrimary}",
+                                            "colorSecondary": "#2E4053",
+                                            "colorAccent": "#3498DB",
+                                            "colorBackground": "#FFFFFF",
+                                            "colorText": "#1d1d1d"
+                                        },
+                                        "slides": ${JSON.stringify(extractedSlides)}
+                                    }`;
+                                    
+                                    console.log(`📊 SERVER: Extracted ${extractedSlides.length} slides from malformed text`);
+                                } else {
+                                    // Last resort: minimal structure
+                                    console.log(`📊 SERVER: No slides found, using minimal structure`);
+                                    cleanedFallback = `{
+                                        "designTheme": {
+                                            "name": "Professional Corporate",
+                                            "description": "Clean and professional theme",
+                                            "colorPrimary": "#1C2833",
+                                            "colorSecondary": "#2E4053",
+                                            "colorAccent": "#3498DB",
+                                            "colorBackground": "#FFFFFF",
+                                            "colorText": "#1d1d1d"
+                                        },
+                                        "slides": [
+                                            {
+                                                "type": "title",
+                                                "title": "Presentation",
+                                                "subtitle": "Generated Content"
+                                            }
+                                        ]
+                                    }`;
+                                }
                             }
                         }
                         

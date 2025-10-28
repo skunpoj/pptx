@@ -116,17 +116,17 @@ Our Products
                     
                     <!-- Subscription Warning Button -->
                     <div id="subscriptionWarningBtn" style="display: block;">
-                        <button onclick="showSubscriptionExplanation()" 
-                                style="display: inline-block; padding: 0.75rem 1rem; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: #333; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            ⚠️ Subscription not found
+                        <button onclick="window.showSubscriptionExplanation()" 
+                                style="display: inline-block; padding: 0.5rem 0.75rem; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: #333; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.75rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
+                            ⚠️ No Sub
                         </button>
                     </div>
                     
                     <!-- PromptPay Button -->
                     <div id="promptPayContainer" style="display: block;">
-                        <button id="promptPayBtn" onclick="createPromptPaySubscription()" 
-                                style="display: inline-block; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            🇹🇭 Pay with PromptPay
+                        <button id="promptPayBtn" onclick="window.createPromptPaySubscription()" 
+                                style="display: inline-block; padding: 0.5rem 0.75rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.75rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
+                            🇹🇭 PromptPay
                         </button>
                     </div>
                     
@@ -169,7 +169,7 @@ Our Products
                             <span style="color: #667eea; font-weight: 600;">🤖 Auto Images</span>
                         </label>
                         <button class="btn-secondary" id="manualGenerateBtn" onclick="window.generateImagesForSlides()" style="padding: 0.5rem 1rem; font-size: 0.85rem; display: none; white-space: nowrap;">
-                            🎨 Generate All Images
+                            🎨 Generate All
                         </button>
                     </div>
                 </div>
@@ -1001,8 +1001,127 @@ Our Products
         });
         
         // Check authentication state and update UI
+        // Check for payment success/cancel messages
+        function checkPaymentStatus() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paymentStatus = urlParams.get('payment');
+            const sessionId = urlParams.get('session_id');
+            
+            if (paymentStatus === 'success' && sessionId) {
+                console.log(`🎉 Payment successful! Session ID: ${sessionId}`);
+                
+                // Show success toast
+                showPaymentSuccessToast(sessionId);
+                
+                // Clean URL (remove parameters)
+                window.history.replaceState({}, document.title, window.location.pathname);
+                
+            } else if (paymentStatus === 'cancelled') {
+                console.log(`❌ Payment cancelled`);
+                
+                // Show cancel toast
+                showPaymentCancelToast();
+                
+                // Clean URL (remove parameters)
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+        // Function to show payment success toast
+        function showPaymentSuccessToast(sessionId) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+                border: 2px solid #28a745;
+                border-radius: 12px;
+                padding: 1.5rem;
+                max-width: 400px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+                z-index: 10000;
+                font-family: 'Inter', sans-serif;
+                animation: slideInRight 0.3s ease-out;
+            `;
+            
+            toast.innerHTML = `
+                <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                    <div style="font-size: 1.5rem;">🎉</div>
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #155724; font-size: 1rem; font-weight: 700;">Payment Successful!</h4>
+                        <p style="margin: 0 0 0.75rem 0; color: #155724; font-size: 0.9rem; line-height: 1.4;">
+                            Thank you for your payment! You now have premium access to GENIS.AI.
+                        </p>
+                        <p style="margin: 0; color: #155724; font-size: 0.85rem; font-weight: 600;">
+                            💡 <strong>Session ID:</strong> ${sessionId.substring(0, 20)}...
+                        </p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            style="background: none; border: none; font-size: 1.2rem; color: #155724; cursor: pointer; padding: 0; margin: 0;">
+                        ✕
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto-remove after 10 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 10000);
+        }
+
+        // Function to show payment cancel toast
+        function showPaymentCancelToast() {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+                border: 2px solid #dc3545;
+                border-radius: 12px;
+                padding: 1.5rem;
+                max-width: 400px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+                z-index: 10000;
+                font-family: 'Inter', sans-serif;
+                animation: slideInRight 0.3s ease-out;
+            `;
+            
+            toast.innerHTML = `
+                <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+                    <div style="font-size: 1.5rem;">❌</div>
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #721c24; font-size: 1rem; font-weight: 700;">Payment Cancelled</h4>
+                        <p style="margin: 0; color: #721c24; font-size: 0.9rem; line-height: 1.4;">
+                            Your payment was cancelled. You can try again anytime using the payment buttons.
+                        </p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            style="background: none; border: none; font-size: 1.2rem; color: #721c24; cursor: pointer; padding: 0; margin: 0;">
+                        ✕
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto-remove after 8 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.animation = 'slideInRight 0.3s ease-out reverse';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 8000);
+        }
+
         // Function to show subscription explanation toast
-        function showSubscriptionExplanation() {
+        window.showSubscriptionExplanation = function() {
             // Create toast element
             const toast = document.createElement('div');
             toast.style.cssText = `
@@ -1067,7 +1186,7 @@ Our Products
         }
 
         // Function to create PromptPay subscription
-        async function createPromptPaySubscription() {
+        window.createPromptPaySubscription = async function() {
             try {
                 const promptPayBtn = document.getElementById('promptPayBtn');
                 const promptPayWarning = document.getElementById('promptPayWarning');
@@ -1119,7 +1238,7 @@ Our Products
         }
 
         // Function to check subscription status
-        async function checkSubscriptionStatus() {
+        window.checkSubscriptionStatus = async function() {
             try {
                 console.log('🔍 Checking subscription status...');
                 const response = await fetch('/api/subscription');
@@ -1284,6 +1403,9 @@ Our Products
         }
 
         window.addEventListener('load', async function() {
+            // Check for payment status first
+            checkPaymentStatus();
+            
             try {
                 const response = await fetch('/api/user');
                 const data = await response.json();
@@ -1314,8 +1436,14 @@ Our Products
                     // Update slide count display
                     const userSlideCount = document.getElementById('userSlideCount');
                     if (userSlideCount && data.user.slideCount !== undefined) {
+                        console.log(`📊 Displaying slide count: ${data.user.slideCount}`);
                         userSlideCount.textContent = `(Total: ${data.user.slideCount} slides)`;
                         userSlideCount.style.display = 'inline';
+                    } else {
+                        console.log('❌ Slide count not available:', {
+                            userSlideCount: !!userSlideCount,
+                            slideCount: data.user.slideCount
+                        });
                     }
                     
                     // Check subscription status
