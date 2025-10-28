@@ -292,8 +292,8 @@ app.post('/api/generate-content', async (req, res) => {
                         }
                         
                         // Bedrock returns EventStream format (binary)
-                        // Try to extract JSON from the chunk
-                        const jsonMatches = chunk.match(/\{"contentBlockIndex":\d+,"delta":\{"text":"[^"]*"[^}]*"?:[^"]*"[^}]*\}[^}]*\}/g);
+                        // Try to extract JSON from the chunk - updated regex pattern
+                        const jsonMatches = chunk.match(/\{"contentBlockIndex":\d+,"delta":\{"text":"[^"]*"\}[^}]*\}/g);
                         if (jsonMatches) {
                             for (const jsonStr of jsonMatches) {
                                 try {
@@ -309,6 +309,9 @@ app.post('/api/generate-content', async (req, res) => {
                                     console.log(`  ⏭️ Failed to parse JSON: ${e.message}`);
                                 }
                             }
+                        } else {
+                            // Debug: show what we're actually getting
+                            console.log(`  🔍 No JSON matches found in chunk. Chunk preview: "${chunk.substring(0, 200)}"`);
                         }
                     }
                 } finally {
@@ -1012,8 +1015,8 @@ app.post('/api/preview', async (req, res) => {
                     console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 150)}..."`);
                     
                     // Bedrock returns EventStream format (binary)
-                    // Try to extract JSON from the chunk
-                    const jsonMatches = chunk.match(/\{"contentBlockIndex":\d+,"delta":\{"text":"[^"]*"[^}]*"?:[^"]*"[^}]*\}[^}]*\}/g);
+                    // Try to extract JSON from the chunk - updated regex pattern
+                    const jsonMatches = chunk.match(/\{"contentBlockIndex":\d+,"delta":\{"text":"[^"]*"\}[^}]*\}/g);
                     if (jsonMatches) {
                         for (const jsonStr of jsonMatches) {
                             try {
@@ -1081,6 +1084,9 @@ app.post('/api/preview', async (req, res) => {
                                 console.log(`  ⏭️ SERVER: Failed to parse JSON: ${e.message}`);
                             }
                         }
+                    } else {
+                        // Debug: show what we're actually getting
+                        console.log(`  🔍 SERVER: No JSON matches found in chunk. Chunk preview: "${chunk.substring(0, 200)}"`);
                     }
                     
                     // Try to parse and extract theme if we haven't sent it yet
