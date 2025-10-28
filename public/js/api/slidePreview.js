@@ -252,7 +252,13 @@ async function generatePreview() {
     };
     
     try {
-        const currentProvider = window.currentProvider || 'anthropic';
+        const currentProvider = window.currentProvider || 'bedrock';
+        
+        console.log('🔍 Provider check:', {
+            'window.currentProvider': window.currentProvider,
+            'selectedProvider': currentProvider,
+            'willUseBedrock': currentProvider === 'bedrock'
+        });
         
         // Update streaming status
         appendStreamingText('📤 Sending request to /api/preview...\n');
@@ -348,11 +354,9 @@ async function generatePreview() {
                 // Hide initial progress indicator
                 hidePreviewProgress();
                 
-                // Show generation button
-                const modificationSection = document.getElementById('modificationSection');
-                const generatePptSection = document.getElementById('generatePptSection');
-                if (modificationSection) modificationSection.style.display = 'block';
-                if (generatePptSection) generatePptSection.style.display = 'block';
+                // Show generation section
+                const generationSection = document.getElementById('generationSection');
+                if (generationSection) generationSection.style.display = 'block';
                 
                 if (typeof showNotification === 'function') {
                     showNotification('✅ Preview generated successfully!', 'success');
@@ -1341,10 +1345,8 @@ function displayPreview(slideData) {
         });
     }
     
-    const modificationSection = document.getElementById('modificationSection');
-    const generatePptSection = document.getElementById('generatePptSection');
-    if (modificationSection) modificationSection.style.display = 'block';
-    if (generatePptSection) generatePptSection.style.display = 'block';
+    const generationSection = document.getElementById('generationSection');
+    if (generationSection) generationSection.style.display = 'block';
 }
 
 // Export functions
