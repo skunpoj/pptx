@@ -1264,7 +1264,51 @@ app.post('/api/preview', async (req, res) => {
                             .replace(/"colorPrimary":\s*"#1C2833",\s*"colorPrimary":\s*"#1C2833"/g, '"colorPrimary": "#1C2833"')
                             .replace(/,\s*,/g, ',')  // Remove double commas
                             .replace(/,\s*}/g, '}')  // Remove trailing commas before closing braces
-                            .replace(/,\s*]/g, ']'); // Remove trailing commas before closing brackets
+                            .replace(/,\s*]/g, ']')  // Remove trailing commas before closing brackets
+                            // Fix missing quotes around values
+                            .replace(/:\s*([^",{\[\s][^",}]*?)(\s*[,}])/g, ': "$1"$2')
+                            // Fix broken property names
+                            .replace(/"colorTexttype":/g, '"colorText": "#1d1d1d", "type":')
+                            // Fix malformed object boundaries
+                            .replace(/"colorBackground":\s*"#FFFFFF",\s*"colorTexttype":/g, '"colorBackground": "#FFFFFF", "colorText": "#1d1d1d", "type":')
+                            // Try to reconstruct the main object structure
+                            .replace(/^[^{]*/, '') // Remove everything before first {
+                            .replace(/[^}]*$/, ''); // Remove everything after last }
+                        
+                        // If we still don't have a proper JSON structure, try to wrap it
+                        if (!cleanedFallback.startsWith('{') || !cleanedFallback.endsWith('}')) {
+                            console.log(`📊 SERVER: Attempting to wrap malformed JSON`);
+                            
+                            // Try to find the main object boundaries
+                            const firstBrace = cleanedFallback.indexOf('{');
+                            const lastBrace = cleanedFallback.lastIndexOf('}');
+                            
+                            if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                                cleanedFallback = cleanedFallback.substring(firstBrace, lastBrace + 1);
+                                console.log(`📊 SERVER: Extracted JSON from position ${firstBrace} to ${lastBrace}`);
+                            } else {
+                                // Last resort: try to construct a minimal valid structure
+                                console.log(`📊 SERVER: Constructing minimal JSON structure`);
+                                cleanedFallback = `{
+                                    "designTheme": {
+                                        "name": "Professional Corporate",
+                                        "description": "Clean and professional theme",
+                                        "colorPrimary": "#1C2833",
+                                        "colorSecondary": "#2E4053",
+                                        "colorAccent": "#3498DB",
+                                        "colorBackground": "#FFFFFF",
+                                        "colorText": "#1d1d1d"
+                                    },
+                                    "slides": [
+                                        {
+                                            "type": "title",
+                                            "title": "Presentation",
+                                            "subtitle": "Generated Content"
+                                        }
+                                    ]
+                                }`;
+                            }
+                        }
                         
                         console.log(`📊 SERVER: Cleaned fallback preview: "${cleanedFallback.substring(0, 300)}..."`);
                         reconstructedJson = cleanedFallback;

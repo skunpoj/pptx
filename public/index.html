@@ -115,7 +115,7 @@ Our Products
                     </div>
                     
                     <!-- Subscription Warning Button -->
-                    <div id="subscriptionWarningBtn" style="display: none;">
+                    <div id="subscriptionWarningBtn" style="display: block;">
                         <button onclick="showSubscriptionExplanation()" 
                                 style="display: inline-block; padding: 0.75rem 1rem; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: #333; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.85rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             ⚠️ Subscription not found
@@ -1121,8 +1121,10 @@ Our Products
         // Function to check subscription status
         async function checkSubscriptionStatus() {
             try {
+                console.log('🔍 Checking subscription status...');
                 const response = await fetch('/api/subscription');
                 const subscriptionData = await response.json();
+                console.log('📊 Subscription data:', subscriptionData);
                 
                 const subscriptionStatus = document.getElementById('subscriptionStatus');
                 const subscriptionBadge = document.getElementById('subscriptionBadge');
@@ -1185,7 +1187,10 @@ Our Products
                     
                     // Show warning button
                     if (subscriptionWarningBtn) {
+                        console.log('🟡 Showing warning button - customer exists but no active subscription');
                         subscriptionWarningBtn.style.display = 'block';
+                    } else {
+                        console.log('❌ Warning button element not found');
                     }
                     
                     // Show buy button
@@ -1221,7 +1226,10 @@ Our Products
                     
                     // Show warning button
                     if (subscriptionWarningBtn) {
+                        console.log('🟡 Showing warning button - no customer found');
                         subscriptionWarningBtn.style.display = 'block';
+                    } else {
+                        console.log('❌ Warning button element not found');
                     }
                     
                     // Show buy button
