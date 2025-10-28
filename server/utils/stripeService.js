@@ -107,7 +107,6 @@ async function checkUserSubscriptionStatus(email) {
             hasActiveSubscription,
             customerExists: true,
             email: email,
-            customerEmail: customer.email,
             customerId: customer.id,
             exactEmailMatch: exactMatch,
             subscriptions: subscriptions,
@@ -215,5 +214,8 @@ module.exports = {
     getCustomerSubscriptions,
     checkUserSubscriptionStatus,
     formatSubscriptionDetails,
-    validateEmailDomain
+    validateEmailDomain,
+    createPromptPayCheckoutSession,
+    createPromptPayPaymentSession,
+    createPromptPayPaymentIntent
 };

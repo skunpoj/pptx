@@ -1010,10 +1010,23 @@ Our Products
                     // Show email mismatch warning if emails don't match exactly
                     if (subscriptionData.emailMismatchWarning && !subscriptionData.exactEmailMatch) {
                         emailMismatchWarning.innerHTML = `
-                            ⚠️ <strong>Email Mismatch:</strong> Your subscription is under a different email (${subscriptionData.customerEmail}). 
-                            Your Auth0 email (${subscriptionData.email}) is different but subscription is active.
+                            ⚠️ <strong>Subscription not found:</strong> Cannot find subscription for your email. 
+                            You may have subscribed using a different email address.
                         `;
                         emailMismatchWarning.style.display = 'block';
+                        
+                        // Show buy button instead of manage subscription for email mismatch
+                        const stripeButtonContainer = document.getElementById('stripeButtonContainer');
+                        if (stripeButtonContainer) {
+                            stripeButtonContainer.innerHTML = `
+                                <stripe-buy-button
+                                    buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                                    publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                                    style="flex: 0 0 auto;"
+                                >
+                                </stripe-buy-button>
+                            `;
+                        }
                     } else {
                         emailMismatchWarning.style.display = 'none';
                     }

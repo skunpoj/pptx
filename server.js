@@ -1089,7 +1089,8 @@ app.post('/api/preview', async (req, res) => {
                     
                     // Parse accumulated text periodically to extract slides as they become available
                     // This gives better UX by showing slides in batches rather than all at once
-                    if (streamedText.length > 500 && streamedText.includes('"slides"')) { // Only try parsing when we have substantial content
+                    // Only try parsing when we have substantial content and it looks like JSON is complete
+                    if (streamedText.length > 1000 && streamedText.includes('"slides"') && streamedText.includes('}')) {
                         try {
                             // Try to find complete JSON structure
                             const jsonStart = streamedText.indexOf('{');
@@ -1147,6 +1148,7 @@ app.post('/api/preview', async (req, res) => {
                             }
                         } catch (e) {
                             // JSON not complete yet, continue streaming
+                            console.log(`  ⏭️ SERVER: Periodic parse failed (expected): ${e.message}`);
                         }
                     }
                 }
@@ -1156,7 +1158,31 @@ app.post('/api/preview', async (req, res) => {
                 console.log(`📊 SERVER: Streamed text length: ${streamedText.length} characters`);
                 
                 try {
-                const fullData = parseAIResponse(streamedText);
+                    // Clean up the streamed text to extract valid JSON
+                    let cleanedText = streamedText;
+                    
+                    // Try to find the main JSON object by looking for the start of the response
+                    const jsonStart = cleanedText.indexOf('{');
+                    if (jsonStart !== -1) {
+                        // Find the end by counting braces
+                        let braceCount = 0;
+                        let jsonEnd = -1;
+                        for (let i = jsonStart; i < cleanedText.length; i++) {
+                            if (cleanedText[i] === '{') braceCount++;
+                            if (cleanedText[i] === '}') braceCount--;
+                            if (braceCount === 0) {
+                                jsonEnd = i;
+                                break;
+                            }
+                        }
+                        
+                        if (jsonEnd !== -1) {
+                            cleanedText = cleanedText.substring(jsonStart, jsonEnd + 1);
+                            console.log(`📊 SERVER: Extracted JSON length: ${cleanedText.length} characters`);
+                        }
+                    }
+                    
+                    const fullData = parseAIResponse(cleanedText);
                     console.log(`📊 SERVER: Final parse successful, slides: ${fullData.slides?.length || 0}`);
                 
                 // Send any remaining slides
@@ -1182,10 +1208,6 @@ app.post('/api/preview', async (req, res) => {
                 // Send completion
                 console.log(`✅ SERVER: All ${fullData.slides.length} slides sent via TRUE STREAMING`);
                 res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
-                } catch (e) {
-                    console.error(`❌ SERVER: Failed to parse final JSON: ${e.message}`);
-                    console.error(`📄 SERVER: Streamed text preview: "${streamedText.substring(0, 500)}..."`);
-                }
                 
                 // Track slide generation for authenticated users
                 if (req.oidc.isAuthenticated() && req.oidc.user) {
@@ -1195,6 +1217,11 @@ app.post('/api/preview', async (req, res) => {
                     } catch (error) {
                         console.error('Failed to track slide generation:', error);
                     }
+                }
+                
+                } catch (e) {
+                    console.error(`❌ SERVER: Failed to parse final JSON: ${e.message}`);
+                    console.error(`📄 SERVER: Streamed text preview: "${streamedText.substring(0, 500)}..."`);
                 }
                 
                 res.write('data: [DONE]\n\n');
