@@ -1203,50 +1203,52 @@ app.post('/api/preview', async (req, res) => {
                     
                     console.log(`📊 SERVER: Raw streamed text preview: "${streamedText.substring(0, 300)}..."`);
                     
-                    // Try to find the main JSON object by looking for the start of the response
-                    const jsonStart = cleanedText.indexOf('{');
-                    if (jsonStart !== -1) {
-                        console.log(`📊 SERVER: Found JSON start at position ${jsonStart}`);
+                    // Try to reconstruct the JSON from the fragmented text
+                    // The issue is that Bedrock streaming gives us fragments that don't form valid JSON
+                    let reconstructedJson = '';
+                    
+                    // Look for the main presentation structure
+                    const themeStart = cleanedText.indexOf('"designTheme"');
+                    const slidesStart = cleanedText.indexOf('"slides"');
+                    
+                    if (themeStart !== -1 && slidesStart !== -1) {
+                        console.log(`📊 SERVER: Found theme at ${themeStart}, slides at ${slidesStart}`);
                         
-                        // Look for the complete presentation structure, not just the first object
-                        // We need to find the main object that contains "designTheme" and "slides"
-                        let presentationStart = -1;
-                        let presentationEnd = -1;
+                        // Find the start of the main object
+                        const mainObjectStart = cleanedText.lastIndexOf('{', Math.min(themeStart, slidesStart));
                         
-                        // Look for the main presentation object that contains both theme and slides
-                        const themeIndex = cleanedText.indexOf('"designTheme"');
-                        const slidesIndex = cleanedText.indexOf('"slides"');
-                        
-                        if (themeIndex !== -1 && slidesIndex !== -1) {
-                            // Find the start of the main object containing both theme and slides
-                            presentationStart = cleanedText.lastIndexOf('{', Math.min(themeIndex, slidesIndex));
+                        if (mainObjectStart !== -1) {
+                            // Try to find the end by looking for the last complete structure
+                            // Since the text is fragmented, we need to be more flexible
+                            let potentialEnd = cleanedText.lastIndexOf('}');
                             
-                            if (presentationStart !== -1) {
-                                // Find the matching closing brace
-                                let braceCount = 0;
-                                for (let i = presentationStart; i < cleanedText.length; i++) {
-                                    if (cleanedText[i] === '{') braceCount++;
-                                    if (cleanedText[i] === '}') braceCount--;
-                                    if (braceCount === 0) {
-                                        presentationEnd = i;
+                            // Look backwards from the end to find a complete structure
+                            while (potentialEnd > mainObjectStart) {
+                                const testJson = cleanedText.substring(mainObjectStart, potentialEnd + 1);
+                                
+                                // Try to parse this as JSON
+                                try {
+                                    const testData = JSON.parse(testJson);
+                                    if (testData.designTheme && testData.slides) {
+                                        reconstructedJson = testJson;
+                                        console.log(`📊 SERVER: Successfully reconstructed JSON (${reconstructedJson.length} chars)`);
                                         break;
                                     }
+                                } catch (e) {
+                                    // Not valid JSON, try shorter
                                 }
+                                
+                                potentialEnd = cleanedText.lastIndexOf('}', potentialEnd - 1);
                             }
                         }
-                        
-                        if (presentationStart !== -1 && presentationEnd !== -1) {
-                            cleanedText = cleanedText.substring(presentationStart, presentationEnd + 1);
-                            console.log(`📊 SERVER: Extracted complete presentation JSON length: ${cleanedText.length} characters`);
-                            console.log(`📊 SERVER: Extracted JSON preview: "${cleanedText.substring(0, 200)}..."`);
-                        } else {
-                            console.log(`❌ SERVER: Could not find complete presentation structure (theme: ${themeIndex}, slides: ${slidesIndex})`);
-                        }
-                    } else {
-                        console.log(`❌ SERVER: No JSON start found in streamed text`);
                     }
                     
-                    const fullData = parseAIResponse(cleanedText);
+                    if (!reconstructedJson) {
+                        console.log(`❌ SERVER: Could not reconstruct valid JSON, trying fallback parsing`);
+                        reconstructedJson = cleanedText;
+                    }
+                    
+                    const fullData = parseAIResponse(reconstructedJson);
                     console.log(`📊 SERVER: Final parse successful, slides: ${fullData.slides?.length || 0}`);
                 
                 // Send any remaining slides
