@@ -699,6 +699,17 @@ app.post('/api/preview', async (req, res) => {
         console.log('  Requested slides:', numSlides || 'AI decides');
         
         // INCREMENTAL MODE: TRUE STREAMING from AI
+        if (incremental) {
+            if (provider === 'anthropic' || provider === 'bedrock') {
+                // These use existing streaming logic
+            } else if (provider === 'openai' || provider === 'openrouter' || provider === 'gemini') {
+                // These providers will use non-streaming mode for preview
+                // (JSON parsing requirements make streaming complex - would need incremental JSON parser)
+                console.log(`ℹ️ Streaming preview not yet implemented for ${provider}, using non-streaming mode`);
+                incremental = false;
+            }
+        }
+        
         if (incremental && provider === 'anthropic') {
             console.log(`🔄 Starting TRUE STREAMING slide generation with ${provider}...`);
             
@@ -1080,6 +1091,23 @@ app.post('/api/preview', async (req, res) => {
                 throw streamError;
             }
             
+        } else if (incremental && (provider === 'openai' || provider === 'openrouter' || provider === 'gemini')) {
+            // Add streaming for OpenAI, OpenRouter, and Gemini in future
+            // For now, fall through to non-streaming mode
+            console.log(`ℹ️ Streaming preview for ${provider} - using non-streaming mode (JSON parsing complexity)`);
+            res.setHeader('Content-Type', 'application/json');
+            
+            const userPrompt = await getSlideDesignPrompt(text, numSlides);
+            const responseText = await callAI(provider, apiKey, userPrompt);
+            console.log('  AI response received, length:', responseText.length);
+            
+            const slideData = parseAIResponse(responseText);
+            console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
+            
+            validateSlideData(slideData);
+            console.log('✅ Preview validation passed');
+            
+            res.json(slideData);
         } else {
             // NON-INCREMENTAL MODE (all at once)
             res.setHeader('Content-Type', 'application/json');

@@ -719,14 +719,11 @@ body {
     
     .product-hunt-badge {
         margin-left: 0.35rem;
+        height: 20px;
     }
     
     .product-hunt-badge img {
         width: 90px;
-        height: 20px;
-    }
-    
-    .product-hunt-badge {
         height: 20px;
     }
     
@@ -799,10 +796,6 @@ body {
     .badge-text {
         font-size: 0.65rem;
         letter-spacing: 0;
-    }
-    
-    .product-hunt-badge {
-        display: none; /* Hide on very small screens to save space */
     }
     
     .header {
