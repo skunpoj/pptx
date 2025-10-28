@@ -562,14 +562,29 @@ body {
     justify-content: flex-end;
 }
 
-/* Fix GitHub button alignment */
+/* Fix GitHub button alignment - Target both the link and iframe */
 .github-button {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 28px !important;
+    line-height: 1 !important;
+}
+
+/* Target the actual GitHub button iframe */
+.github-button iframe {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    margin: 0 !important;
+    height: 28px !important;
+}
+
+/* Parent wrapper for GitHub button */
+.header-left > div > div[style*="height: 30px"] {
     display: inline-flex !important;
     align-items: center !important;
     vertical-align: middle !important;
-    margin: 0 !important;
-    height: 30px !important;
-    align-self: center !important;
 }
 
 .header-feature {

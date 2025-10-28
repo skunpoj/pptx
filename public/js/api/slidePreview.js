@@ -210,12 +210,10 @@ async function generatePreview() {
     const countdownInterval = setInterval(() => {
         remainingTime--;
         if (remainingTime > 0 && countdownEl) {
-            countdownEl.textContent = remainingTime;
-        } else {
-            clearInterval(countdownInterval);
-            if (countdownEl) {
-                countdownEl.textContent = 'Finalizing...';
-            }
+            countdownEl.textContent = remainingTime + 's';
+        } else if (countdownEl) {
+            // Don't show "Finalizing" - just show completion indicator
+            countdownEl.textContent = '...';
         }
     }, 1000);
     
@@ -527,7 +525,9 @@ async function handleIncrementalStream(response) {
     
     appendStreamingText('🚀 Stream connection established\n', 'info');
     appendStreamingText(`⏰ Started: ${new Date().toLocaleTimeString()}\n`, 'info');
-    appendStreamingText('⚡ Receiving data in real-time...\n\n', 'info');
+    appendStreamingText('⚡ Waiting for AI to generate slides...\n\n', 'info');
+    appendStreamingText('ℹ️  NOTE: AI generates all slides first, then sends them.\n');
+    appendStreamingText('   You\'ll see them arrive rapidly once generation completes.\n\n');
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -712,10 +712,18 @@ async function handleIncrementalStream(response) {
                             const progressBar = document.getElementById('progressBar');
                             const progressPercent = document.getElementById('progressPercent');
                             const aiStatus = document.getElementById('aiStatus');
+                            const countdownEl = document.getElementById('countdown');
+                            const statusBar = document.getElementById('statusBar');
                             
                             if (progressBar) progressBar.style.width = '100%';
                             if (progressPercent) progressPercent.textContent = '100%';
                             if (aiStatus) aiStatus.textContent = `✅ Complete! ${totalSlides} slides rendered`;
+                            if (countdownEl) countdownEl.textContent = '✅ Done';
+                            
+                            // Change status bar to success style
+                            if (statusBar) {
+                                statusBar.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                            }
                             
                             // Add final streaming message
                             appendStreamingText('\n\n🎉 GENERATION COMPLETE!\n');

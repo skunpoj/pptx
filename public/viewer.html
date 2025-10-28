@@ -323,17 +323,28 @@
             // Store slide data globally
             window.currentSlideData = data.slideData;
             
-            // Set up PDF link to open directly in new window (like in index.html)
+            // Set up PDF link and start auto-checking for PDF availability
             const pdfLink = document.getElementById('viewPDFLink');
             if (pdfLink && sessionId) {
                 pdfLink.href = `/view-pdf/${sessionId}`;
+                
+                // Start with "generating" state
+                pdfLink.textContent = '⏳ PDF Generating...';
+                pdfLink.style.opacity = '0.6';
+                pdfLink.style.cursor = 'wait';
                 pdfLink.onclick = (e) => {
                     e.preventDefault();
-                    openPDFInNewWindow();
+                    alert('⏳ PDF is being generated in the background. Please wait...');
                 };
-                console.log('✅ PDF link configured to open in new window:', pdfLink.href);
+                
+                console.log('⏳ Starting automatic PDF availability check...');
+                
+                // Start automatic checking for PDF
+                startPDFAvailabilityCheck(sessionId, pdfLink);
+                
             } else if (pdfLink) {
                 // No sessionId - disable the link
+                pdfLink.textContent = '📄 PDF Unavailable';
                 pdfLink.style.opacity = '0.5';
                 pdfLink.style.cursor = 'not-allowed';
                 pdfLink.onclick = (e) => {
@@ -344,6 +355,75 @@
             
             // Display all slides
             displayAllSlides();
+        }
+        
+        /**
+         * Automatically check for PDF availability and enable button when ready
+         */
+        async function startPDFAvailabilityCheck(sessionId, pdfLink) {
+            const pdfUrl = `/view-pdf/${sessionId}`;
+            let attempts = 0;
+            const maxAttempts = 60; // Check for up to 60 seconds
+            
+            const checkInterval = setInterval(async () => {
+                attempts++;
+                
+                try {
+                    // Check if PDF is ready
+                    const response = await fetch(pdfUrl, { method: 'HEAD' });
+                    
+                    if (response.ok) {
+                        // ✅ PDF IS READY!
+                        clearInterval(checkInterval);
+                        
+                        console.log(`✅ PDF ready after ${attempts} checks (${attempts} seconds)`);
+                        
+                        // Update button to enabled state
+                        pdfLink.textContent = '📄 View PDF';
+                        pdfLink.style.opacity = '1';
+                        pdfLink.style.cursor = 'pointer';
+                        pdfLink.onclick = (e) => {
+                            e.preventDefault();
+                            window.open(pdfUrl, '_blank');
+                            console.log('✅ PDF opened in new window');
+                        };
+                        
+                        // Show success notification
+                        if (typeof alert !== 'undefined' && attempts > 5) {
+                            // Only show if it took a while
+                            setTimeout(() => {
+                                alert('✅ PDF is now ready to view!');
+                            }, 500);
+                        }
+                        
+                        return;
+                    }
+                } catch (error) {
+                    // PDF not ready yet, continue checking
+                    console.log(`⏳ PDF check ${attempts}/${maxAttempts} - not ready yet`);
+                }
+                
+                // Update button text to show progress
+                if (attempts % 5 === 0) {
+                    pdfLink.textContent = `⏳ PDF Generating... (${attempts}s)`;
+                }
+                
+                // Timeout after max attempts
+                if (attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    console.warn('⚠️ PDF generation timeout after 60 seconds');
+                    
+                    // Change to "Try Generate" button
+                    pdfLink.textContent = '🔄 Generate PDF';
+                    pdfLink.style.opacity = '1';
+                    pdfLink.style.cursor = 'pointer';
+                    pdfLink.style.background = '#ffc107';
+                    pdfLink.onclick = (e) => {
+                        e.preventDefault();
+                        openPDFInNewWindow();
+                    };
+                }
+            }, 1000); // Check every second
         }
         
         function displayAllSlides() {
