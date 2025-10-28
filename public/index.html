@@ -105,14 +105,16 @@ Our Products
                 <!-- Stripe Buy Button and Generate Preview Button Row -->
                 <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem;">
                     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                        <stripe-buy-button
-                            buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
-                            publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
-                            style="flex: 0 0 auto;"
-                        >
-                        </stripe-buy-button>
+                        <div id="stripeButtonContainer">
+                            <stripe-buy-button
+                                buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                                publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                                style="flex: 0 0 auto;"
+                            >
+                            </stripe-buy-button>
+                        </div>
                         <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
-                            ⚠️ <strong>Email Mismatch:</strong> Your Auth0 email may differ from your Stripe subscription email. Please ensure you use the same email for both accounts.
+                            ⚠️ <strong>Subscription not found:</strong> No active subscription found for your email. Please subscribe to access premium features.
                         </div>
                     </div>
                     <button class="btn-primary btn-large" onclick="window.generatePreview()" id="previewBtn" style="flex: 1; min-width: 200px;">
@@ -980,40 +982,100 @@ Our Products
                 const subscriptionStatus = document.getElementById('subscriptionStatus');
                 const subscriptionBadge = document.getElementById('subscriptionBadge');
                 const emailMismatchWarning = document.getElementById('emailMismatchWarning');
+                const stripeBuyButton = document.querySelector('stripe-buy-button');
                 
                 if (subscriptionData.hasActiveSubscription) {
-                    // User has active subscription
+                    // User has active subscription - hide buy button
                     subscriptionBadge.textContent = '✅ Active';
                     subscriptionBadge.style.background = '#d4edda';
                     subscriptionBadge.style.color = '#155724';
                     subscriptionBadge.style.border = '1px solid #c3e6cb';
                     subscriptionStatus.style.display = 'block';
                     
-                    // Hide email mismatch warning
-                    emailMismatchWarning.style.display = 'none';
+                    // Hide buy button and show subscription management link
+                    const stripeButtonContainer = document.getElementById('stripeButtonContainer');
+                    if (stripeButtonContainer) {
+                        stripeButtonContainer.innerHTML = `
+                            <a href="https://billing.stripe.com/p/login/cNi3cv1GIcNT44zbzldnW00" 
+                               target="_blank" 
+                               rel="noopener noreferrer"
+                               style="display: inline-block; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-align: center; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+                               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
+                               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                                💳 Manage Subscription
+                            </a>
+                        `;
+                    }
+                    
+                    // Show email mismatch warning if emails don't match exactly
+                    if (subscriptionData.emailMismatchWarning && !subscriptionData.exactEmailMatch) {
+                        emailMismatchWarning.innerHTML = `
+                            ⚠️ <strong>Email Mismatch:</strong> Your subscription is under a different email (${subscriptionData.customerEmail}). 
+                            Your Auth0 email (${subscriptionData.email}) is different but subscription is active.
+                        `;
+                        emailMismatchWarning.style.display = 'block';
+                    } else {
+                        emailMismatchWarning.style.display = 'none';
+                    }
+                    
                 } else if (subscriptionData.customerExists) {
-                    // Customer exists but no active subscription
+                    // Customer exists but no active subscription - show buy button
                     subscriptionBadge.textContent = '❌ Inactive';
                     subscriptionBadge.style.background = '#f8d7da';
                     subscriptionBadge.style.color = '#721c24';
                     subscriptionBadge.style.border = '1px solid #f5c6cb';
                     subscriptionStatus.style.display = 'block';
                     
-                    // Show email mismatch warning if needed
-                    if (subscriptionData.message && subscriptionData.message.includes('email')) {
+                    // Show buy button
+                    const stripeButtonContainer = document.getElementById('stripeButtonContainer');
+                    if (stripeButtonContainer) {
+                        stripeButtonContainer.innerHTML = `
+                            <stripe-buy-button
+                                buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                                publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                                style="flex: 0 0 auto;"
+                            >
+                            </stripe-buy-button>
+                        `;
+                    }
+                    
+                    // Show email mismatch warning if emails don't match exactly
+                    if (subscriptionData.emailMismatchWarning && !subscriptionData.exactEmailMatch) {
+                        emailMismatchWarning.innerHTML = `
+                            ⚠️ <strong>Email Mismatch:</strong> Your Stripe account uses a different email (${subscriptionData.customerEmail}). 
+                            Please use the same email for both Auth0 and Stripe to avoid confusion.
+                        `;
                         emailMismatchWarning.style.display = 'block';
                     } else {
                         emailMismatchWarning.style.display = 'none';
                     }
+                    
                 } else {
-                    // No customer found - show warning about email mismatch
+                    // No customer found - show buy button with warning
                     subscriptionBadge.textContent = '⚠️ No Account';
                     subscriptionBadge.style.background = '#fff3cd';
                     subscriptionBadge.style.color = '#856404';
                     subscriptionBadge.style.border = '1px solid #ffeaa7';
                     subscriptionStatus.style.display = 'block';
                     
+                    // Show buy button
+                    const stripeButtonContainer = document.getElementById('stripeButtonContainer');
+                    if (stripeButtonContainer) {
+                        stripeButtonContainer.innerHTML = `
+                            <stripe-buy-button
+                                buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                                publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                                style="flex: 0 0 auto;"
+                            >
+                            </stripe-buy-button>
+                        `;
+                    }
+                    
                     // Show email mismatch warning
+                    emailMismatchWarning.innerHTML = `
+                        ⚠️ <strong>No Stripe Account Found:</strong> No subscription found for your email (${subscriptionData.email}). 
+                        If you have a subscription under a different email, please contact support.
+                    `;
                     emailMismatchWarning.style.display = 'block';
                 }
                 
@@ -1022,6 +1084,19 @@ Our Products
                 // Hide subscription status on error
                 const subscriptionStatus = document.getElementById('subscriptionStatus');
                 subscriptionStatus.style.display = 'none';
+                
+                // Show buy button as fallback
+                const stripeButtonContainer = document.getElementById('stripeButtonContainer');
+                if (stripeButtonContainer) {
+                    stripeButtonContainer.innerHTML = `
+                        <stripe-buy-button
+                            buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                            publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                            style="flex: 0 0 auto;"
+                        >
+                        </stripe-buy-button>
+                    `;
+                }
             }
         }
 

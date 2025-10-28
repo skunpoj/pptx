@@ -253,17 +253,20 @@ async function generatePreview() {
     
     try {
         const currentProvider = window.currentProvider || 'bedrock';
+        const numSlides = document.getElementById('numSlides')?.value || 6;
         
         console.log('🔍 Provider check:', {
             'window.currentProvider': window.currentProvider,
             'selectedProvider': currentProvider,
-            'willUseBedrock': currentProvider === 'bedrock'
+            'willUseBedrock': currentProvider === 'bedrock',
+            'numSlides': numSlides
         });
         
         // Update streaming status
         appendStreamingText('📤 Sending request to /api/preview...\n');
         appendStreamingText(`Provider: ${currentProvider}\n`);
         appendStreamingText(`Content length: ${text.length} chars (${wordCount} words)\n`);
+        appendStreamingText(`Expected slides: ${numSlides}\n`);
         appendStreamingText(`Incremental: true\n\n`);
         
         // Create AbortController for timeout handling
@@ -279,6 +282,7 @@ async function generatePreview() {
                 text: text,
                 apiKey: apiKey,
                 provider: currentProvider,
+                numSlides: parseInt(numSlides),
                 incremental: true  // Enable real-time streaming
             }),
             signal: controller.signal
@@ -677,8 +681,22 @@ async function handleIncrementalStream(response) {
                     try {
                         const data = JSON.parse(jsonStr);
                         
+                        // PROVIDER INFO EVENT - Show actual provider being used
+                        if (data.type === 'provider_info') {
+                            console.log('🔍 Actual provider being used:', data.provider);
+                            const textBox = document.getElementById('streamingTextBox');
+                            if (textBox) {
+                                const providerSpan = document.createElement('div');
+                                providerSpan.style.color = '#28a745';
+                                providerSpan.style.fontWeight = 'bold';
+                                providerSpan.textContent = `🔍 Actual provider: ${data.provider} (Expected slides: ${data.numSlides})`;
+                                textBox.appendChild(providerSpan);
+                                textBox.scrollTop = textBox.scrollHeight;
+                            }
+                        }
+                        
                         // RAW TEXT EVENT - Show streaming JSON generation (TRUE STREAMING!)
-                        if (data.type === 'raw_text') {
+                        else if (data.type === 'raw_text') {
                             // This is the actual AI generating JSON in real-time!
                             // Show it in the streaming box character by character
                             const rawSpan = document.createElement('span');

@@ -729,6 +729,14 @@ app.post('/api/preview', async (req, res) => {
         console.log('  Incremental:', incremental);
         console.log('  Requested slides:', numSlides || 'AI decides');
         
+        // Send initial provider info to frontend
+        res.write(`data: ${JSON.stringify({ 
+            type: 'provider_info',
+            provider: provider,
+            numSlides: numSlides || 'AI decides',
+            timestamp: Date.now()
+        })}\n\n`);
+        
         // INCREMENTAL MODE: TRUE STREAMING from AI
         if (incremental) {
             if (provider === 'anthropic' || provider === 'bedrock') {

@@ -45,7 +45,7 @@ async function getCustomerSubscriptions(customerId) {
 }
 
 /**
- * Check if user has any active subscription
+ * Check if user has any active subscription (including different email variations)
  * @param {string} email - User email from Auth0
  * @returns {Object} - Subscription status information
  */
@@ -53,8 +53,25 @@ async function checkUserSubscriptionStatus(email) {
     try {
         console.log(`🔍 Checking subscription status for email: ${email}`);
         
-        // Find customer by email
-        const customer = await findCustomerByEmail(email);
+        // First, try exact email match
+        let customer = await findCustomerByEmail(email);
+        let exactMatch = !!customer;
+        
+        // If no exact match, try common email variations
+        if (!customer) {
+            console.log(`❌ No exact match for ${email}, trying variations...`);
+            
+            // Try common email variations
+            const emailVariations = generateEmailVariations(email);
+            
+            for (const variation of emailVariations) {
+                customer = await findCustomerByEmail(variation);
+                if (customer) {
+                    console.log(`✅ Found customer with email variation: ${variation}`);
+                    break;
+                }
+            }
+        }
         
         if (!customer) {
             console.log(`❌ No Stripe customer found for email: ${email}`);
@@ -62,8 +79,10 @@ async function checkUserSubscriptionStatus(email) {
                 hasActiveSubscription: false,
                 customerExists: false,
                 email: email,
-                message: 'No Stripe account found with this email',
-                subscriptions: []
+                exactEmailMatch: false,
+                message: 'No Stripe account found with this email or common variations',
+                subscriptions: [],
+                emailMismatchWarning: true
             };
         }
         
@@ -82,14 +101,18 @@ async function checkUserSubscriptionStatus(email) {
         console.log(`📊 Subscription status: ${hasActiveSubscription ? 'ACTIVE' : 'INACTIVE'}`);
         console.log(`   Total subscriptions: ${subscriptions.length}`);
         console.log(`   Active subscriptions: ${activeSubscriptions.length}`);
+        console.log(`   Exact email match: ${exactMatch}`);
         
         return {
             hasActiveSubscription,
             customerExists: true,
             email: email,
+            customerEmail: customer.email,
             customerId: customer.id,
+            exactEmailMatch: exactMatch,
             subscriptions: subscriptions,
             activeSubscriptions: activeSubscriptions,
+            emailMismatchWarning: !exactMatch,
             message: hasActiveSubscription 
                 ? `Active subscription found (${activeSubscriptions.length} active)`
                 : 'No active subscription found'
@@ -101,10 +124,47 @@ async function checkUserSubscriptionStatus(email) {
             hasActiveSubscription: false,
             customerExists: false,
             email: email,
+            exactEmailMatch: false,
             error: error.message,
-            message: 'Error checking subscription status'
+            message: 'Error checking subscription status',
+            emailMismatchWarning: true
         };
     }
+}
+
+/**
+ * Generate common email variations for matching
+ * @param {string} email - Original email
+ * @returns {Array} - Array of email variations
+ */
+function generateEmailVariations(email) {
+    const variations = [];
+    const [localPart, domain] = email.split('@');
+    
+    if (!localPart || !domain) return variations;
+    
+    // Common variations
+    variations.push(`${localPart}+stripe@${domain}`); // Gmail plus addressing
+    variations.push(`${localPart}.stripe@${domain}`); // Gmail dot variations
+    variations.push(`${localPart}_stripe@${domain}`); // Underscore variations
+    
+    // Try without dots in local part (Gmail behavior)
+    const noDotsLocal = localPart.replace(/\./g, '');
+    if (noDotsLocal !== localPart) {
+        variations.push(`${noDotsLocal}@${domain}`);
+    }
+    
+    // Try common alternative domains
+    const commonDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'];
+    if (commonDomains.includes(domain.toLowerCase())) {
+        commonDomains.forEach(altDomain => {
+            if (altDomain !== domain.toLowerCase()) {
+                variations.push(`${localPart}@${altDomain}`);
+            }
+        });
+    }
+    
+    return variations;
 }
 
 /**
