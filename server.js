@@ -37,6 +37,7 @@ const {
     generateSlideHTML, 
     generateConversionScript 
 } = require('./server/utils/generators');
+const { initializeTracking, updateUserTracking, getUserSlideCount } = require('./server/utils/userTracking');
 const {
     initializeStorage,
     savePresentation,
@@ -77,11 +78,25 @@ app.use(bodyParser.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use(express.static('public'));
 
 // Auth check endpoint for frontend
-app.get('/api/user', (req, res) => {
-  res.json({
+app.get('/api/user', async (req, res) => {
+  const userData = {
     authenticated: req.oidc.isAuthenticated(),
     user: req.oidc.user || null
-  });
+  };
+  
+  // Add slide count for authenticated users
+  if (userData.authenticated && userData.user) {
+    try {
+      const userId = userData.user.sub || userData.user.email;
+      const slideCount = await getUserSlideCount(userId);
+      userData.user.slideCount = slideCount;
+    } catch (error) {
+      console.error('Failed to get user slide count:', error);
+      userData.user.slideCount = 0;
+    }
+  }
+  
+  res.json(userData);
 });
 
 // Protected profile route
@@ -104,6 +119,7 @@ let PDF_AVAILABLE = false;
 (async () => {
     try {
         await initializeStorage();
+        await initializeTracking();
         LIBREOFFICE_AVAILABLE = await checkLibreOffice();
         PDF_AVAILABLE = LIBREOFFICE_AVAILABLE;
         STORAGE_INITIALIZED = true;
@@ -865,6 +881,17 @@ app.post('/api/preview', async (req, res) => {
                 
                 // Send completion
                 console.log(`✅ All ${fullData.slides.length} slides sent via TRUE STREAMING`);
+                
+                // Track slide generation for authenticated users
+                if (req.oidc.isAuthenticated() && req.oidc.user) {
+                    try {
+                        const userId = req.oidc.user.sub || req.oidc.user.email;
+                        await updateUserTracking(userId, fullData.slides.length);
+                    } catch (error) {
+                        console.error('Failed to track slide generation:', error);
+                    }
+                }
+                
                 res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
                 res.write('data: [DONE]\n\n');
                 res.end();
@@ -1003,6 +1030,52 @@ app.post('/api/preview', async (req, res) => {
                                         timestamp: Date.now()
                                     })}\n\n`);
                                     if (res.flush) res.flush();
+                                    
+                                    // Try to parse and extract theme if we haven't sent it yet
+                                    if (!themeSent && jsonBuffer.includes('"designTheme"')) {
+                                        try {
+                                            const fullData = parseAIResponse(jsonBuffer);
+                                            if (fullData.designTheme) {
+                                                console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
+                                                res.write(`data: ${JSON.stringify({ 
+                                                    type: 'theme',
+                                                    theme: fullData.designTheme,
+                                                    suggestedThemeKey: fullData.suggestedThemeKey,
+                                                    totalSlides: fullData.slides?.length || 0
+                                                })}\n\n`);
+                                                if (res.flush) res.flush();
+                                                themeSent = true;
+                                            }
+                                        } catch (e) {
+                                            // Not ready yet
+                                        }
+                                    }
+                                    
+                                    // Try to extract complete slides as they arrive
+                                    if (themeSent) {
+                                        try {
+                                            const fullData = parseAIResponse(jsonBuffer);
+                                            if (fullData.slides && fullData.slides.length > slidesSent) {
+                                                // Send any new slides
+                                                for (let i = slidesSent; i < fullData.slides.length; i++) {
+                                                    const slide = fullData.slides[i];
+                                                    console.log(`  ✓ SERVER: Slide ${i + 1} extracted, sending: ${slide.title}`);
+                                                    
+                                                    res.write(`data: ${JSON.stringify({ 
+                                                        type: 'slide', 
+                                                        slide: slide,
+                                                        index: i,
+                                                        current: i + 1,
+                                                        total: fullData.slides.length
+                                                    })}\n\n`);
+                                                    if (res.flush) res.flush();
+                                                    slidesSent++;
+                                                }
+                                            }
+                                        } catch (e) {
+                                            // JSON not complete yet
+                                        }
+                                    }
                                 }
                             } catch (e) {
                                 console.log(`  ⏭️ SERVER: Failed to parse JSON: ${e.message}`);
@@ -1081,6 +1154,17 @@ app.post('/api/preview', async (req, res) => {
                 
                 // Send completion
                 console.log(`✅ SERVER: All ${fullData.slides.length} slides sent via TRUE STREAMING`);
+                
+                // Track slide generation for authenticated users
+                if (req.oidc.isAuthenticated() && req.oidc.user) {
+                    try {
+                        const userId = req.oidc.user.sub || req.oidc.user.email;
+                        await updateUserTracking(userId, fullData.slides.length);
+                    } catch (error) {
+                        console.error('Failed to track slide generation:', error);
+                    }
+                }
+                
                 res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
                 res.write('data: [DONE]\n\n');
                 res.end();
@@ -1106,6 +1190,16 @@ app.post('/api/preview', async (req, res) => {
             validateSlideData(slideData);
             console.log('✅ Preview validation passed');
             
+            // Track slide generation for authenticated users
+            if (req.oidc.isAuthenticated() && req.oidc.user) {
+                try {
+                    const userId = req.oidc.user.sub || req.oidc.user.email;
+                    await updateUserTracking(userId, slideData.slides.length);
+                } catch (error) {
+                    console.error('Failed to track slide generation:', error);
+                }
+            }
+            
             res.json(slideData);
         } else {
             // NON-INCREMENTAL MODE (all at once)
@@ -1120,6 +1214,16 @@ app.post('/api/preview', async (req, res) => {
             
             validateSlideData(slideData);
             console.log('✅ Preview validation passed');
+            
+            // Track slide generation for authenticated users
+            if (req.oidc.isAuthenticated() && req.oidc.user) {
+                try {
+                    const userId = req.oidc.user.sub || req.oidc.user.email;
+                    await updateUserTracking(userId, slideData.slides.length);
+                } catch (error) {
+                    console.error('Failed to track slide generation:', error);
+                }
+            }
             
             res.json(slideData);
         }

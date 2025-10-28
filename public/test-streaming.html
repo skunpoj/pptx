@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streaming Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; height: 200px; overflow-y: auto; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Streaming Test Page</h1>
+        
+        <div>
+            <label>Test Prompt:</label>
+            <input type="text" id="testPrompt" value="Create a presentation about artificial intelligence" style="width: 100%; padding: 8px;">
+        </div>
+        
+        <div>
+            <button onclick="testStreaming()">Test Streaming</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div id="status" class="status info">Ready to test...</div>
+        
+        <div>
+            <label>Streaming Output:</label>
+            <textarea id="output" placeholder="Streaming content will appear here..."></textarea>
+        </div>
+        
+        <div>
+            <label>Debug Log:</label>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function setStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            document.getElementById('output').value = '';
+            setStatus('Log cleared', 'info');
+        }
+
+        async function testStreaming() {
+            const prompt = document.getElementById('testPrompt').value;
+            const output = document.getElementById('output');
+            
+            if (!prompt.trim()) {
+                setStatus('Please enter a test prompt', 'error');
+                return;
+            }
+
+            setStatus('Starting streaming test...', 'info');
+            log('🚀 Starting streaming test');
+            log(`📝 Prompt: "${prompt}"`);
+            
+            output.value = '';
+            
+            try {
+                const response = await fetch('/api/generate-content', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        apiKey: '', // No API key - will use Bedrock
+                        provider: 'bedrock',
+                        numSlides: 6,
+                        generateImages: false,
+                        stream: true
+                    })
+                });
+
+                log(`📡 Response status: ${response.status} ${response.statusText}`);
+                log(`📡 Content-Type: ${response.headers.get('content-type')}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                if (!response.body) {
+                    throw new Error('Response body is null');
+                }
+
+                log('📖 Getting response reader...');
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                let content = '';
+                let chunkCount = 0;
+                let dataEventCount = 0;
+                let buffer = '';
+
+                log('📖 Starting to read stream...');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        log('✅ Stream completed');
+                        log(`📊 Total chunks: ${chunkCount}`);
+                        log(`📊 Total data events: ${dataEventCount}`);
+                        log(`📊 Final content length: ${content.length} characters`);
+                        setStatus('Streaming completed successfully', 'success');
+                        break;
+                    }
+
+                    chunkCount++;
+                    const chunk = decoder.decode(value, { stream: true });
+                    log(`📦 Chunk ${chunkCount}: ${chunk.length} bytes`);
+                    
+                    // Add chunk to buffer and process complete lines
+                    buffer += chunk;
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        
+                        log(`🔍 Processing line: "${line.substring(0, 100)}${line.length > 100 ? '...' : ''}"`);
+                        
+                        if (line.startsWith('data:')) {
+                            const jsonStr = line.substring(5).trim();
+                            
+                            if (jsonStr === '[DONE]') {
+                                log('✅ Received [DONE] marker');
+                                continue;
+                            }
+                            
+                            dataEventCount++;
+                            log(`📥 Data event ${dataEventCount}: "${jsonStr.substring(0, 50)}${jsonStr.length > 50 ? '...' : ''}"`);
+                            
+                            try {
+                                const parsed = JSON.parse(jsonStr);
+                                log(`📊 Parsed JSON keys: ${Object.keys(parsed).join(', ')}`);
+                                
+                                if (parsed.text) {
+                                    content += parsed.text;
+                                    output.value = content;
+                                    output.scrollTop = output.scrollHeight;
+                                    log(`✍️ Updated textarea! Total chars: ${content.length}, new text: "${parsed.text.substring(0, 30)}..."`);
+                                } else {
+                                    log(`⚠️ No 'text' field in parsed data`);
+                                }
+                            } catch (e) {
+                                log(`❌ Failed to parse JSON: ${e.message}`);
+                                log(`📄 Raw data: ${jsonStr.substring(0, 200)}`);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+                setStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            log('📄 Test page loaded');
+            log('💡 Click "Test Streaming" to start the test');
+        });
+    </script>
+</body>
+</html>

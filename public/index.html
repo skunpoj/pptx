@@ -709,6 +709,11 @@ Our Products
     </div>
 
                 <p class="footer-credits">Powered by Claude AI, html2pptx + PptxGenJS</p>
+                <p class="footer-billing">
+                    <a href="https://billing.stripe.com/p/login/cNi3cv1GIcNT44zbzldnW00" target="_blank" rel="noopener noreferrer" class="footer-link">
+                        💳 Manage Billing & Subscription
+                    </a>
+                </p>
             </div>
         </div>
     </div>
@@ -986,6 +991,13 @@ Our Products
                     }
                     userInfo.style.display = 'flex';
                     
+                    // Update slide count display
+                    const userSlideCount = document.getElementById('userSlideCount');
+                    if (userSlideCount && data.user.slideCount !== undefined) {
+                        userSlideCount.textContent = `(Total: ${data.user.slideCount} slides)`;
+                        userSlideCount.style.display = 'inline';
+                    }
+                    
                     // Enable protected sections (remove greyed-out state)
                     aiThemeGrid.classList.remove('protected-disabled');
                 } else {
@@ -995,6 +1007,12 @@ Our Products
                     
                     // Hide user info
                     userInfo.style.display = 'none';
+                    
+                    // Hide slide count for non-logged-in users
+                    const userSlideCount = document.getElementById('userSlideCount');
+                    if (userSlideCount) {
+                        userSlideCount.style.display = 'none';
+                    }
                     
                     // Disable protected sections (show greyed-out with overlay)
                     aiThemeGrid.classList.add('protected-disabled');
