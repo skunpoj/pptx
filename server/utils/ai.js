@@ -9,10 +9,12 @@ async function callAI(provider, apiKey, userPrompt) {
             throw new Error('Bedrock API key not found in environment variable "bedrock"');
         }
         
-        // Try global prefix first, then us. prefix as fallback
+        // Try models in order of preference (same as streaming)
         const modelIds = [
             'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
-            'us.anthropic.claude-sonnet-4-5-20250929-v1:0'
+            'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+            'amazon.nova-lite-v1:0',
+            'amazon.nova-pro-v1:0'
         ];
         
         let lastError = null;

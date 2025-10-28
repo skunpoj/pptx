@@ -365,8 +365,17 @@ async function generateFromPrompt() {
             textInput
         };
         
-        if (window.currentProvider === 'anthropic') {
-            console.log('📡 Using streaming content generation (Anthropic)');
+        console.log('═══════════════════════════════════════════════════');
+        console.log('🔍 PROVIDER SELECTION CHECK');
+        console.log('  window.currentProvider:', window.currentProvider);
+        console.log('  Is Anthropic?', window.currentProvider === 'anthropic');
+        console.log('  Is Bedrock?', window.currentProvider === 'bedrock');
+        console.log('  Files count:', files.length);
+        console.log('  Will use streaming?', window.currentProvider === 'anthropic' || window.currentProvider === 'bedrock');
+        console.log('═══════════════════════════════════════════════════');
+        
+        if (window.currentProvider === 'anthropic' || window.currentProvider === 'bedrock') {
+            console.log(`📡 Using streaming content generation (${window.currentProvider})`);
             console.log('  Options:', {
                 numSlides, 
                 generateImages, 
@@ -377,6 +386,8 @@ async function generateFromPrompt() {
             await streamContentGeneration(apiCallParams);
         } else {
             console.log('📋 Using non-streaming content generation');
+            console.log('  Provider:', window.currentProvider);
+            console.log('  Reason: Provider does not support streaming');
             await nonStreamingContentGeneration(apiCallParams);
         }
         
@@ -401,10 +412,22 @@ async function generateFromPrompt() {
  * @param {object} params - All parameters including prompt, apiKey, numSlides, etc.
  */
 async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generateImages, numImagesToGenerate, extractColors, useAsTemplate, files, textInput }) {
-    console.log('🚀 Starting streaming content generation...');
+    console.log('═══════════════════════════════════════════════════');
+    console.log('🚀 CLIENT: Starting streaming content generation');
     console.log('  Provider:', window.currentProvider);
-    console.log('  Stream:', true);
-    console.log('  Options:', { numSlides, generateImages, extractColors, useAsTemplate, filesCount: files?.length || 0 });
+    console.log('  Stream enabled:', true);
+    console.log('  Options:', { 
+        numSlides, 
+        generateImages, 
+        extractColors, 
+        useAsTemplate, 
+        numImagesToGenerate,
+        filesCount: files?.length || 0 
+    });
+    console.log('  Prompt length:', finalPrompt?.length || 0, 'characters');
+    console.log('  API Key present:', !!apiKey);
+    console.log('  Textarea element:', textInput?.id || 'NOT FOUND');
+    console.log('═══════════════════════════════════════════════════');
     
     // Build request body with ALL parameters
     const requestBody = { 
@@ -438,13 +461,26 @@ async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generat
         });
     }
     
+    console.log('📤 CLIENT: Sending request to /api/generate-content');
+    console.log('  Method: POST');
+    console.log('  Has files:', !!files && files.length > 0);
+    console.log('  Request body type:', formData ? 'FormData' : 'JSON');
+    
     const response = await fetch('/api/generate-content', {
         method: 'POST',
         headers: files && files.length > 0 ? {} : { 'Content-Type': 'application/json' },
         body: formData || JSON.stringify(requestBody)
     });
     
-    console.log('📡 Response received:', response.status, response.headers.get('content-type'));
+    const contentType = response.headers.get('content-type');
+    console.log('📨 CLIENT: Response received');
+    console.log('  Status:', response.status, response.statusText);
+    console.log('  Content-Type:', contentType);
+    console.log('  Headers:', {
+        'content-type': contentType,
+        'cache-control': response.headers.get('cache-control'),
+        'connection': response.headers.get('connection')
+    });
     
     if (!response.ok) {
         let errorMessage = 'Content generation failed';
@@ -464,50 +500,79 @@ async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generat
         throw new Error(errorMessage);
     }
     
+    if (!response.body) {
+        console.error('❌ CLIENT: Response.body is null! Cannot read stream.');
+        throw new Error('Response body is null - server did not send streaming response');
+    }
+    
+    console.log('📖 CLIENT: Response body found, getting reader...');
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let content = '';
     let chunkCount = 0;
+    let lineCount = 0;
+    let dataEventCount = 0;
     
-    console.log('📖 Reading stream...');
+    console.log('📖 CLIENT: Starting to read stream chunks...');
     
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-            console.log(`✅ Stream complete. Received ${chunkCount} chunks, ${content.length} characters total`);
-            break;
-        }
-        
-        chunkCount++;
-        const chunk = decoder.decode(value);
-        console.log(`📦 Chunk ${chunkCount}: ${chunk.length} bytes`);
-        
-        const lines = chunk.split('\n');
-        
-        for (const line of lines) {
-            if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') {
-                    console.log('✅ Received [DONE] marker');
-                    continue;
-                }
-                
-                try {
-                    const parsed = JSON.parse(data);
-                    if (parsed.text) {
-                        content += parsed.text;
-                        textInput.value = content;
-                        textInput.scrollTop = textInput.scrollHeight;
-                        console.log(`✍️ Updated textarea: ${content.length} chars`);
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+                console.log('═══════════════════════════════════════════════════');
+                console.log('✅ CLIENT: Stream complete!');
+                console.log('  Total chunks received:', chunkCount);
+                console.log('  Total data events:', dataEventCount);
+                console.log('  Final content length:', content.length, 'characters');
+                console.log('  Lines processed:', lineCount);
+                console.log('═══════════════════════════════════════════════════');
+                break;
+            }
+            
+            chunkCount++;
+            const chunk = decoder.decode(value, { stream: true });
+            console.log(`📦 CLIENT: Chunk ${chunkCount}: ${chunk.length} bytes`);
+            
+            const lines = chunk.split('\n');
+            lineCount += lines.length;
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') {
+                        console.log('✅ CLIENT: Received [DONE] marker');
+                        continue;
                     }
-                } catch (e) {
-                    console.warn('⚠️ Failed to parse SSE data:', line.substring(0, 100));
+                    
+                    dataEventCount++;
+                    console.log(`  📥 CLIENT: Data event ${dataEventCount}: "${data.substring(0, 50)}${data.length > 50 ? '...' : ''}"`);
+                    
+                    try {
+                        const parsed = JSON.parse(data);
+                        console.log(`  📊 CLIENT: Parsed JSON, keys:`, Object.keys(parsed));
+                        
+                        if (parsed.text) {
+                            content += parsed.text;
+                            textInput.value = content;
+                            textInput.scrollTop = textInput.scrollHeight;
+                            console.log(`  ✍️ CLIENT: Updated textarea! Total chars: ${content.length}, last text: "${parsed.text.substring(0, 30)}..."`);
+                        } else {
+                            console.warn(`  ⚠️ CLIENT: No 'text' field in parsed data. Fields:`, Object.keys(parsed));
+                        }
+                    } catch (e) {
+                        console.error('  ❌ CLIENT: Failed to parse SSE JSON:', e.message);
+                        console.error('  Data:', line.substring(0, 200));
+                    }
                 }
             }
         }
+    } catch (streamError) {
+        console.error('❌ CLIENT: Stream reading error:', streamError);
+        throw streamError;
     }
     
-    console.log('✅ Streaming content generation complete');
+    console.log('✅ CLIENT: Streaming content generation complete');
 }
 
 /**

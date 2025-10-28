@@ -18,7 +18,7 @@
                 <div class="header-badges-row">
                     <h1 class="brand-name">GENIS.AI</h1>
                     <a href="https://www.producthunt.com/products/genis-ai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-genis&#0045;ai" target="_blank" class="product-hunt-badge">
-                        <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1030870&theme=light&t=1761434413944" alt="GENIS&#0046;AI - Transform&#0032;Your&#0032;Ideas&#0032;into&#0032;Stunning&#0032;Presentations&#0032;with&#0032;AI | Product Hunt" width="110" height="24" />
+                        <img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1030870&theme=light&t=1761434413944" alt="GENIS&#0046;AI - Transform&#0032;Your&#0032;Ideas&#0032;into&#0032;Stunning&#0032;Presentations&#0032;with&#0032;AI | Product Hunt" width="120" height="26" />
                     </a>
                     <a class="github-button" href="https://github.com/skunpoj/pptx" data-color-scheme="no-preference: light; light: light; dark: dark;" data-icon="octicon-star" data-size="small" aria-label="Star skunpoj/pptx on GitHub">Star</a>
                 </div>
@@ -33,6 +33,10 @@
                         <span class="header-feature">🔗 Share Links</span>
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <div id="userInfo" style="display: none; align-items: center; gap: 0.5rem;">
+                            <img id="userAvatar" src="" alt="User" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(102, 126, 234, 0.3);">
+                            <span id="userName" style="font-weight: 600; color: #667eea; font-size: 0.85rem;"></span>
+                        </div>
                         <a href="/login" class="login-btn" id="authBtn">
                             <span>🔐 Login</span>
                         </a>
@@ -170,9 +174,20 @@ Our Products
         </style>
 
         <!-- AI IDEA GENERATOR & THEME SELECTOR - Below modify slides section, above settings -->
-        <div class="ai-theme-grid">
+        <div class="ai-theme-grid" id="aiThemeGrid">
+            <!-- Login Overlay -->
+            <div class="login-overlay" id="aiThemeOverlay">
+                <div class="login-overlay-content">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔐</div>
+                    <h3>Sign In to Unlock Features</h3>
+                    <p style="margin-bottom: 1rem;">Unlock AI Idea Generator and Color Themes with a free account</p>
+                    <a href="/login" class="login-overlay-btn">Sign In Free</a>
+                    <p style="margin-top: 1rem; font-size: 0.85rem; color: #888; margin-bottom: 0;">Get started in seconds • No credit card required</p>
+                </div>
+            </div>
+            
             <!-- Left: AI Idea Generator -->
-            <div class="card idea-generator-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border: 3px solid #ff9a56;">
+            <div class="card idea-generator-section protected-section" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border: 3px solid #ff9a56;">
                 <h3 style="margin: 0 0 0.5rem 0; color: #d35400; font-size: 1.3rem;">💡 AI Idea Generator</h3>
                 <p class="section-description" style="color: #555; margin-bottom: 0.75rem;">Don't have content yet? Let AI expand your simple idea into detailed presentation content</p>
                 
@@ -239,7 +254,7 @@ Our Products
             </div>
 
             <!-- Right: Color Theme & Output Format -->
-            <div class="card" id="themeSelector" style="background: #f0fff4; border: 2px solid #82C341;">
+            <div class="card protected-section" id="themeSelector" style="background: #f0fff4; border: 2px solid #82C341;">
                 <div class="theme-header">
                     <h3>🎨 Choose Color Theme</h3>
                     <span id="suggestedBadge" class="suggested-badge" style="display: none;">AI Suggested</span>
@@ -929,22 +944,55 @@ Our Products
             }
         });
         
-        // Check authentication state and update login button
+        // Check authentication state and update UI
         window.addEventListener('load', async function() {
             try {
                 const response = await fetch('/api/user');
                 const data = await response.json();
                 const authBtn = document.getElementById('authBtn');
+                const userInfo = document.getElementById('userInfo');
+                const userAvatar = document.getElementById('userAvatar');
+                const userName = document.getElementById('userName');
+                const aiThemeGrid = document.getElementById('aiThemeGrid');
+                const themeSelector = document.getElementById('themeSelector');
                 
-                if (data.authenticated) {
+                if (data.authenticated && data.user) {
+                    // User is logged in
                     authBtn.href = '/logout';
                     authBtn.querySelector('span').textContent = '🔓 Logout';
+                    
+                    // Display user info
+                    if (data.user.picture) {
+                        userAvatar.src = data.user.picture;
+                        userAvatar.style.display = 'block';
+                    }
+                    if (data.user.name) {
+                        userName.textContent = data.user.name;
+                    } else if (data.user.email) {
+                        userName.textContent = data.user.email;
+                    }
+                    userInfo.style.display = 'flex';
+                    
+                    // Enable protected sections (remove greyed-out state)
+                    aiThemeGrid.classList.remove('protected-disabled');
                 } else {
+                    // User is not logged in
                     authBtn.href = '/login';
                     authBtn.querySelector('span').textContent = '🔐 Login';
+                    
+                    // Hide user info
+                    userInfo.style.display = 'none';
+                    
+                    // Disable protected sections (show greyed-out with overlay)
+                    aiThemeGrid.classList.add('protected-disabled');
                 }
             } catch (error) {
                 console.error('Auth check failed:', error);
+                // On error, disable sections
+                const aiThemeGrid = document.getElementById('aiThemeGrid');
+                if (aiThemeGrid) {
+                    aiThemeGrid.classList.add('protected-disabled');
+                }
             }
         });
     </script>
