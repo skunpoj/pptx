@@ -249,27 +249,34 @@ router.post('/generate-content', async (req, res) => {
                         const chunk = decoder.decode(value, { stream: true });
                         totalBytes += chunk.length;
                         console.log(`📦 SERVER: Chunk ${chunkCount}: ${chunk.length} bytes from Bedrock`);
+                        console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 100)}..."`);
                         
-                        // Bedrock Converse stream format: JSON chunks
-                        // Each chunk contains the delta with text
-                        try {
-                            const data = JSON.parse(chunk);
-                            console.log(`  📊 SERVER: Parsed Bedrock event`);
-                            
-                            if (data.contentBlockDelta?.delta?.text) {
-                                const textToSend = data.contentBlockDelta.delta.text;
-                                eventCount++;
-                                console.log(`  📤 SERVER: Sending text to client (event ${eventCount}): "${textToSend.substring(0, 30)}${textToSend.length > 30 ? '...' : ''}"`);
+                        // Bedrock returns JSON Lines format (one JSON object per line)
+                        const lines = chunk.split('\n').filter(line => line.trim());
+                        
+                        for (const line of lines) {
+                            try {
+                                const data = JSON.parse(line);
+                                console.log(`  📊 SERVER: Parsed Bedrock line, keys:`, Object.keys(data));
                                 
-                                res.write(`data: ${JSON.stringify({ text: textToSend })}\n\n`);
-                                
-                                if (res.flush) {
-                                    res.flush();
-                                    console.log('  ✅ SERVER: Flushed to client');
+                                if (data.contentBlockDelta?.delta?.text) {
+                                    const textToSend = data.contentBlockDelta.delta.text;
+                                    eventCount++;
+                                    console.log(`  📤 SERVER: Sending text to client (event ${eventCount}): "${textToSend.substring(0, 30)}${textToSend.length > 30 ? '...' : ''}"`);
+                                    
+                                    res.write(`data: ${JSON.stringify({ text: textToSend })}\n\n`);
+                                    
+                                    if (res.flush) {
+                                        res.flush();
+                                        console.log('  ✅ SERVER: Flushed to client');
+                                    }
+                                } else {
+                                    console.log(`  ⏭️ SERVER: Skipping non-text event`);
                                 }
+                            } catch (parseError) {
+                                console.error('  ❌ SERVER: Failed to parse Bedrock line:', parseError.message);
+                                console.error('  Line sample:', line.substring(0, 200));
                             }
-                        } catch (parseError) {
-                            console.error('  ❌ SERVER: Failed to parse Bedrock chunk:', parseError.message);
                         }
                     }
                 } catch (streamError) {

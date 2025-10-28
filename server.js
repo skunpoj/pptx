@@ -762,19 +762,27 @@ app.post('/api/preview', async (req, res) => {
                     streamedText += chunk;
                     jsonBuffer += chunk;
                     
-                    // Try to send raw text to client for debugging
-                    try {
-                        const data = JSON.parse(chunk);
-                        if (data.contentBlockDelta?.delta?.text) {
-                            res.write(`data: ${JSON.stringify({ 
-                                type: 'raw_text',
-                                text: data.contentBlockDelta.delta.text,
-                                timestamp: Date.now()
-                            })}\n\n`);
-                            if (res.flush) res.flush();
+                    console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 100)}..."`);
+                    
+                    // Bedrock returns JSON Lines format (one JSON object per line)
+                    // Split into lines and process each JSON object
+                    const lines = chunk.split('\n').filter(line => line.trim());
+                    
+                    for (const line of lines) {
+                        // Try to send raw text to client for debugging
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.contentBlockDelta?.delta?.text) {
+                                res.write(`data: ${JSON.stringify({ 
+                                    type: 'raw_text',
+                                    text: data.contentBlockDelta.delta.text,
+                                    timestamp: Date.now()
+                                })}\n\n`);
+                                if (res.flush) res.flush();
+                            }
+                        } catch (e) {
+                            // Not a contentBlockDelta event or invalid JSON
                         }
-                    } catch (e) {
-                        // Not a complete JSON chunk yet
                     }
                     
                     // Try to parse and extract theme if we haven't sent it yet
