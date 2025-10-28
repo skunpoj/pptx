@@ -78,6 +78,12 @@ app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use(express.static('public'));
 
+// Add Permissions Policy header to allow payment API and other necessary permissions
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'payment=*, camera=(), microphone=(), geolocation=()');
+  next();
+});
+
 // Auth check endpoint for frontend
 app.get('/api/user', async (req, res) => {
   const userData = {
@@ -1091,10 +1097,14 @@ app.post('/api/preview', async (req, res) => {
                     // This gives better UX by showing slides in batches rather than all at once
                     // Only try parsing when we have substantial content and it looks like JSON is complete
                     if (streamedText.length > 1000 && streamedText.includes('"slides"') && streamedText.includes('}')) {
+                        console.log(`  🔍 SERVER: Attempting periodic parse (${streamedText.length} chars, contains slides: ${streamedText.includes('"slides"')}, contains closing brace: ${streamedText.includes('}')})`);
+                        
                         try {
                             // Try to find complete JSON structure
                             const jsonStart = streamedText.indexOf('{');
                             if (jsonStart !== -1) {
+                                console.log(`  🔍 SERVER: Found JSON start at position ${jsonStart}`);
+                                
                                 // Find the end of the JSON object by counting braces
                                 let braceCount = 0;
                                 let jsonEnd = -1;
@@ -1109,46 +1119,62 @@ app.post('/api/preview', async (req, res) => {
                                 
                                 if (jsonEnd !== -1) {
                                     const jsonStr = streamedText.substring(jsonStart, jsonEnd + 1);
+                                    console.log(`  🔍 SERVER: Extracted JSON for periodic parse: "${jsonStr.substring(0, 100)}..."`);
+                                    
                                     const fullData = parseAIResponse(jsonStr);
+                                    console.log(`  📊 SERVER: Periodic parse successful, slides: ${fullData.slides?.length || 0}`);
                                     
                                     // Send theme if not sent yet
                                     if (!themeSent && fullData.designTheme) {
-                                console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
-                                res.write(`data: ${JSON.stringify({ 
-                                    type: 'theme',
-                                    theme: fullData.designTheme,
-                                    suggestedThemeKey: fullData.suggestedThemeKey,
-                                    totalSlides: fullData.slides?.length || 0
-                                })}\n\n`);
-                                if (res.flush) res.flush();
-                                themeSent = true;
-                    }
-                    
+                                        console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
+                                        res.write(`data: ${JSON.stringify({ 
+                                            type: 'theme',
+                                            theme: fullData.designTheme,
+                                            suggestedThemeKey: fullData.suggestedThemeKey,
+                                            totalSlides: fullData.slides?.length || 0
+                                        })}\n\n`);
+                                        if (res.flush) res.flush();
+                                        themeSent = true;
+                                    }
+                                    
                                     // Send any new slides that are complete
-                            if (fullData.slides && fullData.slides.length > slidesSent) {
+                                    if (fullData.slides && fullData.slides.length > slidesSent) {
                                         const newSlidesCount = fullData.slides.length - slidesSent;
                                         console.log(`  📤 SERVER: Sending ${newSlidesCount} new slides (${slidesSent + 1}-${fullData.slides.length})`);
                                         
-                                for (let i = slidesSent; i < fullData.slides.length; i++) {
-                                    const slide = fullData.slides[i];
+                                        for (let i = slidesSent; i < fullData.slides.length; i++) {
+                                            const slide = fullData.slides[i];
                                             console.log(`  ✓ SERVER: Slide ${i + 1}: ${slide.title}`);
-                                    
-                                    res.write(`data: ${JSON.stringify({ 
-                                        type: 'slide', 
-                                        slide: slide,
-                                        index: i,
-                                        current: i + 1,
-                                        total: fullData.slides.length
-                                    })}\n\n`);
-                                    if (res.flush) res.flush();
+                                            
+                                            res.write(`data: ${JSON.stringify({ 
+                                                type: 'slide', 
+                                                slide: slide,
+                                                index: i,
+                                                current: i + 1,
+                                                total: fullData.slides.length
+                                            })}\n\n`);
+                                            if (res.flush) res.flush();
                                         }
                                         slidesSent = fullData.slides.length;
                                     }
+                                } else {
+                                    console.log(`  ⏭️ SERVER: Could not find JSON end for periodic parse`);
                                 }
+                            } else {
+                                console.log(`  ⏭️ SERVER: No JSON start found for periodic parse`);
                             }
                         } catch (e) {
                             // JSON not complete yet, continue streaming
-                            console.log(`  ⏭️ SERVER: Periodic parse failed (expected): ${e.message}`);
+                            console.log(`  ⏭️ SERVER: Periodic parse failed: ${e.message}`);
+                        }
+                    } else {
+                        // Debug why periodic parsing isn't attempted
+                        if (streamedText.length <= 1000) {
+                            console.log(`  ⏭️ SERVER: Periodic parse skipped - not enough content (${streamedText.length} chars)`);
+                        } else if (!streamedText.includes('"slides"')) {
+                            console.log(`  ⏭️ SERVER: Periodic parse skipped - no slides found in text`);
+                        } else if (!streamedText.includes('}')) {
+                            console.log(`  ⏭️ SERVER: Periodic parse skipped - no closing brace found`);
                         }
                     }
                 }
@@ -1161,9 +1187,13 @@ app.post('/api/preview', async (req, res) => {
                     // Clean up the streamed text to extract valid JSON
                     let cleanedText = streamedText;
                     
+                    console.log(`📊 SERVER: Raw streamed text preview: "${streamedText.substring(0, 300)}..."`);
+                    
                     // Try to find the main JSON object by looking for the start of the response
                     const jsonStart = cleanedText.indexOf('{');
                     if (jsonStart !== -1) {
+                        console.log(`📊 SERVER: Found JSON start at position ${jsonStart}`);
+                        
                         // Find the end by counting braces
                         let braceCount = 0;
                         let jsonEnd = -1;
@@ -1179,7 +1209,12 @@ app.post('/api/preview', async (req, res) => {
                         if (jsonEnd !== -1) {
                             cleanedText = cleanedText.substring(jsonStart, jsonEnd + 1);
                             console.log(`📊 SERVER: Extracted JSON length: ${cleanedText.length} characters`);
+                            console.log(`📊 SERVER: Extracted JSON preview: "${cleanedText.substring(0, 200)}..."`);
+                        } else {
+                            console.log(`❌ SERVER: Could not find JSON end - incomplete JSON`);
                         }
+                    } else {
+                        console.log(`❌ SERVER: No JSON start found in streamed text`);
                     }
                     
                     const fullData = parseAIResponse(cleanedText);

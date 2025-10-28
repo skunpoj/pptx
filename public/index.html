@@ -6,6 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Permissions-Policy" content="payment=*, camera=(), microphone=(), geolocation=()">
     <title>GENIS.AI Presentation and Document Generator</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/css/styles.css?v=<?php echo time(); ?>">
@@ -1114,6 +1115,9 @@ Our Products
                         `;
                     }
                     
+                    // Show PromptPay button for inactive customers
+                    promptPayContainer.style.display = 'block';
+                    
                     // Show email mismatch warning if emails don't match exactly
                     if (subscriptionData.emailMismatchWarning && !subscriptionData.exactEmailMatch) {
                         emailMismatchWarning.innerHTML = `
@@ -1146,6 +1150,9 @@ Our Products
                         `;
                     }
                     
+                    // Show PromptPay button for new customers
+                    promptPayContainer.style.display = 'block';
+                    
                     // Show email mismatch warning
                     emailMismatchWarning.innerHTML = `
                         ⚠️ <strong>No Stripe Account Found:</strong> No subscription found for your email (${subscriptionData.email}). 
@@ -1171,6 +1178,12 @@ Our Products
                         >
                         </stripe-buy-button>
                     `;
+                }
+                
+                // Show PromptPay button as fallback
+                const promptPayContainer = document.getElementById('promptPayContainer');
+                if (promptPayContainer) {
+                    promptPayContainer.style.display = 'block';
                 }
             }
         }
@@ -1232,11 +1245,15 @@ Our Products
                     // Hide subscription status for non-logged-in users
                     const subscriptionStatus = document.getElementById('subscriptionStatus');
                     const emailMismatchWarning = document.getElementById('emailMismatchWarning');
+                    const promptPayContainer = document.getElementById('promptPayContainer');
                     if (subscriptionStatus) {
                         subscriptionStatus.style.display = 'none';
                     }
                     if (emailMismatchWarning) {
                         emailMismatchWarning.style.display = 'none';
+                    }
+                    if (promptPayContainer) {
+                        promptPayContainer.style.display = 'none';
                     }
                     
                     // Disable protected sections (show greyed-out with overlay)
