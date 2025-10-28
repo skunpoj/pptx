@@ -989,8 +989,7 @@ app.post('/api/preview', async (req, res) => {
             const reader = bedrockResponse.body.getReader();
             const decoder = new TextDecoder();
             
-            let jsonBuffer = '';
-            let streamedText = '';
+            let streamedText = '';  // Accumulate pure text from Bedrock
             let themeSent = false;
             let slidesSent = 0;
             
@@ -1008,8 +1007,6 @@ app.post('/api/preview', async (req, res) => {
                     
                     chunkCount++;
                     const chunk = decoder.decode(value, { stream: true });
-                    streamedText += chunk;
-                    jsonBuffer += chunk;
                     
                     console.log(`📦 SERVER: Chunk ${chunkCount}: ${chunk.length} bytes from Bedrock`);
                     console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 150)}..."`);
@@ -1026,6 +1023,7 @@ app.post('/api/preview', async (req, res) => {
                                 // Send raw text to client
                                 if (data.delta?.text) {
                                     const text = data.delta.text;
+                                    streamedText += text;  // Accumulate pure text
                                     console.log(`  ✅ SERVER: Sending text: "${text.substring(0, 50)}..."`);
                                     res.write(`data: ${JSON.stringify({ 
                                         type: 'raw_text',
@@ -1033,90 +1031,6 @@ app.post('/api/preview', async (req, res) => {
                                         timestamp: Date.now()
                                     })}\n\n`);
                                     if (res.flush) res.flush();
-                                    
-                                    // Try to parse and extract theme if we haven't sent it yet
-                                    if (!themeSent && jsonBuffer.includes('"designTheme"')) {
-                                        try {
-                                            // Try to find a complete JSON object in the buffer
-                                            const jsonStart = jsonBuffer.indexOf('{');
-                                            if (jsonStart !== -1) {
-                                                // Find the end of the JSON object
-                                                let braceCount = 0;
-                                                let jsonEnd = -1;
-                                                for (let i = jsonStart; i < jsonBuffer.length; i++) {
-                                                    if (jsonBuffer[i] === '{') braceCount++;
-                                                    if (jsonBuffer[i] === '}') braceCount--;
-                                                    if (braceCount === 0) {
-                                                        jsonEnd = i;
-                                                        break;
-                                                    }
-                                                }
-                                                
-                                                if (jsonEnd !== -1) {
-                                                    const jsonStr = jsonBuffer.substring(jsonStart, jsonEnd + 1);
-                                                    const fullData = parseAIResponse(jsonStr);
-                                                    if (fullData.designTheme) {
-                                                        console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
-                                                        res.write(`data: ${JSON.stringify({ 
-                                                            type: 'theme',
-                                                            theme: fullData.designTheme,
-                                                            suggestedThemeKey: fullData.suggestedThemeKey,
-                                                            totalSlides: fullData.slides?.length || 0
-                                                        })}\n\n`);
-                                                        if (res.flush) res.flush();
-                                                        themeSent = true;
-                                                    }
-                                                }
-                                            }
-                                        } catch (e) {
-                                            // Not ready yet
-                                        }
-                                    }
-                                    
-                                    // Try to extract complete slides as they arrive
-                                    if (themeSent) {
-                                        try {
-                                            // Try to find a complete JSON object in the buffer
-                                            const jsonStart = jsonBuffer.indexOf('{');
-                                            if (jsonStart !== -1) {
-                                                // Find the end of the JSON object
-                                                let braceCount = 0;
-                                                let jsonEnd = -1;
-                                                for (let i = jsonStart; i < jsonBuffer.length; i++) {
-                                                    if (jsonBuffer[i] === '{') braceCount++;
-                                                    if (jsonBuffer[i] === '}') braceCount--;
-                                                    if (braceCount === 0) {
-                                                        jsonEnd = i;
-                                                        break;
-                                                    }
-                                                }
-                                                
-                                                if (jsonEnd !== -1) {
-                                                    const jsonStr = jsonBuffer.substring(jsonStart, jsonEnd + 1);
-                                                    const fullData = parseAIResponse(jsonStr);
-                                                    if (fullData.slides && fullData.slides.length > slidesSent) {
-                                                        // Send any new slides
-                                                        for (let i = slidesSent; i < fullData.slides.length; i++) {
-                                                            const slide = fullData.slides[i];
-                                                            console.log(`  ✓ SERVER: Slide ${i + 1} extracted, sending: ${slide.title}`);
-                                                            
-                                                            res.write(`data: ${JSON.stringify({ 
-                                                                type: 'slide', 
-                                                                slide: slide,
-                                                                index: i,
-                                                                current: i + 1,
-                                                                total: fullData.slides.length
-                                                            })}\n\n`);
-                                                            if (res.flush) res.flush();
-                                                            slidesSent++;
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        } catch (e) {
-                                            // JSON not complete yet
-                                        }
-                                    }
                                 }
                             } catch (e) {
                                 console.log(`  ⏭️ SERVER: Failed to parse JSON: ${e.message}`);
@@ -1127,80 +1041,86 @@ app.post('/api/preview', async (req, res) => {
                         console.log(`  🔍 SERVER: No JSON matches found in chunk. Chunk preview: "${chunk.substring(0, 200)}"`);
                     }
                     
-                    // Try to parse and extract theme if we haven't sent it yet
-                    if (!themeSent && jsonBuffer.includes('"designTheme"')) {
+                    // Parse accumulated text periodically to extract slides as they become available
+                    // This gives better UX by showing slides in batches rather than all at once
+                    if (streamedText.length > 500 && streamedText.includes('"slides"')) { // Only try parsing when we have substantial content
                         try {
-                            const fullData = parseAIResponse(jsonBuffer);
-                            if (fullData.designTheme) {
-                                console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
-                                res.write(`data: ${JSON.stringify({ 
-                                    type: 'theme',
-                                    theme: fullData.designTheme,
-                                    suggestedThemeKey: fullData.suggestedThemeKey,
-                                    totalSlides: fullData.slides?.length || 0
-                                })}\n\n`);
-                                if (res.flush) res.flush();
-                                themeSent = true;
-                            }
-                        } catch (e) {
-                            // Not ready yet
-                        }
-                    }
-                    
-                    // Try to extract complete slides as they arrive
-                    if (themeSent) {
-                        try {
-                            const fullData = parseAIResponse(jsonBuffer);
-                            if (fullData.slides && fullData.slides.length > slidesSent) {
-                                // Send any new slides
-                                for (let i = slidesSent; i < fullData.slides.length; i++) {
-                                    const slide = fullData.slides[i];
-                                    console.log(`  ✓ SERVER: Slide ${i + 1} extracted, sending: ${slide.title}`);
+                            // Try to find complete JSON structure
+                            const jsonStart = streamedText.indexOf('{');
+                            if (jsonStart !== -1) {
+                                // Find the end of the JSON object by counting braces
+                                let braceCount = 0;
+                                let jsonEnd = -1;
+                                for (let i = jsonStart; i < streamedText.length; i++) {
+                                    if (streamedText[i] === '{') braceCount++;
+                                    if (streamedText[i] === '}') braceCount--;
+                                    if (braceCount === 0) {
+                                        jsonEnd = i;
+                                        break;
+                                    }
+                                }
+                                
+                                if (jsonEnd !== -1) {
+                                    const jsonStr = streamedText.substring(jsonStart, jsonEnd + 1);
+                                    const fullData = parseAIResponse(jsonStr);
                                     
-                                    res.write(`data: ${JSON.stringify({ 
-                                        type: 'slide', 
-                                        slide: slide,
-                                        index: i,
-                                        current: i + 1,
-                                        total: fullData.slides.length
-                                    })}\n\n`);
-                                    if (res.flush) res.flush();
-                                    slidesSent++;
+                                    // Send theme if not sent yet
+                                    if (!themeSent && fullData.designTheme) {
+                                        console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
+                                        res.write(`data: ${JSON.stringify({ 
+                                            type: 'theme',
+                                            theme: fullData.designTheme,
+                                            suggestedThemeKey: fullData.suggestedThemeKey,
+                                            totalSlides: fullData.slides?.length || 0
+                                        })}\n\n`);
+                                        if (res.flush) res.flush();
+                                        themeSent = true;
+                                    }
+                                    
+                                    // Send any new slides that are complete
+                                    if (fullData.slides && fullData.slides.length > slidesSent) {
+                                        const newSlidesCount = fullData.slides.length - slidesSent;
+                                        console.log(`  📤 SERVER: Sending ${newSlidesCount} new slides (${slidesSent + 1}-${fullData.slides.length})`);
+                                        
+                                        for (let i = slidesSent; i < fullData.slides.length; i++) {
+                                            const slide = fullData.slides[i];
+                                            console.log(`  ✓ SERVER: Slide ${i + 1}: ${slide.title}`);
+                                            
+                                            res.write(`data: ${JSON.stringify({ 
+                                                type: 'slide', 
+                                                slide: slide,
+                                                index: i,
+                                                current: i + 1,
+                                                total: fullData.slides.length
+                                            })}\n\n`);
+                                            if (res.flush) res.flush();
+                                        }
+                                        slidesSent = fullData.slides.length;
+                                    }
                                 }
                             }
                         } catch (e) {
-                            // JSON not complete yet
+                            // JSON not complete yet, continue streaming
                         }
                     }
                 }
                 
-                // Parse final complete JSON from accumulated text
-                console.log('📊 SERVER: Parsing final complete JSON...');
+                // Final parsing to ensure all slides are sent
+                console.log('📊 SERVER: Final parsing to ensure all slides are sent...');
                 console.log(`📊 SERVER: Streamed text length: ${streamedText.length} characters`);
                 
                 try {
                     const fullData = parseAIResponse(streamedText);
-                    console.log(`📊 SERVER: Parsed successfully, slides: ${fullData.slides?.length || 0}`);
+                    console.log(`📊 SERVER: Final parse successful, slides: ${fullData.slides?.length || 0}`);
                     
-                    // Send theme if not sent yet
-                    if (!themeSent && fullData.designTheme) {
-                        console.log(`  🎨 SERVER: Sending theme: ${fullData.designTheme.name}`);
-                        res.write(`data: ${JSON.stringify({ 
-                            type: 'theme',
-                            theme: fullData.designTheme,
-                            suggestedThemeKey: fullData.suggestedThemeKey,
-                            totalSlides: fullData.slides?.length || 0
-                        })}\n\n`);
-                        if (res.flush) res.flush();
-                        themeSent = true;
-                    }
-                    
-                    // Send all slides at once (since incremental parsing is complex with EventStream)
-                    if (fullData.slides && fullData.slides.length > 0) {
-                        console.log(`  📤 SERVER: Sending all ${fullData.slides.length} slides...`);
-                        for (let i = 0; i < fullData.slides.length; i++) {
+                    // Send any remaining slides
+                    if (fullData.slides && fullData.slides.length > slidesSent) {
+                        const remainingSlides = fullData.slides.length - slidesSent;
+                        console.log(`  📤 SERVER: Sending final ${remainingSlides} slides...`);
+                        
+                        for (let i = slidesSent; i < fullData.slides.length; i++) {
                             const slide = fullData.slides[i];
-                            console.log(`  ✓ SERVER: Slide ${i + 1}: ${slide.title}`);
+                            console.log(`  ✓ SERVER: Final slide ${i + 1}: ${slide.title}`);
                             
                             res.write(`data: ${JSON.stringify({ 
                                 type: 'slide', 
@@ -1231,7 +1151,6 @@ app.post('/api/preview', async (req, res) => {
                     }
                 }
                 
-                res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
                 res.write('data: [DONE]\n\n');
                 res.end();
                 
