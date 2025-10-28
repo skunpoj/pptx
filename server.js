@@ -54,6 +54,7 @@ const {
 const promptRoutes = require('./server/routes/prompts');
 const skillRoutes = require('./server/routes/skills');
 const imageRoutes = require('./server/routes/images');
+const stripeRoutes = require('./server/routes/stripe');
 
 // Initialize Express app
 const app = express();
@@ -140,6 +141,7 @@ const upload = multer({
 app.use('/api', promptRoutes);
 app.use('/api', skillRoutes);
 app.use('/api/images', imageRoutes);
+app.use('/', stripeRoutes);
 
 // ========================================
 // SERVER CAPABILITIES & HEALTH ENDPOINTS
@@ -292,26 +294,40 @@ app.post('/api/generate-content', async (req, res) => {
                         }
                         
                         // Bedrock returns EventStream format (binary)
-                        // Try to extract JSON from the chunk - updated regex pattern
-                        const jsonMatches = chunk.match(/\{"contentBlockIndex":\d+,"delta":\{"text":"[^"]*"\}[^}]*\}/g);
-                        if (jsonMatches) {
-                            for (const jsonStr of jsonMatches) {
+                        // More flexible JSON extraction - look for any JSON object containing contentBlockIndex
+                        const jsonStart = chunk.indexOf('{"contentBlockIndex"');
+                        if (jsonStart !== -1) {
+                            // Find the end of the JSON object by looking for the closing brace
+                            let braceCount = 0;
+                            let jsonEnd = -1;
+                            for (let i = jsonStart; i < chunk.length; i++) {
+                                if (chunk[i] === '{') braceCount++;
+                                if (chunk[i] === '}') braceCount--;
+                                if (braceCount === 0) {
+                                    jsonEnd = i;
+                                    break;
+                                }
+                            }
+                            
+                            if (jsonEnd !== -1) {
+                                const jsonStr = chunk.substring(jsonStart, jsonEnd + 1);
                                 try {
                                     const data = JSON.parse(jsonStr);
                                     console.log(`  📊 Parsed Bedrock event, keys:`, Object.keys(data));
                                     
                                     // Extract text from delta
                                     if (data.delta?.text) {
-                                        console.log(`  ✅ Sending text: "${data.delta.text.substring(0, 50)}..."`);
+                                        console.log(`  ✅ Sending text: "${data.delta.text}"`);
                                         res.write(`data: ${JSON.stringify({ text: data.delta.text })}\n\n`);
                                     }
                                 } catch (e) {
                                     console.log(`  ⏭️ Failed to parse JSON: ${e.message}`);
+                                    console.log(`  📄 JSON attempt: "${jsonStr.substring(0, 100)}..."`);
                                 }
                             }
                         } else {
                             // Debug: show what we're actually getting
-                            console.log(`  🔍 No JSON matches found in chunk. Chunk preview: "${chunk.substring(0, 200)}"`);
+                            console.log(`  🔍 No JSON found in chunk. Chunk preview: "${chunk.substring(0, 200)}"`);
                         }
                     }
                 } finally {
@@ -1012,10 +1028,23 @@ app.post('/api/preview', async (req, res) => {
                     console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 150)}..."`);
                     
                     // Bedrock returns EventStream format (binary)
-                    // Try to extract JSON from the chunk - updated regex pattern
-                    const jsonMatches = chunk.match(/\{"contentBlockIndex":\d+,"delta":\{"text":"[^"]*"\}[^}]*\}/g);
-                    if (jsonMatches) {
-                        for (const jsonStr of jsonMatches) {
+                    // More flexible JSON extraction - look for any JSON object containing contentBlockIndex
+                    const jsonStart = chunk.indexOf('{"contentBlockIndex"');
+                    if (jsonStart !== -1) {
+                        // Find the end of the JSON object by looking for the closing brace
+                        let braceCount = 0;
+                        let jsonEnd = -1;
+                        for (let i = jsonStart; i < chunk.length; i++) {
+                            if (chunk[i] === '{') braceCount++;
+                            if (chunk[i] === '}') braceCount--;
+                            if (braceCount === 0) {
+                                jsonEnd = i;
+                                break;
+                            }
+                        }
+                        
+                        if (jsonEnd !== -1) {
+                            const jsonStr = chunk.substring(jsonStart, jsonEnd + 1);
                             try {
                                 const data = JSON.parse(jsonStr);
                                 console.log(`  📊 SERVER: Parsed Bedrock event, keys:`, Object.keys(data));
@@ -1024,7 +1053,7 @@ app.post('/api/preview', async (req, res) => {
                                 if (data.delta?.text) {
                                     const text = data.delta.text;
                                     streamedText += text;  // Accumulate pure text
-                                    console.log(`  ✅ SERVER: Sending text: "${text.substring(0, 50)}..."`);
+                                    console.log(`  ✅ SERVER: Sending text: "${text}"`);
                                     res.write(`data: ${JSON.stringify({ 
                                         type: 'raw_text',
                                         text: text,
@@ -1034,11 +1063,12 @@ app.post('/api/preview', async (req, res) => {
                                 }
                             } catch (e) {
                                 console.log(`  ⏭️ SERVER: Failed to parse JSON: ${e.message}`);
+                                console.log(`  📄 SERVER: JSON attempt: "${jsonStr.substring(0, 100)}..."`);
                             }
                         }
                     } else {
                         // Debug: show what we're actually getting
-                        console.log(`  🔍 SERVER: No JSON matches found in chunk. Chunk preview: "${chunk.substring(0, 200)}"`);
+                        console.log(`  🔍 SERVER: No JSON found in chunk. Chunk preview: "${chunk.substring(0, 200)}"`);
                     }
                     
                     // Parse accumulated text periodically to extract slides as they become available

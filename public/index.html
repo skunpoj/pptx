@@ -39,6 +39,9 @@
                         <div id="userInfo" style="display: none; align-items: center; gap: 0.5rem;">
                             <img id="userAvatar" src="" alt="User" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(102, 126, 234, 0.3);">
                             <span id="userName" style="font-weight: 600; color: #667eea; font-size: 0.85rem;"></span>
+                            <div id="subscriptionStatus" style="display: none; margin-left: 0.5rem;">
+                                <span id="subscriptionBadge" style="font-size: 0.75rem; padding: 0.2rem 0.4rem; border-radius: 4px; font-weight: 600;"></span>
+                            </div>
                         </div>
                         <a href="/login" class="login-btn" id="authBtn">
                             <span>🔐 Login</span>
@@ -101,12 +104,17 @@ Our Products
 
                 <!-- Stripe Buy Button and Generate Preview Button Row -->
                 <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem;">
-                    <stripe-buy-button
-                        buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
-                        publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
-                        style="flex: 0 0 auto;"
-                    >
-                    </stripe-buy-button>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <stripe-buy-button
+                            buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                            publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                            style="flex: 0 0 auto;"
+                        >
+                        </stripe-buy-button>
+                        <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
+                            ⚠️ <strong>Email Mismatch:</strong> Your Auth0 email may differ from your Stripe subscription email. Please ensure you use the same email for both accounts.
+                        </div>
+                    </div>
                     <button class="btn-primary btn-large" onclick="window.generatePreview()" id="previewBtn" style="flex: 1; min-width: 200px;">
                         👁️ Generate Preview
                     </button>
@@ -963,6 +971,60 @@ Our Products
         });
         
         // Check authentication state and update UI
+        // Function to check subscription status
+        async function checkSubscriptionStatus() {
+            try {
+                const response = await fetch('/api/subscription');
+                const subscriptionData = await response.json();
+                
+                const subscriptionStatus = document.getElementById('subscriptionStatus');
+                const subscriptionBadge = document.getElementById('subscriptionBadge');
+                const emailMismatchWarning = document.getElementById('emailMismatchWarning');
+                
+                if (subscriptionData.hasActiveSubscription) {
+                    // User has active subscription
+                    subscriptionBadge.textContent = '✅ Active';
+                    subscriptionBadge.style.background = '#d4edda';
+                    subscriptionBadge.style.color = '#155724';
+                    subscriptionBadge.style.border = '1px solid #c3e6cb';
+                    subscriptionStatus.style.display = 'block';
+                    
+                    // Hide email mismatch warning
+                    emailMismatchWarning.style.display = 'none';
+                } else if (subscriptionData.customerExists) {
+                    // Customer exists but no active subscription
+                    subscriptionBadge.textContent = '❌ Inactive';
+                    subscriptionBadge.style.background = '#f8d7da';
+                    subscriptionBadge.style.color = '#721c24';
+                    subscriptionBadge.style.border = '1px solid #f5c6cb';
+                    subscriptionStatus.style.display = 'block';
+                    
+                    // Show email mismatch warning if needed
+                    if (subscriptionData.message && subscriptionData.message.includes('email')) {
+                        emailMismatchWarning.style.display = 'block';
+                    } else {
+                        emailMismatchWarning.style.display = 'none';
+                    }
+                } else {
+                    // No customer found - show warning about email mismatch
+                    subscriptionBadge.textContent = '⚠️ No Account';
+                    subscriptionBadge.style.background = '#fff3cd';
+                    subscriptionBadge.style.color = '#856404';
+                    subscriptionBadge.style.border = '1px solid #ffeaa7';
+                    subscriptionStatus.style.display = 'block';
+                    
+                    // Show email mismatch warning
+                    emailMismatchWarning.style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('Error checking subscription status:', error);
+                // Hide subscription status on error
+                const subscriptionStatus = document.getElementById('subscriptionStatus');
+                subscriptionStatus.style.display = 'none';
+            }
+        }
+
         window.addEventListener('load', async function() {
             try {
                 const response = await fetch('/api/user');
@@ -998,6 +1060,9 @@ Our Products
                         userSlideCount.style.display = 'inline';
                     }
                     
+                    // Check subscription status
+                    checkSubscriptionStatus();
+                    
                     // Enable protected sections (remove greyed-out state)
                     aiThemeGrid.classList.remove('protected-disabled');
                 } else {
@@ -1012,6 +1077,16 @@ Our Products
                     const userSlideCount = document.getElementById('userSlideCount');
                     if (userSlideCount) {
                         userSlideCount.style.display = 'none';
+                    }
+                    
+                    // Hide subscription status for non-logged-in users
+                    const subscriptionStatus = document.getElementById('subscriptionStatus');
+                    const emailMismatchWarning = document.getElementById('emailMismatchWarning');
+                    if (subscriptionStatus) {
+                        subscriptionStatus.style.display = 'none';
+                    }
+                    if (emailMismatchWarning) {
+                        emailMismatchWarning.style.display = 'none';
                     }
                     
                     // Disable protected sections (show greyed-out with overlay)
