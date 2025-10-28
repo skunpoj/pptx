@@ -570,8 +570,13 @@ body {
     height: 32px; /* Match the row height */
 }
 
-/* Make both badge images the same height and vertically centered */
-.product-hunt-badge img,
+/* Badge images styling */
+.product-hunt-badge img {
+    height: 26px;
+    width: auto;
+    display: block;
+}
+
 .github-shield-badge img {
     height: 24px;
     width: auto;

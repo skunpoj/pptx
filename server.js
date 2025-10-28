@@ -680,26 +680,29 @@ app.post('/api/preview', async (req, res) => {
                 throw new Error('Bedrock API key not found');
             }
             
-            // For slide preview, use NON-STREAMING to get complete JSON
-            // Bedrock streaming has HTTP/2 issues that are difficult to parse
-            // Get complete response, then simulate streaming by sending slides one by one
-            console.log('⚠️  Using NON-STREAMING mode for slide preview (simulating streaming)');
+            // Use TRUE STREAMING with /converse-stream (same as Expand Idea)
+            console.log('📡 Using TRUE STREAMING for slide preview with Bedrock');
             
-            const modelIds = [
-                'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
-                'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-                'amazon.nova-lite-v1:0',
-                'amazon.nova-pro-v1:0'
+            const modelConfigs = [
+                { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
+                { id: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
+                { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'global' },  // Global as 2nd fallback
+                { id: 'amazon.nova-lite-v1:0', region: 'us-east-1' },
+                { id: 'amazon.nova-pro-v1:0', region: 'us-east-1' }
             ];
             
-            let fullResponse = null;
+            let bedrockResponse = null;
             let lastError = null;
             
-            for (const modelId of modelIds) {
+            for (const config of modelConfigs) {
                 try {
-                    console.log(`📤 SERVER: Trying Bedrock model: ${modelId}`);
+                    console.log(`📤 SERVER: Trying Bedrock model: ${config.id} in ${config.region}`);
                     
-                    const response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse`, {
+                    const baseUrl = config.region === 'global' 
+                        ? 'https://bedrock-runtime.amazonaws.com' 
+                        : `https://bedrock-runtime.${config.region}.amazonaws.com`;
+                    
+                    bedrockResponse = await fetch(`${baseUrl}/model/${config.id}/converse-stream`, {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
@@ -716,102 +719,164 @@ app.post('/api/preview', async (req, res) => {
                         })
                     });
                     
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.output && data.output.message && data.output.message.content) {
-                            const content = data.output.message.content;
-                            if (Array.isArray(content) && content.length > 0 && content[0].text) {
-                                fullResponse = content[0].text.trim();
-                                console.log(`✅ SERVER: Success with model: ${modelId}`);
-                                break;
-                            }
-                        }
-                        throw new Error('Unexpected Bedrock response format');
+                    if (bedrockResponse.ok) {
+                        console.log(`✅ SERVER: Success with model: ${config.id} in ${config.region}`);
+                        break;
                     } else {
-                        const errorData = await response.json().catch(() => ({}));
-                        console.log(`❌ SERVER: Model ${modelId} failed: ${errorData.error?.message || response.status}`);
-                        lastError = new Error(errorData.error?.message || `HTTP ${response.status}`);
+                        const errorData = await bedrockResponse.json().catch(() => ({}));
+                        console.log(`❌ SERVER: Model ${config.id} (${config.region}) failed: ${errorData.error?.message || bedrockResponse.status}`);
+                        lastError = new Error(errorData.error?.message || `HTTP ${bedrockResponse.status}`);
+                        bedrockResponse = null;
                         continue;
                     }
                 } catch (error) {
-                    console.log(`❌ SERVER: Error with ${modelId}: ${error.message}`);
+                    console.log(`❌ SERVER: Error with ${config.id} (${config.region}): ${error.message}`);
                     lastError = error;
                     continue;
                 }
             }
             
-            if (!fullResponse) {
+            if (!bedrockResponse || !bedrockResponse.ok) {
                 throw lastError || new Error('All Bedrock models failed');
             }
             
-            console.log(`📝 SERVER: Received full Bedrock response (${fullResponse.length} chars)`);
-            console.log(`  📄 First 200 chars: "${fullResponse.substring(0, 200)}..."`);
+            console.log('📨 SERVER: Bedrock response status:', bedrockResponse.status, bedrockResponse.statusText);
             
-            // Parse the AI response
-            const fullData = parseAIResponse(fullResponse);
-            const totalSlides = fullData.slides.length;
-            const theme = fullData.designTheme;
-            const suggestedThemeKey = fullData.suggestedThemeKey;
-            
-            console.log(`  📝 Generated ${totalSlides} slides`);
-            console.log(`  🎨 Theme: ${theme.name}`);
-            
-            // Send theme info first
-            res.write(`data: ${JSON.stringify({ 
-                type: 'theme',
-                theme: theme,
-                suggestedThemeKey: suggestedThemeKey,
-                totalSlides: totalSlides
-            })}\n\n`);
-            if (res.flush) res.flush();
-            
-            // Send raw response as raw_text events for debugging
-            // Split the response into chunks to simulate streaming
-            const chunkSize = 100; // Send 100 chars at a time
-            for (let i = 0; i < fullResponse.length; i += chunkSize) {
-                const chunk = fullResponse.substring(i, i + chunkSize);
-                res.write(`data: ${JSON.stringify({ 
-                    type: 'raw_text',
-                    text: chunk,
-                    timestamp: Date.now()
-                })}\n\n`);
-                if (res.flush) res.flush();
+            if (!bedrockResponse.body) {
+                throw new Error('Bedrock response body is null');
             }
             
-            // Simulate streaming by sending slides one by one
-            console.log(`  📤 Now sending ${totalSlides} slides incrementally...`);
+            console.log('📖 SERVER: Getting reader from Bedrock response...');
+            const reader = bedrockResponse.body.getReader();
+            const decoder = new TextDecoder();
             
-            for (let i = 0; i < totalSlides; i++) {
-                const slide = fullData.slides[i];
+            let jsonBuffer = '';
+            let streamedText = '';
+            let themeSent = false;
+            let slidesSent = 0;
+            
+            console.log('📡 SERVER: Starting to read Bedrock stream...');
+            
+            try {
+                let chunkCount = 0;
                 
-                try {
-                    validateSlideData({ slides: [slide], designTheme: theme });
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        console.log('✅ SERVER: Bedrock stream completed');
+                        break;
+                    }
                     
-                    console.log(`  ✓ Sending slide ${i + 1}/${totalSlides}: ${slide.title}`);
+                    chunkCount++;
+                    const chunk = decoder.decode(value, { stream: true });
+                    streamedText += chunk;
+                    jsonBuffer += chunk;
                     
-                    res.write(`data: ${JSON.stringify({ 
-                        type: 'slide', 
-                        slide: slide,
-                        index: i,
-                        current: i + 1,
-                        total: totalSlides
-                    })}\n\n`);
+                    console.log(`📦 SERVER: Chunk ${chunkCount}: ${chunk.length} bytes from Bedrock`);
+                    console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 150)}..."`);
                     
-                    if (res.flush) res.flush();
+                    // Bedrock returns JSON Lines format (one JSON object per line)
+                    const lines = chunk.split('\n').filter(line => line.trim());
                     
-                } catch (validateError) {
-                    console.error(`  ❌ Slide ${i + 1} validation failed:`, validateError.message);
+                    for (const line of lines) {
+                        try {
+                            const data = JSON.parse(line);
+                            console.log(`  📊 SERVER: Parsed Bedrock line, keys:`, Object.keys(data));
+                            
+                            // Send raw text to client
+                            if (data.contentBlockDelta?.delta?.text) {
+                                const text = data.contentBlockDelta.delta.text;
+                                res.write(`data: ${JSON.stringify({ 
+                                    type: 'raw_text',
+                                    text: text,
+                                    timestamp: Date.now()
+                                })}\n\n`);
+                                if (res.flush) res.flush();
+                            }
+                        } catch (e) {
+                            console.log(`  ⏭️ SERVER: Failed to parse line, continuing...`);
+                        }
+                    }
+                    
+                    // Try to parse and extract theme if we haven't sent it yet
+                    if (!themeSent && jsonBuffer.includes('"designTheme"')) {
+                        try {
+                            const fullData = parseAIResponse(jsonBuffer);
+                            if (fullData.designTheme) {
+                                console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
+                                res.write(`data: ${JSON.stringify({ 
+                                    type: 'theme',
+                                    theme: fullData.designTheme,
+                                    suggestedThemeKey: fullData.suggestedThemeKey,
+                                    totalSlides: fullData.slides?.length || 0
+                                })}\n\n`);
+                                if (res.flush) res.flush();
+                                themeSent = true;
+                            }
+                        } catch (e) {
+                            // Not ready yet
+                        }
+                    }
+                    
+                    // Try to extract complete slides as they arrive
+                    if (themeSent) {
+                        try {
+                            const fullData = parseAIResponse(jsonBuffer);
+                            if (fullData.slides && fullData.slides.length > slidesSent) {
+                                // Send any new slides
+                                for (let i = slidesSent; i < fullData.slides.length; i++) {
+                                    const slide = fullData.slides[i];
+                                    console.log(`  ✓ SERVER: Slide ${i + 1} extracted, sending: ${slide.title}`);
+                                    
+                                    res.write(`data: ${JSON.stringify({ 
+                                        type: 'slide', 
+                                        slide: slide,
+                                        index: i,
+                                        current: i + 1,
+                                        total: fullData.slides.length
+                                    })}\n\n`);
+                                    if (res.flush) res.flush();
+                                    slidesSent++;
+                                }
+                            }
+                        } catch (e) {
+                            // JSON not complete yet
+                        }
+                    }
                 }
+                
+                // Parse final complete JSON
+                console.log('📊 SERVER: Parsing final complete JSON...');
+                const fullData = parseAIResponse(streamedText);
+                
+                // Send any remaining slides
+                if (fullData.slides && fullData.slides.length > slidesSent) {
+                    console.log(`  📤 SERVER: Sending remaining ${fullData.slides.length - slidesSent} slides...`);
+                    for (let i = slidesSent; i < fullData.slides.length; i++) {
+                        const slide = fullData.slides[i];
+                        console.log(`  ✓ SERVER: Final slide ${i + 1}: ${slide.title}`);
+                        
+                        res.write(`data: ${JSON.stringify({ 
+                            type: 'slide', 
+                            slide: slide,
+                            index: i,
+                            current: i + 1,
+                            total: fullData.slides.length
+                        })}\n\n`);
+                        if (res.flush) res.flush();
+                    }
+                }
+                
+                // Send completion
+                console.log(`✅ SERVER: All ${fullData.slides.length} slides sent via TRUE STREAMING`);
+                res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
+                res.write('data: [DONE]\n\n');
+                res.end();
+                
+            } catch (streamError) {
+                console.error('❌ SERVER: Stream error:', streamError);
+                throw streamError;
             }
-            
-            console.log(`  ✅ All ${totalSlides} slides sent to client`);
-            
-            // Send completion
-            res.write(`data: ${JSON.stringify({ type: 'complete', data: fullData })}\n\n`);
-            res.write('data: [DONE]\n\n');
-            res.end();
-            
-            console.log('✅ SERVER: Incremental generation complete');
             
         } else {
             // NON-INCREMENTAL MODE (all at once)
@@ -1535,26 +1600,63 @@ app.get('/download/:sessionId/:filename', async (req, res) => {
             return res.status(400).json({ error: 'Invalid filename' });
         }
         
-        // Get file from storage
-        const { fileBuffer, metadata } = await getFile(sessionId, filename);
+        console.log(`📥 Download request: ${sessionId}/${filename}`);
         
-        // Set appropriate headers
-        const contentType = filename.endsWith('.pdf') 
-            ? 'application/pdf' 
-            : 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-        
-        res.set({
-            'Content-Type': contentType,
-            'Content-Disposition': `attachment; filename="${filename}"`,
-            'Content-Length': fileBuffer.length
-        });
-        
-        res.send(fileBuffer);
-        console.log(`✅ Downloaded: ${sessionId}/${filename} (${metadata.downloads} total downloads)`);
+        try {
+            // Try to get file from storage
+            const { fileBuffer, metadata } = await getFile(sessionId, filename);
+            
+            // Set appropriate headers
+            const contentType = filename.endsWith('.pdf') 
+                ? 'application/pdf' 
+                : 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+            
+            res.set({
+                'Content-Type': contentType,
+                'Content-Disposition': `attachment; filename="${filename}"`,
+                'Content-Length': fileBuffer.length
+            });
+            
+            res.send(fileBuffer);
+            console.log(`✅ Downloaded: ${sessionId}/${filename} (${metadata.downloads} total downloads)`);
+            
+        } catch (fileError) {
+            // File not found - check if we need to generate it from shared presentation
+            console.log(`⚠️ File not found for ${sessionId}/${filename}, checking shared presentations...`);
+            
+            // Try to find the presentation in sharedPresentations map
+            let presentationData = null;
+            let shareId = null;
+            
+            for (const [sid, pres] of sharedPresentations.entries()) {
+                if (pres.sessionId === sessionId) {
+                    presentationData = pres;
+                    shareId = sid;
+                    console.log(`✅ Found matching presentation for sessionId: ${sessionId} in shareId: ${shareId}`);
+                    break;
+                }
+            }
+            
+            if (!presentationData) {
+                console.error(`❌ No presentation found for sessionId: ${sessionId}`);
+                return res.status(404).json({ 
+                    error: 'File not found. The presentation may have expired or been deleted.' 
+                });
+            }
+            
+            // We found the presentation, but the file doesn't exist
+            // This should not happen normally, but we'll try to help by:
+            // 1. Try to get the PPTX file if it exists
+            // 2. Otherwise, offer to regenerate
+            return res.status(404).json({ 
+                error: 'Presentation file not found. Please regenerate the presentation.',
+                suggestion: 'The presentation data exists but the file is missing. Please go back and regenerate.'
+            });
+        }
         
     } catch (error) {
         console.error('Download error:', error);
-        res.status(404).json({ error: error.message });
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

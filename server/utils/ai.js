@@ -9,21 +9,26 @@ async function callAI(provider, apiKey, userPrompt) {
             throw new Error('Bedrock API key not found in environment variable "bedrock"');
         }
         
-        // Try models in order of preference (same as streaming)
-        const modelIds = [
-            'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
-            'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-            'amazon.nova-lite-v1:0',
-            'amazon.nova-pro-v1:0'
+        // Try models in order of preference
+        const modelConfigs = [
+            { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
+            { id: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
+            { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'global' },  // Global as 2nd fallback
+            { id: 'amazon.nova-lite-v1:0', region: 'us-east-1' },
+            { id: 'amazon.nova-pro-v1:0', region: 'us-east-1' }
         ];
         
         let lastError = null;
         
-        for (const modelId of modelIds) {
+        for (const config of modelConfigs) {
             try {
-                console.log(`🔄 Calling Bedrock model: ${modelId}`);
+                console.log(`🔄 Calling Bedrock model: ${config.id} in ${config.region}`);
                 
-                const response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse`, {
+                const baseUrl = config.region === 'global' 
+                    ? 'https://bedrock-runtime.amazonaws.com' 
+                    : `https://bedrock-runtime.${config.region}.amazonaws.com`;
+                
+                const response = await fetch(`${baseUrl}/model/${config.id}/converse`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -40,18 +45,18 @@ async function callAI(provider, apiKey, userPrompt) {
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
                     const errorMsg = errorData.error?.message || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-                    console.log(`❌ Model ${modelId} failed: ${errorMsg}`);
+                    console.log(`❌ Model ${config.id} (${config.region}) failed: ${errorMsg}`);
                     lastError = new Error(errorMsg);
                     continue; // Try next model
                 }
-
+                
                 const data = await response.json();
                 
                 // Parse Bedrock response format
                 if (data.output && data.output.message && data.output.message.content) {
                     const content = data.output.message.content;
                     if (Array.isArray(content) && content.length > 0 && content[0].text) {
-                        console.log(`✅ Success with model: ${modelId}`);
+                        console.log(`✅ Success with model: ${config.id} in ${config.region}`);
                         return content[0].text.trim();
                     }
                 }
@@ -59,7 +64,7 @@ async function callAI(provider, apiKey, userPrompt) {
                 throw new Error('Unexpected Bedrock response format');
                 
             } catch (error) {
-                console.log(`❌ Error with ${modelId}: ${error.message}`);
+                console.log(`❌ Error with ${config.id} (${config.region}): ${error.message}`);
                 lastError = error;
                 continue; // Try next model
             }

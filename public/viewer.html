@@ -604,34 +604,28 @@
             console.log('📥 Download requested, sessionId:', sessionId);
             
             if (!sessionId) {
-                alert('❌ Download not available - no session ID found.');
+                alert('❌ Download not available - no session ID found.\n\nThis share link may not have the presentation file saved. Please ask the creator to regenerate the presentation.');
                 return;
             }
             
             try {
-                // First verify the file exists
-                const checkUrl = `/download/${sessionId}/presentation.pptx`;
-                console.log('📥 Checking file at:', checkUrl);
+                // First try to download directly
+                console.log('📥 Attempting download from:', `/download/${sessionId}/presentation.pptx`);
                 
-                const checkResponse = await fetch(checkUrl, { method: 'HEAD' });
+                // Use window.location for direct download
+                window.location.href = `/download/${sessionId}/presentation.pptx`;
                 
-                if (!checkResponse.ok) {
-                    throw new Error(`File not found (${checkResponse.status})`);
-                }
-                
-                console.log('✅ File exists, starting download...');
-                
-                // Use direct window.location for more reliable download
-                window.location.href = checkUrl;
-                
-                // Show success message
+                // Show message after a moment
                 setTimeout(() => {
-                    alert('✅ Download started! Check your downloads folder.');
-                }, 500);
+                    console.log('✅ Download initiated');
+                }, 300);
                 
             } catch (error) {
                 console.error('❌ Download error:', error);
-                alert('❌ Download failed: ' + error.message + '\n\nPlease try refreshing the page or contact support.');
+                alert('❌ Download failed: ' + error.message + '\n\nPossible reasons:\n' +
+                      '• The presentation file was not saved\n' +
+                      '• The file has expired (24 hours)\n' +
+                      '• Please contact the creator to regenerate the presentation');
             }
         }
         

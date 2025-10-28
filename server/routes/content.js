@@ -50,32 +50,32 @@ router.post('/generate-content', async (req, res) => {
             
             if (provider === 'anthropic') {
                 console.log('📤 SERVER: Calling Anthropic API with streaming...');
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "x-api-key": apiKey.trim(),
-                        "anthropic-version": "2023-06-01"
-                    },
-                    body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 4000,
-                        stream: true,
-                        messages: [{
-                            role: "user",
-                            content: userPrompt
-                        }]
-                    })
-                });
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey.trim(),
+                    "anthropic-version": "2023-06-01"
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 4000,
+                    stream: true,
+                    messages: [{
+                        role: "user",
+                        content: userPrompt
+                    }]
+                })
+            });
             
                 console.log('📨 SERVER: Anthropic response status:', response.status, response.statusText);
 
-                if (!response.ok) {
+            if (!response.ok) {
                     console.error('❌ SERVER: Anthropic API error:', response.status);
-                    const errorData = await response.json().catch(() => ({}));
+                const errorData = await response.json().catch(() => ({}));
                     console.error('❌ SERVER: Error details:', errorData);
-                    throw new Error(errorData.error?.message || `API Error: ${response.status}`);
-                }
+                throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+            }
 
                 if (!response.body) {
                     console.error('❌ SERVER: Anthropic response body is null!');
@@ -83,18 +83,18 @@ router.post('/generate-content', async (req, res) => {
                 }
 
                 console.log('📖 SERVER: Getting reader from Anthropic response...');
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
 
-                try {
+            try {
                     console.log('📡 SERVER: Starting to read Anthropic stream...');
                     
                     let chunkCount = 0;
                     let eventCount = 0;
                     let totalBytes = 0;
                     
-                    while (true) {
-                        const { done, value } = await reader.read();
+                while (true) {
+                    const { done, value } = await reader.read();
                         if (done) {
                             console.log('═══════════════════════════════════════════════════');
                             console.log('✅ SERVER: Anthropic stream complete');
@@ -110,21 +110,21 @@ router.post('/generate-content', async (req, res) => {
                         totalBytes += chunk.length;
                         console.log(`📦 SERVER: Chunk ${chunkCount}: ${chunk.length} bytes from Anthropic`);
                         
-                        const lines = chunk.split('\n');
+                    const lines = chunk.split('\n');
 
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                const data = line.slice(6);
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
                                 if (data === '[DONE]') {
                                     console.log('✅ SERVER: Received [DONE] from Anthropic');
                                     continue;
                                 }
-                                
-                                try {
-                                    const parsed = JSON.parse(data);
+                            
+                            try {
+                                const parsed = JSON.parse(data);
                                     console.log(`  📊 SERVER: Parsed Anthropic event, type:`, parsed.type);
                                     
-                                    if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
                                         eventCount++;
                                         const textToSend = parsed.delta.text;
                                         console.log(`  📤 SERVER: Sending text to client (event ${eventCount}): "${textToSend.substring(0, 30)}${textToSend.length > 30 ? '...' : ''}"`);
@@ -164,21 +164,26 @@ router.post('/generate-content', async (req, res) => {
                 }
                 
                 // Try models in order of preference
-                const modelIds = [
-                    'global.anthropic.claude-sonnet-4-5-20250929-v1:0',
-                    'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
-                    'amazon.nova-lite-v1:0',
-                    'amazon.nova-pro-v1:0'
+                const modelConfigs = [
+                    { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
+                    { id: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
+                    { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'global' },  // Global as 2nd fallback
+                    { id: 'amazon.nova-lite-v1:0', region: 'us-east-1' },
+                    { id: 'amazon.nova-pro-v1:0', region: 'us-east-1' }
                 ];
                 
                 let response = null;
                 let lastError = null;
                 
-                for (const modelId of modelIds) {
+                for (const config of modelConfigs) {
                     try {
-                        console.log(`📤 SERVER: Trying Bedrock model: ${modelId}`);
+                        console.log(`📤 SERVER: Trying Bedrock model: ${config.id} in ${config.region}`);
                         
-                        response = await fetch(`https://bedrock-runtime.us-east-1.amazonaws.com/model/${modelId}/converse-stream`, {
+                        const baseUrl = config.region === 'global' 
+                            ? 'https://bedrock-runtime.amazonaws.com' 
+                            : `https://bedrock-runtime.${config.region}.amazonaws.com`;
+                        
+                        response = await fetch(`${baseUrl}/model/${config.id}/converse-stream`, {
                             method: "POST",
                             headers: {
                                 "Content-Type": "application/json",
@@ -196,17 +201,17 @@ router.post('/generate-content', async (req, res) => {
                         });
                         
                         if (response.ok) {
-                            console.log(`✅ SERVER: Success with model: ${modelId}`);
+                            console.log(`✅ SERVER: Success with model: ${config.id} in ${config.region}`);
                             break;
                         } else {
                             const errorData = await response.json().catch(() => ({}));
-                            console.log(`❌ SERVER: Model ${modelId} failed: ${errorData.error?.message || response.status}`);
+                            console.log(`❌ SERVER: Model ${config.id} (${config.region}) failed: ${errorData.error?.message || response.status}`);
                             lastError = new Error(errorData.error?.message || `HTTP ${response.status}`);
                             response = null;
                             continue;
                         }
                     } catch (error) {
-                        console.log(`❌ SERVER: Error with ${modelId}: ${error.message}`);
+                        console.log(`❌ SERVER: Error with ${config.id} (${config.region}): ${error.message}`);
                         lastError = error;
                         continue;
                     }
@@ -282,10 +287,10 @@ router.post('/generate-content', async (req, res) => {
                 } catch (streamError) {
                     console.error('❌ SERVER: Stream error:', streamError);
                     throw streamError;
-                } finally {
+            } finally {
                     console.log('📤 SERVER: Sending [DONE] marker to client');
-                    res.write('data: [DONE]\n\n');
-                    res.end();
+                res.write('data: [DONE]\n\n');
+                res.end();
                     console.log('✅ SERVER: Stream closed');
                 }
             }
