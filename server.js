@@ -228,7 +228,7 @@ app.post('/api/generate-content', async (req, res) => {
 
                         console.log(`📡 Response status: ${response.status} ${response.statusText}`);
                         console.log(`📡 Response headers:`, Object.fromEntries(response.headers.entries()));
-                        
+
                         if (response.ok) {
                             console.log(`✅ Stream success with model: ${modelId}`);
                             console.log(`📊 Response body type:`, typeof response.body);
@@ -275,32 +275,23 @@ app.post('/api/generate-content', async (req, res) => {
                             console.log(`  📋 Full chunk content:`, chunk);
                         }
                         
-                        // Bedrock returns JSON Lines format (one JSON object per line)
-                        const lines = chunk.split('\n').filter(line => line.trim());
-                        
-                        for (const line of lines) {
-                            try {
-                                const data = JSON.parse(line);
-                                console.log(`  📊 Parsed Bedrock line, keys:`, Object.keys(data));
-                                
-                                // Handle both Claude and Nova response formats
-                                let text = null;
-                                if (data.contentBlockDelta?.delta?.text) {
-                                    text = data.contentBlockDelta.delta.text;
-                                } else if (data.contentBlockDelta?.delta?.textDelta) {
-                                    text = data.contentBlockDelta.delta.textDelta;
+                        // Bedrock returns EventStream format (binary)
+                        // Try to extract JSON from the chunk
+                        const jsonMatches = chunk.match(/\{"contentBlockIndex":\d+,"delta":\{"text":"[^"]*"[^}]*"?:[^"]*"[^}]*\}[^}]*\}/g);
+                        if (jsonMatches) {
+                            for (const jsonStr of jsonMatches) {
+                                try {
+                                    const data = JSON.parse(jsonStr);
+                                    console.log(`  📊 Parsed Bedrock event, keys:`, Object.keys(data));
+                                    
+                                    // Extract text from delta
+                                    if (data.delta?.text) {
+                                        console.log(`  ✅ Sending text: "${data.delta.text.substring(0, 50)}..."`);
+                                        res.write(`data: ${JSON.stringify({ text: data.delta.text })}\n\n`);
+                                    }
+                                } catch (e) {
+                                    console.log(`  ⏭️ Failed to parse JSON: ${e.message}`);
                                 }
-                                
-                                if (text) {
-                                    console.log(`  ✅ Sending text: "${text.substring(0, 50)}..."`);
-                                    res.write(`data: ${JSON.stringify({ text: text })}\n\n`);
-                                } else {
-                                    console.log(`  ⚠️ No text content found in data. Structure:`, Object.keys(data));
-                                    console.log(`  📋 Full parsed data:`, JSON.stringify(data, null, 2).substring(0, 500));
-                                }
-                            } catch (e) {
-                                console.log(`  ⏭️ Failed to parse line: ${e.message}`);
-                                console.log(`  📄 Line content: "${line.substring(0, 200)}"`);
                             }
                         }
                     }
@@ -727,7 +718,7 @@ app.post('/api/preview', async (req, res) => {
             const themePrompt = await getSlideDesignPrompt(text, numSlides);
             
             // Call Anthropic's STREAMING API (like content generation!)
-            console.log('📡 Calling Anthropic streaming API...');
+            console.log(`📡 Calling ${provider} streaming API...`);
             const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
@@ -993,26 +984,29 @@ app.post('/api/preview', async (req, res) => {
                     console.log(`📦 SERVER: Chunk ${chunkCount}: ${chunk.length} bytes from Bedrock`);
                     console.log(`  📄 Raw chunk sample: "${chunk.substring(0, 150)}..."`);
                     
-                    // Bedrock returns JSON Lines format (one JSON object per line)
-                    const lines = chunk.split('\n').filter(line => line.trim());
-                    
-                    for (const line of lines) {
-                        try {
-                            const data = JSON.parse(line);
-                            console.log(`  📊 SERVER: Parsed Bedrock line, keys:`, Object.keys(data));
-                            
-                            // Send raw text to client
-                            if (data.contentBlockDelta?.delta?.text) {
-                                const text = data.contentBlockDelta.delta.text;
-                                res.write(`data: ${JSON.stringify({ 
-                                    type: 'raw_text',
-                                    text: text,
-                                    timestamp: Date.now()
-                                })}\n\n`);
-                                if (res.flush) res.flush();
+                    // Bedrock returns EventStream format (binary)
+                    // Try to extract JSON from the chunk
+                    const jsonMatches = chunk.match(/\{"contentBlockIndex":\d+,"delta":\{"text":"[^"]*"[^}]*"?:[^"]*"[^}]*\}[^}]*\}/g);
+                    if (jsonMatches) {
+                        for (const jsonStr of jsonMatches) {
+                            try {
+                                const data = JSON.parse(jsonStr);
+                                console.log(`  📊 SERVER: Parsed Bedrock event, keys:`, Object.keys(data));
+                                
+                                // Send raw text to client
+                                if (data.delta?.text) {
+                                    const text = data.delta.text;
+                                    console.log(`  ✅ SERVER: Sending text: "${text.substring(0, 50)}..."`);
+                                    res.write(`data: ${JSON.stringify({ 
+                                        type: 'raw_text',
+                                        text: text,
+                                        timestamp: Date.now()
+                                    })}\n\n`);
+                                    if (res.flush) res.flush();
+                                }
+                            } catch (e) {
+                                console.log(`  ⏭️ SERVER: Failed to parse JSON: ${e.message}`);
                             }
-                        } catch (e) {
-                            console.log(`  ⏭️ SERVER: Failed to parse line, continuing...`);
                         }
                     }
                     
