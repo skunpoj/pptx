@@ -163,11 +163,10 @@ router.post('/generate-content', async (req, res) => {
                     throw new Error('Bedrock API key not found');
                 }
                 
-                // Try models in order of preference
+                // Try models in order of preference (all in us-east-1)
                 const modelConfigs = [
                     { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
                     { id: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
-                    { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'global' },  // Global as 2nd fallback
                     { id: 'amazon.nova-lite-v1:0', region: 'us-east-1' },
                     { id: 'amazon.nova-pro-v1:0', region: 'us-east-1' }
                 ];
