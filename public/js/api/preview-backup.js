@@ -511,10 +511,8 @@ function displayPreview(slideData) {
     }
     
     // Show action buttons
-    const modificationSection = document.getElementById('modificationSection');
-    const generatePptSection = document.getElementById('generatePptSection');
-    if (modificationSection) modificationSection.style.display = 'block';
-    if (generatePptSection) generatePptSection.style.display = 'block';
+    const generationSection = document.getElementById('generationSection');
+    if (generationSection) generationSection.style.display = 'block';
 }
 
 // Export functions for use in other modules

@@ -512,6 +512,7 @@ async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generat
     let chunkCount = 0;
     let lineCount = 0;
     let dataEventCount = 0;
+    let buffer = ''; // Buffer for incomplete lines
     
     console.log('📖 CLIENT: Starting to read stream chunks...');
     
@@ -534,22 +535,28 @@ async function streamContentGeneration({ finalPrompt, apiKey, numSlides, generat
             const chunk = decoder.decode(value, { stream: true });
             console.log(`📦 CLIENT: Chunk ${chunkCount}: ${chunk.length} bytes`);
             
-            const lines = chunk.split('\n');
+            // Add chunk to buffer and process complete lines
+            buffer += chunk;
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Keep incomplete line in buffer
+            
             lineCount += lines.length;
             
             for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const data = line.slice(6);
-                    if (data === '[DONE]') {
+                // Handle both 'data:' and 'data: ' formats
+                if (line.startsWith('data:')) {
+                    const jsonStr = line.substring(5).trim();
+                    
+                    if (jsonStr === '[DONE]') {
                         console.log('✅ CLIENT: Received [DONE] marker');
                         continue;
                     }
                     
                     dataEventCount++;
-                    console.log(`  📥 CLIENT: Data event ${dataEventCount}: "${data.substring(0, 50)}${data.length > 50 ? '...' : ''}"`);
+                    console.log(`  📥 CLIENT: Data event ${dataEventCount}: "${jsonStr.substring(0, 50)}${jsonStr.length > 50 ? '...' : ''}"`);
                     
                     try {
-                        const parsed = JSON.parse(data);
+                        const parsed = JSON.parse(jsonStr);
                         console.log(`  📊 CLIENT: Parsed JSON, keys:`, Object.keys(parsed));
                         
                         if (parsed.text) {

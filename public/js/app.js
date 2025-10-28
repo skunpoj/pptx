@@ -611,27 +611,15 @@ function loadExampleByCategory(category) {
         // Clear current slide data to force new generation
         window.currentSlideData = null;
         
-        // Hide preview sections until new preview is generated
-        const modificationSection = document.getElementById('modificationSection');
-        const generatePptSection = document.getElementById('generatePptSection');
-        if (modificationSection) modificationSection.style.display = 'none';
+        // Hide generation section until new preview is generated
+        const generationSection = document.getElementById('generationSection');
+        if (generationSection) generationSection.style.display = 'none';
         
-        // Keep generatePptSection visible if it has download buttons
-        if (generatePptSection) {
-            const hasDownloadButtons = generatePptSection.querySelector('.download-link, .presentation-options');
-            if (!hasDownloadButtons) {
-                generatePptSection.style.display = 'none';
-            }
-        }
-        
-        // Clear preview area (but keep download buttons in generatePptSection)
+        // Clear preview area
         const preview = document.getElementById('preview');
         if (preview) {
             preview.innerHTML = '';
         }
-        
-        // Keep download buttons and options in generatePptSection
-        // They will be replaced when new PowerPoint is generated
         
         window.showStatus(`📝 ${category.charAt(0).toUpperCase() + category.slice(1)} example loaded. Click "Generate Preview" for fresh slides!`, 'success');
     }

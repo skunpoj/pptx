@@ -745,6 +745,7 @@ app.post('/api/preview', async (req, res) => {
             }
             
             console.log(`📝 SERVER: Received full Bedrock response (${fullResponse.length} chars)`);
+            console.log(`  📄 First 200 chars: "${fullResponse.substring(0, 200)}..."`);
             
             // Parse the AI response
             const fullData = parseAIResponse(fullResponse);
@@ -763,6 +764,19 @@ app.post('/api/preview', async (req, res) => {
                 totalSlides: totalSlides
             })}\n\n`);
             if (res.flush) res.flush();
+            
+            // Send raw response as raw_text events for debugging
+            // Split the response into chunks to simulate streaming
+            const chunkSize = 100; // Send 100 chars at a time
+            for (let i = 0; i < fullResponse.length; i += chunkSize) {
+                const chunk = fullResponse.substring(i, i + chunkSize);
+                res.write(`data: ${JSON.stringify({ 
+                    type: 'raw_text',
+                    text: chunk,
+                    timestamp: Date.now()
+                })}\n\n`);
+                if (res.flush) res.flush();
+            }
             
             // Simulate streaming by sending slides one by one
             console.log(`  📤 Now sending ${totalSlides} slides incrementally...`);
