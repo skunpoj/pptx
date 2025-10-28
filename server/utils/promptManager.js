@@ -220,9 +220,44 @@ async function getFileProcessingPrompt(files) {
 async function getSlideModificationPrompt(currentSlides, modificationRequest) {
     const promptConfig = await getPrompt('slideModification');
     
+    // CRITICAL: Extract only essential information to avoid input length errors
+    // Create a lightweight version of slides with only necessary fields
+    const lightweightSlides = currentSlides.map(slide => {
+        const slim = {
+            type: slide.type,
+            title: slide.title
+        };
+        
+        // Only include content if it's not too long
+        if (slide.content && Array.isArray(slide.content)) {
+            slim.content = slide.content.slice(0, 6); // Max 6 bullets to save space
+        }
+        
+        // Include layout only if needed
+        if (slide.layout && slide.layout !== 'bullets') {
+            slim.layout = slide.layout;
+        }
+        
+        // Include subtitle only if it exists (title slides)
+        if (slide.subtitle && slide.type === 'title') {
+            slim.subtitle = slide.subtitle;
+        }
+        
+        // Include chart data only if exists (for visualization understanding)
+        if (slide.chart) {
+            slim.chart = {
+                type: slide.chart.type,
+                title: slide.chart.title
+                // Don't include actual data values to save space
+            };
+        }
+        
+        return slim;
+    });
+    
     const variables = {
         slideCount: currentSlides.length,
-        currentSlides: JSON.stringify(currentSlides, null, 2),
+        currentSlides: JSON.stringify(lightweightSlides, null, 2), // Use lightweight version
         modificationRequest: modificationRequest
     };
     
