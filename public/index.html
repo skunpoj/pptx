@@ -1546,7 +1546,7 @@ Our Products
                         }
                     }
                     
-                    // Explicitly show both payment buttons for inactive customers
+                    // Show correct payment buttons: Warning button, PromptPay button, and Stripe button
                     console.log('🔄 Showing payment buttons for logged-in user without active subscription');
                     if (promptPayContainer) {
                         console.log('✅ Showing PromptPay button');
@@ -1554,16 +1554,31 @@ Our Products
                     } else {
                         console.log('❌ PromptPay container not found');
                     }
+                    
+                    // Hide Credit Card button (not part of correct set)
                     if (creditCardContainer) {
-                        console.log('✅ Showing Credit Card button');
-                        creditCardContainer.style.display = 'flex'; // Use flex to match parent container
-                    } else {
-                        console.log('❌ Credit Card container not found');
+                        console.log('🚫 Hiding Credit Card button');
+                        creditCardContainer.style.display = 'none';
                     }
                     
-                    // Ensure Stripe button container is also visible
+                    // Ensure Stripe button container is also visible with correct content
                     if (stripeButtonContainer) {
+                        console.log('✅ Showing Stripe button');
+                        // Ensure it has the stripe-buy-button element
+                        const currentStripeContent = stripeButtonContainer.innerHTML.trim();
+                        if (!currentStripeContent.includes('stripe-buy-button') && !currentStripeContent.includes('buy_btn_1SN5z9GfwbNFFG53MZKQw2qX')) {
+                            stripeButtonContainer.innerHTML = `
+                                <stripe-buy-button
+                                    buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                                    publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                                    style="flex: 0 0 auto;"
+                                >
+                                </stripe-buy-button>
+                            `;
+                        }
                         stripeButtonContainer.style.display = 'block';
+                    } else {
+                        console.log('❌ Stripe button container not found');
                     }
                     
                     // Show email mismatch warning if emails don't match exactly
@@ -1611,7 +1626,7 @@ Our Products
                         }
                     }
                     
-                    // Explicitly show both payment buttons for new customers
+                    // Show correct payment buttons: Warning button, PromptPay button, and Stripe button
                     console.log('🔄 Showing payment buttons for logged-in user (no customer found)');
                     if (promptPayContainer) {
                         console.log('✅ Showing PromptPay button');
@@ -1619,16 +1634,31 @@ Our Products
                     } else {
                         console.log('❌ PromptPay container not found');
                     }
+                    
+                    // Hide Credit Card button (not part of correct set)
                     if (creditCardContainer) {
-                        console.log('✅ Showing Credit Card button');
-                        creditCardContainer.style.display = 'flex'; // Use flex to match parent container
-                    } else {
-                        console.log('❌ Credit Card container not found');
+                        console.log('🚫 Hiding Credit Card button');
+                        creditCardContainer.style.display = 'none';
                     }
                     
-                    // Ensure Stripe button container is also visible
+                    // Ensure Stripe button container is also visible with correct content
                     if (stripeButtonContainer) {
+                        console.log('✅ Showing Stripe button');
+                        // Ensure it has the stripe-buy-button element
+                        const currentStripeContent2 = stripeButtonContainer.innerHTML.trim();
+                        if (!currentStripeContent2.includes('stripe-buy-button') && !currentStripeContent2.includes('buy_btn_1SN5z9GfwbNFFG53MZKQw2qX')) {
+                            stripeButtonContainer.innerHTML = `
+                                <stripe-buy-button
+                                    buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                                    publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                                    style="flex: 0 0 auto;"
+                                >
+                                </stripe-buy-button>
+                            `;
+                        }
                         stripeButtonContainer.style.display = 'block';
+                    } else {
+                        console.log('❌ Stripe button container not found');
                     }
                     
                     // Show email mismatch warning ONLY if there's an actual email mismatch
@@ -1671,10 +1701,12 @@ Our Products
                     paymentButtonsRow.style.display = 'flex';
                 }
                 
-                // Show payment buttons as fallback
+                // Show correct payment buttons as fallback: Warning button, PromptPay button, and Stripe button
                 const subscriptionWarningBtn = document.getElementById('subscriptionWarningBtn');
                 const promptPayContainer = document.getElementById('promptPayContainer');
                 const creditCardContainer = document.getElementById('creditCardContainer');
+                const stripeButtonContainer = document.getElementById('stripeButtonContainer');
+                
                 if (subscriptionWarningBtn) {
                     console.log('✅ Showing warning button (error fallback)');
                     subscriptionWarningBtn.style.display = 'flex';
@@ -1683,9 +1715,29 @@ Our Products
                     console.log('✅ Showing PromptPay button (error fallback)');
                     promptPayContainer.style.display = 'flex'; // Use flex to match parent container
                 }
+                
+                // Hide Credit Card button (not part of correct set)
                 if (creditCardContainer) {
-                    console.log('✅ Showing Credit Card button (error fallback)');
-                    creditCardContainer.style.display = 'flex'; // Use flex to match parent container
+                    console.log('🚫 Hiding Credit Card button (error fallback)');
+                    creditCardContainer.style.display = 'none';
+                }
+                
+                // Ensure Stripe button container is visible with correct content
+                if (stripeButtonContainer) {
+                    console.log('✅ Showing Stripe button (error fallback)');
+                    // Ensure it has the stripe-buy-button element
+                    const currentContent = stripeButtonContainer.innerHTML.trim();
+                    if (!currentContent.includes('stripe-buy-button') && !currentContent.includes('buy_btn_1SN5z9GfwbNFFG53MZKQw2qX')) {
+                        stripeButtonContainer.innerHTML = `
+                            <stripe-buy-button
+                                buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
+                                publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
+                                style="flex: 0 0 auto;"
+                            >
+                            </stripe-buy-button>
+                        `;
+                    }
+                    stripeButtonContainer.style.display = 'block';
                 }
             }
         }
