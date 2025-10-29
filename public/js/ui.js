@@ -90,7 +90,20 @@ function switchView(view) {
     window.currentView = 'list';
     
     // Re-render preview with current slide data if available
+    // BUT: Skip if slides are already rendered via streaming (prevents double-render bug)
     if (window.currentSlideData && window.displayPreview) {
+        const slidesContainer = document.getElementById('slidesContainer');
+        const statusBar = document.getElementById('statusBar');
+        
+        // Don't re-render if streaming already rendered the slides correctly
+        if (slidesContainer && statusBar) {
+            const slideElements = slidesContainer.querySelectorAll('.slide-preview, [class*="slide-preview"]');
+            if (slideElements.length > 0) {
+                console.log('⚠️ switchView: Slides already rendered via streaming - skipping re-render');
+                return;
+            }
+        }
+        
         window.displayPreview(window.currentSlideData);
     }
 }

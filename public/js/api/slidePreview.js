@@ -1247,6 +1247,23 @@ function displayPreview(slideData) {
         return;
     }
     
+    // Check if slides were already rendered via streaming (preserve them!)
+    const slidesContainer = document.getElementById('slidesContainer');
+    const statusBar = document.getElementById('statusBar');
+    
+    // If streaming UI exists with rendered slides, don't wipe it out!
+    // This prevents double-render issue where correct slides disappear.
+    // Only skip if streaming UI is still actively present (recently rendered)
+    if (slidesContainer && statusBar && slidesContainer.children.length > 0) {
+        // Count actual slide elements (not theme banner, progress div, etc.)
+        const slideElements = slidesContainer.querySelectorAll('.slide-preview, [class*="slide-preview"]');
+        if (slideElements.length > 0) {
+            console.log('⚠️ Slides already rendered via streaming - skipping displayPreview to preserve rendered content');
+            console.log(`   Found ${slideElements.length} rendered slides, preserving them`);
+            return;
+        }
+    }
+    
     previewContainer.innerHTML = '';
     
     if (slideData.designTheme) {
