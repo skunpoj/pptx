@@ -73,6 +73,22 @@ function displayPreview(slideData) {
  */
 function displayListView(slideData) {
     const preview = document.getElementById('preview');
+    
+    // CRITICAL: Don't wipe out streaming-rendered slides!
+    // Check if slidesContainer with rendered slides exists (both streaming and batch use this)
+    const slidesContainer = document.getElementById('slidesContainer');
+    const statusBar = document.getElementById('statusBar');
+    
+    if (slidesContainer && statusBar) {
+        const slideElements = slidesContainer.querySelectorAll('.slide-preview');
+        if (slideElements && slideElements.length > 0) {
+            console.log('⚠️ BLOCKED: displayListView called but slides already rendered - preventing wipe');
+            console.log(`   Found ${slideElements.length} rendered slides, preserving them`);
+            console.trace('   Call stack that tried to wipe slides:');
+            return;
+        }
+    }
+    
     const theme = slideData.designTheme;
     
     let html = '';

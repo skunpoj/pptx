@@ -374,9 +374,9 @@ async function generatePreview() {
                 }
             }
         } else {
-            // Fallback: non-streaming response
+            // Fallback: non-streaming response (batch mode) - render progressively like streaming
             console.log('📋 Receiving non-streaming response...');
-            appendStreamingText('⚠️ NON-STREAMING MODE\n');
+            appendStreamingText('⚠️ BATCH MODE - Rendering all slides progressively\n');
             appendStreamingText('📋 Waiting for complete response...\n\n');
             
             const responseText = await response.text();
@@ -394,7 +394,59 @@ async function generatePreview() {
                 
                 savePreviewCache(text, slideData);
                 window.currentSlideData = slideData;
-                displayPreview(slideData);
+                
+                // Use progressive rendering like streaming - don't call displayPreview which wipes everything
+                const slidesContainer = document.getElementById('slidesContainer');
+                const theme = slideData.designTheme;
+                
+                if (slidesContainer && theme) {
+                    // Remove skeleton if still present
+                    const skeleton = document.getElementById('slideSkeleton');
+                    if (skeleton) {
+                        skeleton.style.transition = 'opacity 0.3s ease';
+                        skeleton.style.opacity = '0';
+                        setTimeout(() => skeleton.remove(), 300);
+                    }
+                    
+                    // Add theme banner if not exists
+                    if (!slidesContainer.querySelector('.theme-banner-batch')) {
+                        const themeDiv = document.createElement('div');
+                        themeDiv.className = 'theme-banner-batch';
+                        themeDiv.style.cssText = `
+                            background: linear-gradient(135deg, ${theme.colorPrimary}, ${theme.colorSecondary});
+                            color: white;
+                            padding: 1rem;
+                            border-radius: 8px;
+                            margin-bottom: 1rem;
+                            text-align: center;
+                        `;
+                        themeDiv.innerHTML = `
+                            <h3 style="margin: 0 0 0.5rem 0; color: white;">🎨 ${theme.name}</h3>
+                            <p style="margin: 0; opacity: 0.9;">${theme.description}</p>
+                        `;
+                        slidesContainer.insertBefore(themeDiv, slidesContainer.firstChild);
+                    }
+                    
+                    // Render slides progressively with animation
+                    slideData.slides.forEach((slide, index) => {
+                        setTimeout(() => {
+                            const slideDiv = createSlidePreviewCard(slide, index, theme);
+                            slideDiv.style.opacity = '0';
+                            slideDiv.style.transform = 'translateY(20px)';
+                            slidesContainer.appendChild(slideDiv);
+                            
+                            // Animate in
+                            requestAnimationFrame(() => {
+                                slideDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                                slideDiv.style.opacity = '1';
+                                slideDiv.style.transform = 'translateY(0)';
+                            });
+                        }, index * 100); // Stagger animations
+                    });
+                } else {
+                    // Fallback to displayPreview if slidesContainer not found
+                    displayPreview(slideData);
+                }
                 
                 // Stop spinner and show completion (for non-streaming mode)
                 const statusBar = document.getElementById('statusBar');
@@ -405,6 +457,17 @@ async function generatePreview() {
                         spinnerContainer.parentElement.innerHTML = '<div style="font-size: 2.5rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">✅</div>';
                     }
                 }
+                
+                // Update progress to 100%
+                const progressBar = document.getElementById('progressBar');
+                const progressPercent = document.getElementById('progressPercent');
+                const aiStatus = document.getElementById('aiStatus');
+                const countdownEl = document.getElementById('countdown');
+                
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressPercent) progressPercent.textContent = '100%';
+                if (aiStatus) aiStatus.textContent = `✅ Complete! ${slideData.slides.length} slides rendered`;
+                if (countdownEl) countdownEl.textContent = '✅ Done';
                 
                 hidePreviewProgress();
                 
@@ -820,6 +883,10 @@ async function handleIncrementalStream(response) {
                         else if (data.type === 'complete') {
                             console.log('✅ Stream complete event received');
                             
+                            // IMPORTANT: Don't re-render if slides were already rendered via streaming
+                            // The complete event may contain full data, but we already rendered slides incrementally
+                            // Only update completion status, don't wipe and re-render
+                            
                             // Update progress to 100%
                             const progressBar = document.getElementById('progressBar');
                             const progressPercent = document.getElementById('progressPercent');
@@ -840,6 +907,17 @@ async function handleIncrementalStream(response) {
                                 const spinnerContainer = statusBar.querySelector('.spinner');
                                 if (spinnerContainer && spinnerContainer.parentElement) {
                                     spinnerContainer.parentElement.innerHTML = '<div style="font-size: 2.5rem; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">✅</div>';
+                                }
+                            }
+                            
+                            // If complete event has full data, save it but DON'T call displayPreview
+                            // Slides are already rendered incrementally above
+                            if (data.data && data.data.slides) {
+                                console.log('✅ Complete event has full data, but skipping re-render (slides already rendered)');
+                                // Just update the stored data for future reference
+                                if (!window.currentSlideData || slides.length > 0) {
+                                    // Only update if we actually have rendered slides
+                                    window.currentSlideData = data.data;
                                 }
                             }
                             
@@ -1245,23 +1323,6 @@ function displayPreview(slideData) {
     if (!previewContainer) {
         console.error('Preview container not found');
         return;
-    }
-    
-    // Check if slides were already rendered via streaming (preserve them!)
-    const slidesContainer = document.getElementById('slidesContainer');
-    const statusBar = document.getElementById('statusBar');
-    
-    // If streaming UI exists with rendered slides, don't wipe it out!
-    // This prevents double-render issue where correct slides disappear.
-    // Only skip if streaming UI is still actively present (recently rendered)
-    if (slidesContainer && statusBar && slidesContainer.children.length > 0) {
-        // Count actual slide elements (not theme banner, progress div, etc.)
-        const slideElements = slidesContainer.querySelectorAll('.slide-preview, [class*="slide-preview"]');
-        if (slideElements.length > 0) {
-            console.log('⚠️ Slides already rendered via streaming - skipping displayPreview to preserve rendered content');
-            console.log(`   Found ${slideElements.length} rendered slides, preserving them`);
-            return;
-        }
     }
     
     previewContainer.innerHTML = '';
