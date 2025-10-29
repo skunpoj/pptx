@@ -767,18 +767,21 @@ body {
         margin-top: 0.3rem;
     }
     
+    /* Header features - same layout for both logged-in and non-logged-in */
     .header-features {
         gap: 0.5rem;
         justify-content: center;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
+        flex-wrap: wrap;
         width: 100%;
-        max-width: 400px;
+        max-width: 100%;
     }
     
     .header-feature {
         font-size: 0.7rem;
         padding: 0.3rem 0.65rem;
+        flex: 0 1 auto;
+        min-width: fit-content;
     }
 }
 
@@ -820,13 +823,19 @@ body {
         justify-content: center;
     }
     
+    /* Header features - same layout for both logged-in and non-logged-in */
     .header-features {
         gap: 0.4rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
     }
     
     .header-feature {
         font-size: 0.65rem;
         padding: 0.25rem 0.55rem;
+        flex: 0 1 auto;
+        min-width: fit-content;
     }
 }
 

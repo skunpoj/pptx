@@ -107,31 +107,31 @@ Our Products
                     </button>
                 </div>
 
-                <!-- Slide Count, Warning Button, PromptPay, and Buy Button Row -->
-                <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap;">
-                    <!-- Slide Count Display -->
+                <!-- Slide Count, Warning Button, PromptPay, and Buy Button Row (Logged-in users only) -->
+                <div id="paymentButtonsRow" style="display: none; flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap;">
+                    <!-- Slide Count Display (Logged-in only) -->
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <span id="userSlideCount" style="font-size: 0.85rem; color: #667eea; font-weight: 600;"></span>
                     </div>
                     
-                    <!-- Subscription Warning Button -->
-                    <div id="subscriptionWarningBtn" style="display: block;">
+                    <!-- Subscription Warning Button (Logged-in only) -->
+                    <div id="subscriptionWarningBtn" style="display: none;">
                         <button onclick="window.showSubscriptionExplanation()" 
                                 style="display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem; background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: #333; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 1.2rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
                             ⚠️
                         </button>
                     </div>
                     
-                    <!-- Payment Buttons -->
-                    <div id="promptPayContainer" style="display: block;">
+                    <!-- Payment Buttons (Logged-in only) -->
+                    <div id="promptPayContainer" style="display: none;">
                         <button id="promptPayBtn" onclick="window.createPromptPaySubscription()" 
                                 style="display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
                             <img src="/icon-thaiqr.png" alt="Thai QR" style="width: 20px; height: 20px; object-fit: contain;">
                         </button>
                     </div>
                     
-                    <!-- Credit Card Subscription Button -->
-                    <div id="creditCardContainer" style="display: block;">
+                    <!-- Credit Card Subscription Button (Logged-in only) -->
+                    <div id="creditCardContainer" style="display: none;">
                         <button id="creditCardBtn" onclick="window.createCreditCardSubscription()" 
                                 style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.5rem 0.75rem; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.75rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
                             <span style="font-size: 0.8rem;">💳</span>
@@ -139,14 +139,23 @@ Our Products
                         </button>
                     </div>
                     
-                    <!-- Stripe Buy Button -->
-                    <div id="stripeButtonContainer">
+                    <!-- Stripe Buy Button (Logged-in only) -->
+                    <div id="stripeButtonContainer" style="display: none;">
                         <stripe-buy-button
                             buy-button-id="buy_btn_1SN5z9GfwbNFFG53MZKQw2qX"
                             publishable-key="pk_live_51OKYdlGfwbNFFG53ez9b6nQ0KuURqAwPV5TJNr4HSTq1MhLpoQoa38iceUvx4vpu5yFxgORYKOzV0Vfsn7GzixlU00ffZcxaVD"
                         >
                         </stripe-buy-button>
                     </div>
+                </div>
+                
+                <!-- Cookie Consent Button (Non-logged-in users only) -->
+                <div id="cookieConsentBtn" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+                    <button onclick="window.acceptCookies()" 
+                            style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); white-space: nowrap;">
+                        <span>🍪</span>
+                        <span>Accept Cookies</span>
+                    </button>
                 </div>
                 
                 <!-- Warning Messages Row -->
@@ -926,6 +935,12 @@ Our Products
                     }
                     userInfo.style.display = 'flex';
                     
+                    // Show payment buttons row for logged-in users (will be hidden by checkSubscriptionStatus if user has active subscription)
+                    const paymentButtonsRow = document.getElementById('paymentButtonsRow');
+                    if (paymentButtonsRow) {
+                        paymentButtonsRow.style.display = 'flex';
+                    }
+                    
                     // Show slide count
                     if (data.user.slideCount !== undefined) {
                         const userSlideCount = document.getElementById('userSlideCount');
@@ -943,7 +958,7 @@ Our Products
                         themeSelector.disabled = false;
                     }
                     
-                    // Check subscription status
+                    // Check subscription status (will hide payment buttons if user has active subscription)
                     checkSubscriptionStatus();
                     
                 } else {
@@ -952,25 +967,30 @@ Our Products
                     authBtn.querySelector('span').textContent = '🔐 Login';
                     userInfo.style.display = 'none';
                     
-                    // Show slide count as 0
-                    const userSlideCount = document.getElementById('userSlideCount');
-                    if (userSlideCount) {
-                        userSlideCount.textContent = 'Total slides: 0';
+                    // HIDE payment buttons row for non-logged-in users
+                    const paymentButtonsRow = document.getElementById('paymentButtonsRow');
+                    if (paymentButtonsRow) {
+                        paymentButtonsRow.style.display = 'none';
                     }
                     
-                    // Show warning button and payment buttons
+                    // Hide all payment-related elements
                     const subscriptionWarningBtn = document.getElementById('subscriptionWarningBtn');
                     const promptPayContainer = document.getElementById('promptPayContainer');
                     const creditCardContainer = document.getElementById('creditCardContainer');
+                    const stripeButtonContainer = document.getElementById('stripeButtonContainer');
                     
-                    if (subscriptionWarningBtn) {
-                        subscriptionWarningBtn.style.display = 'block';
-                    }
-                    if (promptPayContainer) {
-                        promptPayContainer.style.display = 'block';
-                    }
-                    if (creditCardContainer) {
-                        creditCardContainer.style.display = 'block';
+                    if (subscriptionWarningBtn) subscriptionWarningBtn.style.display = 'none';
+                    if (promptPayContainer) promptPayContainer.style.display = 'none';
+                    if (creditCardContainer) creditCardContainer.style.display = 'none';
+                    if (stripeButtonContainer) stripeButtonContainer.style.display = 'none';
+                    
+                    // Show cookie consent button if not accepted
+                    const cookieConsent = localStorage.getItem('cookieConsent');
+                    if (!cookieConsent) {
+                        const cookieConsentBtn = document.getElementById('cookieConsentBtn');
+                        if (cookieConsentBtn) {
+                            cookieConsentBtn.style.display = 'block';
+                        }
                     }
                     
                     // Disable protected sections (show greyed-out with overlay)
@@ -1402,10 +1422,15 @@ Our Products
                 const promptPayContainer = document.getElementById('promptPayContainer');
                 const creditCardContainer = document.getElementById('creditCardContainer');
                 const subscriptionWarningBtn = document.getElementById('subscriptionWarningBtn');
+                const stripeButtonContainer = document.getElementById('stripeButtonContainer');
                 
                 if (subscriptionData.hasActiveSubscription) {
-                    // User has active subscription - hide buy button and warning
-                    // Note: subscriptionStatus is hidden with !important CSS
+                    // User has active subscription - hide ALL payment buttons and warning
+                    // Show the row (for slide count) but hide all payment elements
+                    const paymentButtonsRow = document.getElementById('paymentButtonsRow');
+                    if (paymentButtonsRow) {
+                        paymentButtonsRow.style.display = 'flex'; // Show row for slide count
+                    }
                     
                     // Hide warning button
                     if (subscriptionWarningBtn) {
@@ -1419,12 +1444,14 @@ Our Products
                     if (creditCardContainer) {
                         creditCardContainer.style.display = 'none';
                     }
+                    if (stripeButtonContainer) {
+                        stripeButtonContainer.style.display = 'none';
+                    }
                     
                     // Hide buy button and show subscription management link
-                    const stripeButtonContainer = document.getElementById('stripeButtonContainer');
                     if (stripeButtonContainer) {
                         const currentContent = stripeButtonContainer.innerHTML.trim();
-                        const manageLinkHtml = `<a href="https://billing.stripe.com/p/login/cNi3cv1GIcNT44zbzldnW00"`;
+                        const manageLinkHtml = `https://billing.stripe.com/p/login/cNi3cv1GIcNT44zbzldnW00`;
                         // Only update if not already showing the manage link
                         if (!currentContent.includes(manageLinkHtml) && !currentContent.includes('Manage Subscription')) {
                             stripeButtonContainer.innerHTML = `
@@ -1437,6 +1464,7 @@ Our Products
                                     💳 Manage Subscription
                                 </a>
                             `;
+                            stripeButtonContainer.style.display = 'block';
                         }
                     }
                     
@@ -1469,14 +1497,16 @@ Our Products
                     
                 } else if (subscriptionData.customerExists) {
                     // Customer exists but no active subscription - show buy button and warning
-                    // Note: subscriptionStatus is hidden with !important CSS
+                    // Show the payment buttons row
+                    const paymentButtonsRow = document.getElementById('paymentButtonsRow');
+                    if (paymentButtonsRow) {
+                        paymentButtonsRow.style.display = 'flex';
+                    }
                     
-                    // Show warning button (only if not already visible)
+                    // Show warning button
                     if (subscriptionWarningBtn) {
-                        if (subscriptionWarningBtn.style.display !== 'block') {
-                            console.log('🟡 Showing warning button - customer exists but no active subscription');
-                            subscriptionWarningBtn.style.display = 'block';
-                        }
+                        console.log('🟡 Showing warning button - customer exists but no active subscription');
+                        subscriptionWarningBtn.style.display = 'block';
                     } else {
                         console.log('❌ Warning button element not found');
                     }
@@ -1593,6 +1623,94 @@ Our Products
             }
         }
 
+    </script>
+    
+    <!-- Cookie and Slide Tracking for Non-Logged-In Users -->
+    <script>
+        /**
+         * Cookie utilities for tracking slide count
+         */
+        function setCookie(name, value, days = 365) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+        }
+        
+        function getCookie(name) {
+            const nameEQ = name + '=';
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+        
+        /**
+         * Accept cookies and hide consent button
+         */
+        window.acceptCookies = function() {
+            localStorage.setItem('cookieConsent', 'accepted');
+            setCookie('cookieConsent', 'accepted', 365);
+            
+            const cookieConsentBtn = document.getElementById('cookieConsentBtn');
+            if (cookieConsentBtn) {
+                cookieConsentBtn.style.display = 'none';
+            }
+            
+            console.log('✅ Cookie consent accepted');
+        };
+        
+        /**
+         * Track slide count in cookie for non-logged-in users
+         */
+        function updateSlideCountCookie(slideCount) {
+            const cookieConsent = getCookie('cookieConsent') || localStorage.getItem('cookieConsent');
+            if (cookieConsent === 'accepted') {
+                const currentCount = parseInt(getCookie('slideCount') || '0', 10);
+                const newCount = currentCount + slideCount;
+                setCookie('slideCount', newCount.toString(), 365);
+                console.log(`📊 Updated slide count cookie: ${newCount} slides`);
+                
+                // Show warning if approaching limit (optional)
+                if (newCount >= 50) {
+                    // Could show a warning here
+                }
+            }
+        }
+        
+        /**
+         * Get slide count from cookie for non-logged-in users
+         */
+        function getSlideCountCookie() {
+            const cookieConsent = getCookie('cookieConsent') || localStorage.getItem('cookieConsent');
+            if (cookieConsent === 'accepted') {
+                return parseInt(getCookie('slideCount') || '0', 10);
+            }
+            return 0;
+        }
+        
+        // Initialize cookie consent button display on page load
+        window.addEventListener('load', () => {
+            const cookieConsent = getCookie('cookieConsent') || localStorage.getItem('cookieConsent');
+            const userResponse = fetch('/api/user').then(r => r.json()).catch(() => ({ authenticated: false }));
+            
+            userResponse.then(userData => {
+                if (!userData.authenticated && !cookieConsent) {
+                    const cookieConsentBtn = document.getElementById('cookieConsentBtn');
+                    if (cookieConsentBtn) {
+                        cookieConsentBtn.style.display = 'block';
+                    }
+                }
+            });
+        });
+        
+        // Export functions
+        window.setCookie = setCookie;
+        window.getCookie = getCookie;
+        window.updateSlideCountCookie = updateSlideCountCookie;
+        window.getSlideCountCookie = getSlideCountCookie;
     </script>
     
     <!-- GitHub Buttons Script -->

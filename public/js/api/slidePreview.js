@@ -334,6 +334,11 @@ async function generatePreview() {
                 savePreviewCache(text, slideData);
                 window.currentSlideData = slideData;
                 
+                // Track slide count in cookie for non-logged-in users
+                if (typeof window.updateSlideCountCookie === 'function') {
+                    window.updateSlideCountCookie(slideData.slides.length);
+                }
+                
                 // Stop spinner and show completion
                 const statusBar = document.getElementById('statusBar');
                 if (statusBar) {
@@ -394,6 +399,11 @@ async function generatePreview() {
                 
                 savePreviewCache(text, slideData);
                 window.currentSlideData = slideData;
+                
+                // Track slide count in cookie for non-logged-in users
+                if (typeof window.updateSlideCountCookie === 'function') {
+                    window.updateSlideCountCookie(slideData.slides.length);
+                }
                 
                 // Use progressive rendering like streaming - don't call displayPreview which wipes everything
                 const slidesContainer = document.getElementById('slidesContainer');
@@ -656,6 +666,7 @@ async function handleIncrementalStream(response) {
     let progressDiv = null;
     let buffer = '';
     let isFirstChunk = true;
+    let jsonBuffer = ''; // Buffer for concatenating raw_text JSON chunks
     
     try {
         while (true) {
@@ -666,10 +677,112 @@ async function handleIncrementalStream(response) {
                 const endTime = Date.now();
                 const duration = endTime - (window.streamStartTime || endTime);
                 
+                // If we have accumulated JSON from raw_text events but no slides were rendered incrementally,
+                // parse and render in batch (this handles cases where only raw_text comes through)
+                if (jsonBuffer && jsonBuffer.trim().length > 0 && slides.length === 0) {
+                    console.log('📦 Processing accumulated JSON buffer for batch rendering...');
+                    appendStreamingText('\n📦 Processing accumulated JSON from raw_text events...\n');
+                    
+                    try {
+                        // Clean the JSON buffer - remove malformed fragments
+                        let cleanedJson = jsonBuffer
+                            // Remove any non-JSON prefixes
+                            .replace(/^[^{[]*/, '')
+                            // Remove any non-JSON suffixes
+                            .replace(/[^}\]]*$/, '')
+                            // Fix common corruption: remove inserted event markers
+                            .replace(/📦\s*data:\s*\{[^}]*\}/g, '')
+                            .replace(/data:\s*\{[^}]*\}/g, '')
+                            // Fix broken quotes from concatenation
+                            .replace(/"([^"]*)"\s*📦/g, '"$1"')
+                            // Fix broken graphics markers
+                            .replace(/"graphics":\s*true/g, '"graphics": {}')
+                            .replace(/"backgroundSh([^"]*?)"/g, (match) => {
+                                // Try to fix broken backgroundShapes
+                                return '"backgroundShapes": []';
+                            })
+                            // Remove incomplete property declarations
+                            .replace(/,\s*"([^"]*?)":\s*([^,}\]]*?),?\s*$/gm, '')
+                            // Fix trailing commas
+                            .replace(/,(\s*[}\]])/g, '$1')
+                            .trim();
+                        
+                        // Try to extract valid JSON object
+                        const jsonMatch = cleanedJson.match(/(\{[\s\S]*\})/);
+                        if (jsonMatch) {
+                            cleanedJson = jsonMatch[1];
+                        }
+                        
+                        console.log(`📦 Cleaned JSON length: ${cleanedJson.length} chars`);
+                        
+                        const batchData = JSON.parse(cleanedJson);
+                        
+                        if (batchData.slides && batchData.slides.length > 0) {
+                            console.log(`✅ Parsed ${batchData.slides.length} slides from accumulated JSON`);
+                            
+                            // Use the same progressive rendering as batch mode
+                            if (!theme && batchData.designTheme) {
+                                theme = batchData.designTheme;
+                                totalSlides = batchData.slides.length;
+                                
+                                // Remove skeleton
+                                const skeleton = document.getElementById('slideSkeleton');
+                                if (skeleton) {
+                                    skeleton.style.transition = 'opacity 0.3s ease';
+                                    skeleton.style.opacity = '0';
+                                    setTimeout(() => skeleton.remove(), 300);
+                                }
+                                
+                                // Show theme banner
+                                const themeDiv = document.createElement('div');
+                                themeDiv.className = 'theme-banner-batch';
+                                themeDiv.style.cssText = `
+                                    background: linear-gradient(135deg, ${theme.colorPrimary}, ${theme.colorSecondary});
+                                    color: white;
+                                    padding: 1rem;
+                                    border-radius: 8px;
+                                    margin-bottom: 1rem;
+                                    text-align: center;
+                                `;
+                                themeDiv.innerHTML = `
+                                    <h3 style="margin: 0 0 0.5rem 0; color: white;">🎨 ${theme.name}</h3>
+                                    <p style="margin: 0; opacity: 0.9;">${theme.description}</p>
+                                `;
+                                slidesContainer.insertBefore(themeDiv, slidesContainer.firstChild);
+                            }
+                            
+                            // Render slides progressively
+                            batchData.slides.forEach((slide, index) => {
+                                slides.push(slide);
+                                setTimeout(() => {
+                                    const slideDiv = createSlidePreviewCard(slide, index, theme || batchData.designTheme);
+                                    slideDiv.style.opacity = '0';
+                                    slideDiv.style.transform = 'translateY(20px)';
+                                    slidesContainer.appendChild(slideDiv);
+                                    
+                                    requestAnimationFrame(() => {
+                                        slideDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                                        slideDiv.style.opacity = '1';
+                                        slideDiv.style.transform = 'translateY(0)';
+                                    });
+                                }, index * 100);
+                            });
+                            
+                            // Update final counts
+                            totalSlides = batchData.slides.length;
+                        }
+                    } catch (parseError) {
+                        console.error('❌ Failed to parse accumulated JSON:', parseError);
+                        appendStreamingText(`\n❌ Error parsing accumulated JSON: ${parseError.message}\n`);
+                    }
+                }
+                
                 appendStreamingText('\n\n' + '═'.repeat(50) + '\n');
                 appendStreamingText('✅ STREAM COMPLETE!\n');
                 appendStreamingText(`⏱️ Total duration: ${(duration/1000).toFixed(2)}s\n`);
                 appendStreamingText(`📊 Total data received: ${buffer.length} bytes\n`);
+                appendStreamingText(`📦 JSON buffer size: ${jsonBuffer.length} chars\n`);
+                appendStreamingText(`📄 Slides rendered: ${slides.length}\n`);
                 appendStreamingText('═'.repeat(50) + '\n');
                 
                 // Stop spinner when stream closes
@@ -758,10 +871,12 @@ async function handleIncrementalStream(response) {
                             }
                         }
                         
-                        // RAW TEXT EVENT - Show streaming JSON generation (TRUE STREAMING!)
+                        // RAW TEXT EVENT - Collect JSON chunks for batch rendering
                         else if (data.type === 'raw_text') {
-                            // This is the actual AI generating JSON in real-time!
-                            // Show it in the streaming box character by character
+                            // Accumulate JSON text chunks - we'll parse and render in batch at the end
+                            jsonBuffer += data.text;
+                            
+                            // Show it in the streaming box character by character for visual feedback
                             const rawSpan = document.createElement('span');
                             rawSpan.style.color = '#8b949e';
                             rawSpan.textContent = data.text;
@@ -976,7 +1091,7 @@ async function handleIncrementalStream(response) {
     }
     
     // Return complete slideData object
-    return {
+    const finalSlideData = {
         slides: slides,
         designTheme: theme || {
             name: 'Default Theme',
@@ -989,6 +1104,13 @@ async function handleIncrementalStream(response) {
         },
         totalSlides: totalSlides || slides.length
     };
+    
+    // Track slide count in cookie for non-logged-in users (after stream completes)
+    if (typeof window.updateSlideCountCookie === 'function' && slides.length > 0) {
+        window.updateSlideCountCookie(slides.length);
+    }
+    
+    return finalSlideData;
 }
 
 /**
