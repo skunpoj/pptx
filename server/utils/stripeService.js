@@ -222,11 +222,18 @@ async function createPromptPayCheckoutSession(customerEmail, subscriptionData) {
         console.log(`💰 Using price ID: price_1SN5z9GfwbNFFG53MZKQw2qX`);
         
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['promptpay', 'card'], // Support both PromptPay and cards
-            mode: 'payment', // Changed from 'subscription' to 'payment' since PromptPay doesn't support subscriptions
+            payment_method_types: ['promptpay'], // PromptPay only for one-time payment
+            mode: 'payment', // One-time payment for PromptPay
             customer_email: customerEmail,
             line_items: [{
-                price: 'price_1SN5z9GfwbNFFG53MZKQw2qX', // Use the active product's price ID
+                price_data: {
+                    currency: 'thb',
+                    product_data: {
+                        name: 'GENIS.AI Premium Access',
+                        description: 'One-time payment for premium access'
+                    },
+                    unit_amount: 19900 // 199 THB one-time payment
+                },
                 quantity: 1
             }],
             success_url: `${process.env.BASE_URL || 'https://genis.ai'}/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -235,7 +242,7 @@ async function createPromptPayCheckoutSession(customerEmail, subscriptionData) {
                 customer_email: customerEmail,
                 service: 'genis-ai',
                 payment_type: 'promptpay_one_time',
-                product_id: 'prod_TJiubB9Eq7c68h' // Active product ID
+                product_id: 'prod_TJiubB9Eq7c68h'
             }
         });
         
@@ -245,6 +252,55 @@ async function createPromptPayCheckoutSession(customerEmail, subscriptionData) {
         
     } catch (error) {
         console.error('❌ Error creating PromptPay checkout session:', error);
+        throw error;
+    }
+}
+
+/**
+ * Create a Credit Card Subscription Session for recurring billing
+ * @param {string} customerEmail - Customer email
+ * @param {Object} subscriptionData - Subscription details
+ * @returns {Object} - Checkout session
+ */
+async function createCreditCardSubscriptionSession(customerEmail, subscriptionData) {
+    try {
+        console.log(`🔄 Creating credit card subscription session for: ${customerEmail}`);
+        console.log(`📦 Using active product ID: prod_TJiubB9Eq7c68h`);
+        console.log(`💰 Using price ID: price_1SN5z9GfwbNFFG53MZKQw2qX`);
+        
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'], // Credit cards only for recurring subscriptions
+            mode: 'subscription', // Recurring subscription mode
+            customer_email: customerEmail,
+            line_items: [{
+                price: 'price_1SN5z9GfwbNFFG53MZKQw2qX', // Use the active product's recurring price ID
+                quantity: 1
+            }],
+            success_url: `${process.env.BASE_URL || 'https://genis.ai'}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.BASE_URL || 'https://genis.ai'}/cancel`,
+            // Enable automatic collection for renewals
+            payment_method_collection: 'always',
+            subscription_data: {
+                metadata: {
+                    customer_email: customerEmail,
+                    service: 'genis-ai',
+                    payment_type: 'credit_card_subscription'
+                }
+            },
+            metadata: {
+                customer_email: customerEmail,
+                service: 'genis-ai',
+                payment_type: 'credit_card_subscription',
+                product_id: 'prod_TJiubB9Eq7c68h'
+            }
+        });
+        
+        console.log(`✅ Credit card subscription session created: ${session.id}`);
+        console.log(`✅ Note: Credit card subscriptions will auto-renew monthly.`);
+        return session;
+        
+    } catch (error) {
+        console.error('❌ Error creating credit card subscription session:', error);
         throw error;
     }
 }
@@ -321,7 +377,9 @@ module.exports = {
     checkUserSubscriptionStatus,
     formatSubscriptionDetails,
     validateEmailDomain,
+    generateEmailVariations,
     createPromptPayCheckoutSession,
+    createCreditCardSubscriptionSession,
     createPromptPayPaymentSession,
     createPromptPayPaymentIntent
 };

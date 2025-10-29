@@ -9,6 +9,7 @@ const {
     checkUserSubscriptionStatus, 
     formatSubscriptionDetails,
     createPromptPayCheckoutSession,
+    createCreditCardSubscriptionSession,
     createPromptPayPaymentSession,
     createPromptPayPaymentIntent
 } = require('../utils/stripeService');
@@ -37,6 +38,44 @@ router.get('/api/subscription', async (req, res) => {
     console.error('Error checking subscription status:', error);
     res.status(500).json({ 
       error: 'Failed to check subscription status',
+      message: error.message 
+    });
+  }
+});
+
+/**
+ * POST /api/creditcard/subscription
+ * Create credit card subscription checkout session with automatic recurring billing
+ * Requires authentication
+ */
+router.post('/api/creditcard/subscription', async (req, res) => {
+  if (!req.oidc.isAuthenticated() || !req.oidc.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  try {
+    const userEmail = req.oidc.user.email;
+    const { amount = 19900, interval = 'month', productName, description } = req.body;
+    
+    const subscriptionData = {
+      amount: parseInt(amount),
+      interval,
+      productName: productName || 'GENIS.AI Subscription',
+      description: description || 'AI-powered presentation generation service',
+      productId: 'prod_TJiubB9Eq7c68h' // Active product ID
+    };
+    
+    const session = await createCreditCardSubscriptionSession(userEmail, subscriptionData);
+    
+    res.json({
+      sessionId: session.id,
+      url: session.url,
+      message: 'Credit card subscription will auto-renew monthly.'
+    });
+  } catch (error) {
+    console.error('Error creating credit card subscription:', error);
+    res.status(500).json({ 
+      error: 'Failed to create credit card subscription',
       message: error.message 
     });
   }

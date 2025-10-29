@@ -122,11 +122,21 @@ Our Products
                         </button>
                     </div>
                     
-                    <!-- PromptPay Button -->
+                    <!-- Payment Buttons -->
                     <div id="promptPayContainer" style="display: block;">
                         <button id="promptPayBtn" onclick="window.createPromptPaySubscription()" 
-                                style="display: inline-block; padding: 0.5rem 0.75rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.75rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
-                            🇹🇭 PromptPay
+                                style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.5rem 0.75rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.75rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
+                            <img src="/icon-thaiqr.png" alt="Thai QR" style="width: 16px; height: 16px; object-fit: contain;">
+                            <span>Pay</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Credit Card Subscription Button -->
+                    <div id="creditCardContainer" style="display: block;">
+                        <button id="creditCardBtn" onclick="window.createCreditCardSubscription()" 
+                                style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.5rem 0.75rem; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.75rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); white-space: nowrap;">
+                            <span style="font-size: 0.8rem;">💳</span>
+                            <span>Subscribe</span>
                         </button>
                     </div>
                     
@@ -144,6 +154,9 @@ Our Products
                 <div style="margin-top: 0.5rem;">
                     <div id="promptPayWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #856404;">
                         ⚠️ <strong>Important:</strong> PromptPay is single-use. This is a one-time payment for premium access.
+                    </div>
+                    <div id="creditCardWarning" style="display: none; background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 4px; padding: 0.5rem; font-size: 0.8rem; color: #0c5460;">
+                        ✅ <strong>Credit Card Subscription:</strong> This will auto-renew monthly.
                     </div>
                     <div id="emailMismatchWarning" style="display: none; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 0.3rem 0.5rem; font-size: 0.75rem; color: #856404; max-width: 300px;">
                         ⚠️ <strong>Subscription not found:</strong> You may have subscribed using a different email address.
@@ -1207,8 +1220,8 @@ Our Products
                     // Show warning before redirecting
                     promptPayWarning.style.display = 'block';
                     promptPayWarning.innerHTML = `
-                        ⚠️ <strong>Important:</strong> PromptPay is single-use. This is a one-time payment for premium access.
-                        <br><br>Redirecting to PromptPay checkout...
+                        ⚠️ <strong>Important:</strong> This checkout supports PromptPay and cards. PromptPay is single-use for one-time payments.
+                        <br><br>Redirecting to payment checkout...
                     `;
                     
                     // Redirect to Stripe checkout
@@ -1230,6 +1243,60 @@ Our Products
             }
         }
 
+        // Function to create Credit Card subscription (recurring billing)
+        window.createCreditCardSubscription = async function() {
+            try {
+                const creditCardBtn = document.getElementById('creditCardBtn');
+                const creditCardWarning = document.getElementById('creditCardWarning');
+                
+                // Show loading state
+                creditCardBtn.textContent = '🔄 Creating Subscription...';
+                creditCardBtn.disabled = true;
+                
+                const response = await fetch('/api/creditcard/subscription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: 19900, // 199 THB monthly subscription
+                        interval: 'month',
+                        productName: 'GENIS.AI Subscription',
+                        description: 'Monthly subscription with automatic renewal'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.url) {
+                    // Show success message before redirecting
+                    if (creditCardWarning) {
+                        creditCardWarning.style.display = 'block';
+                        creditCardWarning.innerHTML = `
+                            ✅ <strong>Credit Card Subscription:</strong> This will auto-renew monthly.
+                            <br><br>Redirecting to subscription checkout...
+                        `;
+                    }
+                    
+                    // Redirect to Stripe checkout
+                    setTimeout(() => {
+                        window.location.href = data.url;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Failed to create credit card subscription session');
+                }
+                
+            } catch (error) {
+                console.error('Error creating credit card subscription:', error);
+                alert('Failed to create credit card subscription: ' + error.message);
+                
+                // Reset button
+                const creditCardBtn = document.getElementById('creditCardBtn');
+                creditCardBtn.innerHTML = '<span style="font-size: 0.8rem;">💳</span><span>Subscribe</span>';
+                creditCardBtn.disabled = false;
+            }
+        }
+
         // Function to check subscription status
         window.checkSubscriptionStatus = async function() {
             try {
@@ -1243,6 +1310,7 @@ Our Products
                 const emailMismatchWarning = document.getElementById('emailMismatchWarning');
                 const stripeBuyButton = document.querySelector('stripe-buy-button');
                 const promptPayContainer = document.getElementById('promptPayContainer');
+                const creditCardContainer = document.getElementById('creditCardContainer');
                 const subscriptionWarningBtn = document.getElementById('subscriptionWarningBtn');
                 
                 if (subscriptionData.hasActiveSubscription) {
@@ -1252,6 +1320,14 @@ Our Products
                     // Hide warning button
                     if (subscriptionWarningBtn) {
                         subscriptionWarningBtn.style.display = 'none';
+                    }
+                    
+                    // Hide both payment buttons
+                    if (promptPayContainer) {
+                        promptPayContainer.style.display = 'none';
+                    }
+                    if (creditCardContainer) {
+                        creditCardContainer.style.display = 'none';
                     }
                     
                     // Hide buy button and show subscription management link
@@ -1317,8 +1393,13 @@ Our Products
                         `;
                     }
                     
-                    // Show PromptPay button for inactive customers
-                    promptPayContainer.style.display = 'block';
+                    // Show both payment buttons for inactive customers
+                    if (promptPayContainer) {
+                        promptPayContainer.style.display = 'block';
+                    }
+                    if (creditCardContainer) {
+                        creditCardContainer.style.display = 'block';
+                    }
                     
                     // Show email mismatch warning if emails don't match exactly
                     if (subscriptionData.emailMismatchWarning && !subscriptionData.exactEmailMatch) {
@@ -1355,8 +1436,13 @@ Our Products
                         `;
                     }
                     
-                    // Show PromptPay button for new customers
-                    promptPayContainer.style.display = 'block';
+                    // Show both payment buttons for new customers
+                    if (promptPayContainer) {
+                        promptPayContainer.style.display = 'block';
+                    }
+                    if (creditCardContainer) {
+                        creditCardContainer.style.display = 'block';
+                    }
                     
                     // Show email mismatch warning
                     emailMismatchWarning.innerHTML = `
