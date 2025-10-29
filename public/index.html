@@ -1503,10 +1503,10 @@ Our Products
                         paymentButtonsRow.style.display = 'flex';
                     }
                     
-                    // Show warning button
+                    // Show warning button (yellow warning button, not text)
                     if (subscriptionWarningBtn) {
                         console.log('🟡 Showing warning button - customer exists but no active subscription');
-                        subscriptionWarningBtn.style.display = 'block';
+                        subscriptionWarningBtn.style.display = 'flex'; // Use flex to match parent container
                     } else {
                         console.log('❌ Warning button element not found');
                     }
@@ -1528,12 +1528,24 @@ Our Products
                         }
                     }
                     
-                    // Show both payment buttons for inactive customers (only if hidden)
-                    if (promptPayContainer && promptPayContainer.style.display !== 'block') {
-                        promptPayContainer.style.display = 'block';
+                    // Explicitly show both payment buttons for inactive customers
+                    console.log('🔄 Showing payment buttons for logged-in user without active subscription');
+                    if (promptPayContainer) {
+                        console.log('✅ Showing PromptPay button');
+                        promptPayContainer.style.display = 'flex'; // Use flex to match parent container
+                    } else {
+                        console.log('❌ PromptPay container not found');
                     }
-                    if (creditCardContainer && creditCardContainer.style.display !== 'block') {
-                        creditCardContainer.style.display = 'block';
+                    if (creditCardContainer) {
+                        console.log('✅ Showing Credit Card button');
+                        creditCardContainer.style.display = 'flex'; // Use flex to match parent container
+                    } else {
+                        console.log('❌ Credit Card container not found');
+                    }
+                    
+                    // Ensure Stripe button container is also visible
+                    if (stripeButtonContainer) {
+                        stripeButtonContainer.style.display = 'block';
                     }
                     
                     // Show email mismatch warning if emails don't match exactly
@@ -1550,12 +1562,16 @@ Our Products
                     // No customer found - show buy button with warning
                     // Note: subscriptionStatus is hidden with !important CSS
                     
-                    // Show warning button (only if not already visible)
+                    // Show the payment buttons row
+                    const paymentButtonsRow = document.getElementById('paymentButtonsRow');
+                    if (paymentButtonsRow) {
+                        paymentButtonsRow.style.display = 'flex';
+                    }
+                    
+                    // Show warning button (yellow warning button, not text)
                     if (subscriptionWarningBtn) {
-                        if (subscriptionWarningBtn.style.display !== 'block') {
-                            console.log('🟡 Showing warning button - no customer found');
-                            subscriptionWarningBtn.style.display = 'block';
-                        }
+                        console.log('🟡 Showing warning button - no customer found');
+                        subscriptionWarningBtn.style.display = 'flex'; // Use flex to match parent container
                     } else {
                         console.log('❌ Warning button element not found');
                     }
@@ -1577,19 +1593,35 @@ Our Products
                         }
                     }
                     
-                    // Show both payment buttons for new customers (only if hidden)
-                    if (promptPayContainer && promptPayContainer.style.display !== 'block') {
-                        promptPayContainer.style.display = 'block';
+                    // Explicitly show both payment buttons for new customers
+                    console.log('🔄 Showing payment buttons for logged-in user (no customer found)');
+                    if (promptPayContainer) {
+                        console.log('✅ Showing PromptPay button');
+                        promptPayContainer.style.display = 'flex'; // Use flex to match parent container
+                    } else {
+                        console.log('❌ PromptPay container not found');
                     }
-                    if (creditCardContainer && creditCardContainer.style.display !== 'block') {
-                        creditCardContainer.style.display = 'block';
+                    if (creditCardContainer) {
+                        console.log('✅ Showing Credit Card button');
+                        creditCardContainer.style.display = 'flex'; // Use flex to match parent container
+                    } else {
+                        console.log('❌ Credit Card container not found');
                     }
                     
-                    // Show email mismatch warning
-                    emailMismatchWarning.innerHTML = `
-                        ⚠️ <strong>Subscription not found:</strong> You may have subscribed using a different email address.
-                    `;
-                    emailMismatchWarning.style.display = 'block';
+                    // Ensure Stripe button container is also visible
+                    if (stripeButtonContainer) {
+                        stripeButtonContainer.style.display = 'block';
+                    }
+                    
+                    // Show email mismatch warning ONLY if there's an actual email mismatch
+                    if (subscriptionData.emailMismatchWarning && !subscriptionData.exactEmailMatch) {
+                        emailMismatchWarning.innerHTML = `
+                            ⚠️ <strong>Subscription not found:</strong> You may have subscribed using a different email address.
+                        `;
+                        emailMismatchWarning.style.display = 'block';
+                    } else {
+                        emailMismatchWarning.style.display = 'none';
+                    }
                 }
                 
             } catch (error) {
@@ -1615,10 +1647,27 @@ Our Products
                     }
                 }
                 
-                // Show PromptPay button as fallback (only if hidden)
+                // Show payment buttons row as fallback
+                const paymentButtonsRow = document.getElementById('paymentButtonsRow');
+                if (paymentButtonsRow) {
+                    paymentButtonsRow.style.display = 'flex';
+                }
+                
+                // Show payment buttons as fallback
+                const subscriptionWarningBtn = document.getElementById('subscriptionWarningBtn');
                 const promptPayContainer = document.getElementById('promptPayContainer');
-                if (promptPayContainer && promptPayContainer.style.display !== 'block') {
-                    promptPayContainer.style.display = 'block';
+                const creditCardContainer = document.getElementById('creditCardContainer');
+                if (subscriptionWarningBtn) {
+                    console.log('✅ Showing warning button (error fallback)');
+                    subscriptionWarningBtn.style.display = 'flex';
+                }
+                if (promptPayContainer) {
+                    console.log('✅ Showing PromptPay button (error fallback)');
+                    promptPayContainer.style.display = 'flex'; // Use flex to match parent container
+                }
+                if (creditCardContainer) {
+                    console.log('✅ Showing Credit Card button (error fallback)');
+                    creditCardContainer.style.display = 'flex'; // Use flex to match parent container
                 }
             }
         }
