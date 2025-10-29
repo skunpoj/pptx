@@ -912,6 +912,17 @@ button {
     font-size: 1rem;
 }
 
+/* Payment buttons - match Stripe button height (44px is Stripe's default) */
+#subscriptionWarningBtn > button,
+#promptPayBtn,
+#creditCardBtn {
+    height: 44px;
+    min-height: 44px;
+}
+
+/* Stripe buy button - use natural height as reference */
+/* No height constraints - let it use its default (typically 44px) */
+
 /* ==========================================================================
    FORM INPUTS
    ========================================================================== */
