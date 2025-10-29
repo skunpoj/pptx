@@ -65,13 +65,31 @@ const config = {
   authRequired: false,
   auth0Logout: true,
   secret: process.env.AUTH0_SECRET || 'a long, randomly-generated string stored in env', // Should use openssl rand -hex 32
-  baseURL: process.env.AUTH0_BASE_URL || 'https://genis.ai',
+  baseURL: process.env.AUTH0_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://genis.ai' : `http://localhost:${PORT}`),
   clientID: 'N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9',
-  issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com'
+  issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com',
+  routes: {
+    callback: '/callback',
+    postLogoutRedirect: '/'
+  }
 };
 
+// Validate Auth0 configuration
+if (!process.env.AUTH0_SECRET && process.env.NODE_ENV === 'production') {
+  console.warn('⚠️ WARNING: AUTH0_SECRET not set in production environment!');
+}
+
 // Auth router attaches /login, /logout, and /callback routes to the baseURL
-app.use(auth(config));
+// MUST be before static files and other routes
+try {
+  app.use(auth(config));
+  console.log('✅ Auth0 middleware initialized successfully');
+  console.log(`   Base URL: ${config.baseURL}`);
+  console.log(`   Callback: ${config.baseURL}${config.routes.callback}`);
+} catch (error) {
+  console.error('❌ Auth0 middleware initialization failed:', error);
+  throw error;
+}
 
 // Stripe Success Page Handler
 app.get('/success', (req, res) => {
@@ -103,26 +121,45 @@ app.use((req, res, next) => {
 
 // Auth check endpoint for frontend
 app.get('/api/user', async (req, res) => {
-  const userData = {
-    authenticated: req.oidc.isAuthenticated(),
-    user: req.oidc.user || null
-  };
-  
-  // Add slide count for authenticated users
-  if (userData.authenticated && userData.user) {
-    try {
-      const userId = userData.user.sub || userData.user.email;
-      console.log(`🔍 Getting slide count for user: ${userId}`);
-      const slideCount = await getUserSlideCount(userId);
-      console.log(`📊 Slide count retrieved: ${slideCount}`);
-      userData.user.slideCount = slideCount;
-    } catch (error) {
-      console.error('Failed to get user slide count:', error);
-      userData.user.slideCount = 0;
+  try {
+    // Check if Auth0 middleware is available
+    if (!req.oidc) {
+      console.error('❌ Auth0 middleware not available - req.oidc is undefined');
+      return res.json({
+        authenticated: false,
+        user: null,
+        error: 'Auth0 middleware not initialized'
+      });
     }
+    
+    const userData = {
+      authenticated: req.oidc.isAuthenticated(),
+      user: req.oidc.user || null
+    };
+    
+    // Add slide count for authenticated users
+    if (userData.authenticated && userData.user) {
+      try {
+        const userId = userData.user.sub || userData.user.email;
+        console.log(`🔍 Getting slide count for user: ${userId}`);
+        const slideCount = await getUserSlideCount(userId);
+        console.log(`📊 Slide count retrieved: ${slideCount}`);
+        userData.user.slideCount = slideCount;
+      } catch (error) {
+        console.error('Failed to get user slide count:', error);
+        userData.user.slideCount = 0;
+      }
+    }
+    
+    res.json(userData);
+  } catch (error) {
+    console.error('❌ Error in /api/user endpoint:', error);
+    res.status(500).json({
+      authenticated: false,
+      user: null,
+      error: error.message
+    });
   }
-  
-  res.json(userData);
 });
 
 // Protected profile route

@@ -282,6 +282,95 @@ async function getSlideModificationPrompt(currentSlides, modificationRequest) {
 }
 
 /**
+ * Generates a single-slide prompt with context from previous slides
+ * Used for sequential slide generation
+ * @param {string} userContent - Original user content
+ * @param {number} slideIndex - Current slide index (0-based)
+ * @param {number} totalSlides - Total number of slides to generate
+ * @param {Array} previousSlides - Array of previously generated slides
+ * @param {Object} designTheme - Design theme for the presentation
+ * @returns {Promise<string>} - Prompt for generating a single slide
+ */
+async function getSingleSlidePrompt(userContent, slideIndex, totalSlides, previousSlides = [], designTheme = null) {
+    const schemaConfig = await getPrompt('jsonSchema');
+    
+    // Get the slide type (title slide is first, rest are content)
+    const isTitleSlide = slideIndex === 0;
+    const slideType = isTitleSlide ? 'title' : 'content';
+    
+    // Build context from previous slides
+    let previousContext = '';
+    if (previousSlides.length > 0) {
+        previousContext = '\n\nPREVIOUSLY GENERATED SLIDES (for reference and consistency):\n';
+        previousSlides.forEach((slide, idx) => {
+            previousContext += `\nSlide ${idx + 1}: ${slide.type} - "${slide.title}"\n`;
+            if (slide.subtitle) previousContext += `  Subtitle: ${slide.subtitle}\n`;
+            if (slide.content && Array.isArray(slide.content)) {
+                previousContext += `  Content preview: ${slide.content.slice(0, 2).join(', ')}\n`;
+            }
+        });
+    }
+    
+    // Build theme context
+    let themeContext = '';
+    if (designTheme) {
+        themeContext = `\n\nDESIGN THEME (to maintain consistency):\n${JSON.stringify(designTheme, null, 2)}\n`;
+    }
+    
+    // Single slide JSON schema (simplified)
+    const singleSlideSchema = isTitleSlide ? 
+        `{
+  "type": "title",
+  "title": " atop Title Here",
+  "subtitle": "Optional subtitle"
+}` :
+        `{
+  "type": "content",
+  "title": "Slide Title",
+  "content": ["Bullet point 1", "Bullet point 2", "Bullet point 3"],
+  "layout": "bullets",
+  "graphics": {}
+}`;
+    
+    const prompt = `You are a presentation design expert. Generate ONLY ONE slide for a presentation.
+
+CRITICAL REQUIREMENTS:
+1. Generate EXACTLY slide ${slideIndex + 1} of ${totalSlides} total slides
+2. ${isTitleSlide ? 'This is the TITLE SLIDE (first slide)' : `This is a CONTENT SLIDE (slide ${slideIndex + 1} of ${totalSlides})`}
+3. Output ONLY valid JSON - no explanations, no conversational text
+4. Start your response with { and end with }
+5. The slide should logically follow from previous slides and contribute to the overall presentation narrative
+
+${previousContext ? previousContext + '\n' : ''}
+${themeContext ? themeContext + '\n' : ''}
+USER'S ORIGINAL CONTENT:
+${userContent}
+
+${isTitleSlide ? 
+    'TITLE SLIDE REQUIREMENTS:\n' +
+    '- Extract the main topic/theme from the user content above\n' +
+    '- Create a compelling, professional title\n' +
+    '- Add an informative subtitle that summarizes the presentation scope\n' +
+    '- Make it impactful and engaging\n\n' :
+    `CONTENT SLIDE REQUIREMENTS (Slide ${slideIndex + 1} of ${totalSlides}):\n` +
+    '- Extract the next logical topic/concept from the user content\n' +
+    '- Create 4-6 comprehensive bullet points that develop this topic\n' +
+    '- Use consultant-style formatting with strategic headers\n' +
+    '- Include specific details, examples, or data points if mentioned in content\n' +
+    '- Avoid repeating content from previous slides\n' +
+    '- Choose appropriate layout: "bullets", "two-column", "three-column", "framework", or "process-flow"\n' +
+    '- If content contains numerical data or trends, consider using "chart" layout with chart specifications\n\n`
+}
+
+OUTPUT FORMAT (JSON only):
+${singleSlideSchema}
+
+Remember: Return ONLY the JSON object, nothing else. Start with { immediately.`;
+
+    return prompt;
+}
+
+/**
  * Returns default prompts structure
  * @returns {Object} - Default prompts configuration
  */
@@ -300,6 +389,7 @@ module.exports = {
     applyVariables,
     getContentGenerationPrompt,
     getSlideDesignPrompt,
+    getSingleSlidePrompt,
     getFileProcessingPrompt,
     getSlideModificationPrompt
 };
