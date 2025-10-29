@@ -149,13 +149,21 @@ Our Products
                     </div>
                 </div>
                 
-                <!-- Cookie Consent Button (Non-logged-in users only) -->
-                <div id="cookieConsentBtn" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
-                    <button onclick="window.acceptCookies()" 
-                            style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-align: center; border: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); white-space: nowrap;">
-                        <span>🍪</span>
-                        <span>Accept Cookies</span>
-                    </button>
+                <!-- Cookie Consent Bar (Non-logged-in users only) -->
+                <div id="cookieConsentBtn" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; width: 100%; z-index: 1000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);">
+                    <div style="max-width: 1200px; margin: 0 auto; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 200px;">
+                            <span style="font-size: 1.5rem;">🍪</span>
+                            <span style="color: white; font-size: 0.9rem; font-weight: 500;">
+                                We use cookies to track your slide usage. By clicking "Accept", you agree to our use of cookies.
+                            </span>
+                        </div>
+                        <button onclick="window.acceptCookies()" 
+                                style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 0.9rem; text-align: center; border: 2px solid rgba(255, 255, 255, 0.3); cursor: pointer; transition: all 0.3s ease; white-space: nowrap; flex-shrink: 0;">
+                            <span>🍪</span>
+                            <span>Accept Cookies</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Warning Messages Row -->
@@ -978,11 +986,13 @@ Our Products
                     const promptPayContainer = document.getElementById('promptPayContainer');
                     const creditCardContainer = document.getElementById('creditCardContainer');
                     const stripeButtonContainer = document.getElementById('stripeButtonContainer');
+                    const emailMismatchWarning = document.getElementById('emailMismatchWarning');
                     
                     if (subscriptionWarningBtn) subscriptionWarningBtn.style.display = 'none';
                     if (promptPayContainer) promptPayContainer.style.display = 'none';
                     if (creditCardContainer) creditCardContainer.style.display = 'none';
                     if (stripeButtonContainer) stripeButtonContainer.style.display = 'none';
+                    if (emailMismatchWarning) emailMismatchWarning.style.display = 'none';
                     
                     // Show cookie consent button if not accepted
                     const cookieConsent = localStorage.getItem('cookieConsent');
@@ -1409,6 +1419,14 @@ Our Products
 
         // Function to check subscription status
         window.checkSubscriptionStatus = async function() {
+            // CRITICAL: Only check subscription for logged-in users
+            // First verify user is authenticated by checking the payment buttons row visibility
+            const paymentButtonsRow = document.getElementById('paymentButtonsRow');
+            if (!paymentButtonsRow || paymentButtonsRow.style.display === 'none') {
+                console.log('⚠️ Skipping subscription check - user not logged in');
+                return; // Don't show any buttons for non-logged-in users
+            }
+            
             try {
                 console.log('🔍 Checking subscription status...');
                 const response = await fetch('/api/subscription');
