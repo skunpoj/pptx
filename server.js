@@ -60,7 +60,7 @@ const stripeRoutes = require('./server/routes/stripe');
 
 // Initialize Express app
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Auth0 Configuration
 const config = {
@@ -1580,7 +1580,6 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📱 Open http://localhost:${PORT} to view the app`);
