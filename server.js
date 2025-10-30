@@ -32,6 +32,8 @@ const {
     getFileProcessingPrompt,
     getSlideModificationPrompt
 } = require('./server/utils/promptManager');
+const { generateBatchSlides } = require('./server/utils/batchSlideGenerator');
+const { generateSequentialSlides } = require('./server/utils/sequentialSlideGenerator');
 const { 
     generateCSS, 
     generateSlideHTML, 
@@ -69,7 +71,7 @@ const config = {
   clientID: 'N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9',
   issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com',
   routes: {
-    callback: '/callback',
+    callback: '/callback',  // Proper callback route
     postLogoutRedirect: '/'
   }
 };
@@ -82,10 +84,10 @@ if (!process.env.AUTH0_SECRET && process.env.NODE_ENV === 'production') {
 // Auth router attaches /login, /logout, and /callback routes to the baseURL
 // MUST be before static files and other routes
 try {
-  app.use(auth(config));
+app.use(auth(config));
   console.log('✅ Auth0 middleware initialized successfully');
   console.log(`   Base URL: ${config.baseURL}`);
-  console.log(`   Callback: ${config.baseURL}${config.routes.callback}`);
+  console.log(`   Callback: ${config.baseURL}${config.routes.callback || '/'}`);
 } catch (error) {
   console.error('❌ Auth0 middleware initialization failed:', error);
   throw error;
@@ -106,6 +108,14 @@ app.get('/cancel', (req, res) => {
     
     // Redirect to main page with cancel message
     res.redirect(`/?payment=cancelled`);
+});
+
+// Auth0 Callback Handler
+app.get('/callback', (req, res) => {
+    console.log('🔄 Auth0 callback received');
+    // The express-openid-connect middleware handles the callback automatically
+    // This route is just for logging and any additional processing
+    res.redirect('/');
 });
 
 // Middleware
@@ -132,26 +142,26 @@ app.get('/api/user', async (req, res) => {
       });
     }
     
-    const userData = {
-      authenticated: req.oidc.isAuthenticated(),
-      user: req.oidc.user || null
-    };
-    
-    // Add slide count for authenticated users
-    if (userData.authenticated && userData.user) {
-      try {
-        const userId = userData.user.sub || userData.user.email;
-        console.log(`🔍 Getting slide count for user: ${userId}`);
-        const slideCount = await getUserSlideCount(userId);
-        console.log(`📊 Slide count retrieved: ${slideCount}`);
-        userData.user.slideCount = slideCount;
-      } catch (error) {
-        console.error('Failed to get user slide count:', error);
-        userData.user.slideCount = 0;
-      }
+  const userData = {
+    authenticated: req.oidc.isAuthenticated(),
+    user: req.oidc.user || null
+  };
+  
+  // Add slide count for authenticated users
+  if (userData.authenticated && userData.user) {
+    try {
+      const userId = userData.user.sub || userData.user.email;
+      console.log(`🔍 Getting slide count for user: ${userId}`);
+      const slideCount = await getUserSlideCount(userId);
+      console.log(`📊 Slide count retrieved: ${slideCount}`);
+      userData.user.slideCount = slideCount;
+    } catch (error) {
+      console.error('Failed to get user slide count:', error);
+      userData.user.slideCount = 0;
     }
-    
-    res.json(userData);
+  }
+  
+  res.json(userData);
   } catch (error) {
     console.error('❌ Error in /api/user endpoint:', error);
     res.status(500).json({
@@ -785,11 +795,15 @@ app.post('/api/preview', async (req, res) => {
     }
     
     try {
+        // Feature flag: Set USE_SEQUENTIAL_SLIDES=true in env to use sequential generation, false for batch (old logic)
+        const USE_SEQUENTIAL_GENERATION = process.env.USE_SEQUENTIAL_SLIDES === 'true' || false;
+        
         console.log('📊 Preview request received');
         console.log('  Content length:', text.length, 'characters');
         console.log('  Provider:', provider);
         console.log('  Incremental:', incremental);
         console.log('  Requested slides:', numSlides || 'AI decides');
+        console.log('  Generation mode:', USE_SEQUENTIAL_GENERATION ? 'SEQUENTIAL (new)' : 'BATCH (old)');
         
         // INCREMENTAL MODE: TRUE STREAMING from AI
         if (incremental) {
@@ -991,296 +1005,588 @@ app.post('/api/preview', async (req, res) => {
             }
             
         } else if (incremental && provider === 'bedrock') {
-            console.log(`🔄 Starting TRUE STREAMING slide generation with ${provider}...`);
-            
-            res.setHeader('Content-Type', 'text/event-stream');
-            res.setHeader('Cache-Control', 'no-cache');
-            res.setHeader('Connection', 'keep-alive');
-            res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering for SSE
-            
-            // Send initial provider info to frontend
-            res.write(`data: ${JSON.stringify({ 
-                type: 'provider_info',
-                provider: provider,
-                numSlides: numSlides || 'AI decides',
-                timestamp: Date.now()
-            })}\n\n`);
-            
-            // Get the prompt
-            const themePrompt = await getSlideDesignPrompt(text, numSlides);
-            
             const bedrockApiKey = apiKey || process.env.bedrock;
             if (!bedrockApiKey) {
                 throw new Error('Bedrock API key not found');
             }
             
-            // Use TRUE STREAMING with /converse-stream (same as Expand Idea)
-            console.log('📡 Using TRUE STREAMING for slide preview with Bedrock');
-            
-            const modelConfigs = [
-                { id: 'claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
-                { id: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0', region: 'us-east-1' },
-                { id: 'amazon.nova-lite-v1:0', region: 'us-east-1' },
-                { id: 'amazon.nova-pro-v1:0', region: 'us-east-1' }
-            ];
-            
-            let bedrockResponse = null;
-            let lastError = null;
-            
-            for (const config of modelConfigs) {
+            // Choose generation method based on flag
+            if (USE_SEQUENTIAL_GENERATION && numSlides && numSlides > 0) {
+                // NEW: Sequential generation - one slide at a time with SSE progress
+                console.log(`🔄 Starting SEQUENTIAL slide generation (new logic) with ${provider}...`);
+
+                // Initialize SSE
+                res.setHeader('Content-Type', 'text/event-stream');
+                res.setHeader('Cache-Control', 'no-cache');
+                res.setHeader('Connection', 'keep-alive');
+                res.setHeader('X-Accel-Buffering', 'no');
+
+                const flush = () => {
+                    if (typeof res.flush === 'function') res.flush();
+                };
+
                 try {
-                    console.log(`📤 SERVER: Trying Bedrock model: ${config.id} in ${config.region}`);
-                    
-                    const baseUrl = config.region === 'global' 
-                        ? 'https://bedrock-runtime.amazonaws.com' 
-                        : `https://bedrock-runtime.${config.region}.amazonaws.com`;
-                    
-                    bedrockResponse = await fetch(`${baseUrl}/model/${config.id}/converse-stream`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${bedrockApiKey.trim()}`
-                        },
-                        body: JSON.stringify({
-                            messages: [{
-                                role: "user",
-                                content: [{ text: themePrompt }]
-                            }],
-                            inferenceConfig: {
-                                maxTokens: 16000
-                            }
-                        })
-                    });
-                    
-                    if (bedrockResponse.ok) {
-                        console.log(`✅ SERVER: Success with model: ${config.id} in ${config.region}`);
-                        break;
-                    } else {
-                        const errorData = await bedrockResponse.json().catch(() => ({}));
-                        console.log(`❌ SERVER: Model ${config.id} (${config.region}) failed: ${errorData.error?.message || bedrockResponse.status}`);
-                        lastError = new Error(errorData.error?.message || `HTTP ${bedrockResponse.status}`);
-                        bedrockResponse = null;
-                        continue;
-                    }
-                } catch (error) {
-                    console.log(`❌ SERVER: Error with ${config.id} (${config.region}): ${error.message}`);
-                    lastError = error;
-                    continue;
-                }
-            }
-            
-            if (!bedrockResponse || !bedrockResponse.ok) {
-                throw lastError || new Error('All Bedrock models failed');
-            }
-            
-            console.log('📨 SERVER: Bedrock response status:', bedrockResponse.status, bedrockResponse.statusText);
-            
-            if (!bedrockResponse.body) {
-                throw new Error('Bedrock response body is null');
-            }
-            
-            console.log('📖 SERVER: Getting reader from Bedrock response...');
-            const reader = bedrockResponse.body.getReader();
-            const decoder = new TextDecoder();
-            
-            let streamedText = '';  // Accumulate pure text from Bedrock
-            let themeSent = false;
-            let slidesSent = 0;
-            
-            console.log('📡 SERVER: Starting to read Bedrock stream...');
-            
-            try {
-                let chunkCount = 0;
-                
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) {
-                        console.log('✅ SERVER: Bedrock stream completed');
-                        break;
-                    }
-                    
-                    chunkCount++;
-                    const chunk = decoder.decode(value, { stream: true });
-                    
-                    // Reduced logging to avoid rate limits
-                    if (chunkCount <= 5 || chunkCount % 50 === 0) {
-                        console.log(`📦 SERVER: Chunk ${chunkCount}: ${chunk.length} bytes from Bedrock`);
-                    }
-                    
-                    // Bedrock returns EventStream format (binary)
-                    // More flexible JSON extraction - look for any JSON object containing contentBlockIndex
-                    const jsonStart = chunk.indexOf('{"contentBlockIndex"');
-                    if (jsonStart !== -1) {
-                        // Find the end of the JSON object by looking for the closing brace
-                        let braceCount = 0;
-                        let jsonEnd = -1;
-                        for (let i = jsonStart; i < chunk.length; i++) {
-                            if (chunk[i] === '{') braceCount++;
-                            if (chunk[i] === '}') braceCount--;
-                            if (braceCount === 0) {
-                                jsonEnd = i;
-                                break;
-                            }
-                        }
-                        
-                        if (jsonEnd !== -1) {
-                            const jsonStr = chunk.substring(jsonStart, jsonEnd + 1);
+                    const { slides, designTheme } = await generateSequentialSlides({
+                        userContent: text,
+                        numSlides,
+                        bedrockApiKey,
+                        onTheme: (themePayload) => {
                             try {
-                                const data = JSON.parse(jsonStr);
-                                console.log(`  📊 SERVER: Parsed Bedrock event, keys:`, Object.keys(data));
-                            
-                            // Send raw text to client
-                                if (data.delta?.text) {
-                                    const text = data.delta.text;
-                                    streamedText += text;  // Accumulate pure text
-                                    // Reduced logging
-                                    if (chunkCount <= 5 || chunkCount % 50 === 0) {
-                                        console.log(`  ✅ SERVER: Sending text: "${text}"`);
-                                    }
-                                    res.write(`data: ${JSON.stringify({ 
-                                        type: 'raw_text',
-                                        text: text,
-                                        timestamp: Date.now()
-                                    })}\n\n`);
-                                    if (res.flush) res.flush();
-                                }
-                        } catch (e) {
-                                console.log(`  ⏭️ SERVER: Failed to parse JSON: ${e.message}`);
-                                console.log(`  📄 SERVER: JSON attempt: "${jsonStr.substring(0, 100)}..."`);
+                                res.write(`data: ${JSON.stringify({ type: 'theme', ...themePayload })}\n\n`);
+                                flush();
+                            } catch (e) {
+                                console.warn('Failed to stream theme payload:', e.message);
+                            }
+                        },
+                        onProgress: (progressEvent) => {
+                            try {
+                                // progressEvent expected shapes: { type: 'slide'|'progress'|'raw_text', ... }
+                                res.write(`data: ${JSON.stringify(progressEvent)}\n\n`);
+                                flush();
+                            } catch (e) {
+                                console.warn('Failed to stream progress event:', e.message);
                             }
                         }
-                    } else {
-                        // Debug: show what we're actually getting
-                        console.log(`  🔍 SERVER: No JSON found in chunk. Chunk preview: "${chunk.substring(0, 200)}"`);
-                    }
-                    
-                    // Parse accumulated text periodically to extract slides as they become available
-                    // This gives better UX by showing slides in batches rather than all at once
-                    // Only try parsing when we have substantial content and it looks like JSON is complete
-                    if (streamedText.length > 1000 && (streamedText.includes('"slides"') || streamedText.includes('"type":') || streamedText.includes('"title":')) && streamedText.includes('}')) {
-                        console.log(`  🔍 SERVER: Attempting periodic parse (${streamedText.length} chars, contains slides: ${streamedText.includes('"slides"')}, contains closing brace: ${streamedText.includes('}')})`);
-                        
-                        try {
-                            // Try to find complete JSON structure
-                            const jsonStart = streamedText.indexOf('{');
-                            if (jsonStart !== -1) {
-                                console.log(`  🔍 SERVER: Found JSON start at position ${jsonStart}`);
-                                
-                                // Look for the complete presentation structure, not just the first object
-                                let presentationStart = -1;
-                                let presentationEnd = -1;
-                                
-                                // Look for the main presentation object that contains both theme and slides
-                                const themeIndex = streamedText.indexOf('"designTheme"');
-                                const slidesIndex = streamedText.indexOf('"slides"');
-                                
-                                if (themeIndex !== -1 && slidesIndex !== -1) {
-                                    // Find the start of the main object containing both theme and slides
-                                    presentationStart = streamedText.lastIndexOf('{', Math.min(themeIndex, slidesIndex));
-                                    
-                                    if (presentationStart !== -1) {
-                                        // Find the matching closing brace
-                                        let braceCount = 0;
-                                        for (let i = presentationStart; i < streamedText.length; i++) {
-                                            if (streamedText[i] === '{') braceCount++;
-                                            if (streamedText[i] === '}') braceCount--;
-                                            if (braceCount === 0) {
-                                                presentationEnd = i;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                if (presentationStart !== -1 && presentationEnd !== -1) {
-                                    const jsonStr = streamedText.substring(presentationStart, presentationEnd + 1);
-                                    console.log(`  🔍 SERVER: Extracted complete presentation JSON for periodic parse: "${jsonStr.substring(0, 100)}..."`);
-                                    
-                                    const fullData = parseAIResponse(jsonStr);
-                                    console.log(`  📊 SERVER: Periodic parse successful, slides: ${fullData.slides?.length || 0}`);
-                                    
-                                    // Send theme if not sent yet
-                                    if (!themeSent && fullData.designTheme) {
-                                console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
-                                res.write(`data: ${JSON.stringify({ 
-                                    type: 'theme',
-                                    theme: fullData.designTheme,
-                                    suggestedThemeKey: fullData.suggestedThemeKey,
-                                    totalSlides: fullData.slides?.length || 0
-                                })}\n\n`);
-                                if (res.flush) res.flush();
-                                themeSent = true;
-                    }
-                    
-                                    // Send any new slides that are complete
-                            if (fullData.slides && fullData.slides.length > slidesSent) {
-                                        const newSlidesCount = fullData.slides.length - slidesSent;
-                                        console.log(`  📤 SERVER: Sending ${newSlidesCount} new slides (${slidesSent + 1}-${fullData.slides.length})`);
-                                        
-                                for (let i = slidesSent; i < fullData.slides.length; i++) {
-                                    const slide = fullData.slides[i];
-                                            console.log(`  ✓ SERVER: Slide ${i + 1}: ${slide.title}`);
-                                    
-                                    res.write(`data: ${JSON.stringify({ 
-                                        type: 'slide', 
-                                        slide: slide,
-                                        index: i,
-                                        current: i + 1,
-                                        total: fullData.slides.length
-                                    })}\n\n`);
-                                    if (res.flush) res.flush();
-                                        }
-                                        slidesSent = fullData.slides.length;
-                                    }
-                                } else {
-                                    console.log(`  ⏭️ SERVER: Could not find complete presentation structure for periodic parse`);
-                                }
-                            } else {
-                                console.log(`  ⏭️ SERVER: No JSON start found for periodic parse`);
-                            }
-                        } catch (e) {
-                            // JSON not complete yet, continue streaming
-                            console.log(`  ⏭️ SERVER: Periodic parse failed: ${e.message}`);
-                        }
-                    } else {
-                        // Reduced logging for periodic parse skipping
-                        if (chunkCount % 20 === 0) {
-                            if (streamedText.length <= 1000) {
-                                console.log(`  ⏭️ SERVER: Periodic parse skipped - not enough content (${streamedText.length} chars)`);
-                            } else if (!streamedText.includes('"slides"')) {
-                                console.log(`  ⏭️ SERVER: Periodic parse skipped - no slides found in text`);
-                            } else if (!streamedText.includes('}')) {
-                                console.log(`  ⏭️ SERVER: Periodic parse skipped - no closing brace found`);
-                            }
-                        }
-                    }
+                    });
+
+                    // Final payload
+                    const finalPayload = { type: 'complete', slides, designTheme };
+                    res.write(`data: ${JSON.stringify(finalPayload)}\n\n`);
+                    res.write('data: [DONE]\n\n');
+                    flush();
+                    res.end();
+                    return;
+                } catch (seqErr) {
+                    console.error('❌ Sequential generation failed:', seqErr);
+                    res.write(`data: ${JSON.stringify({ type: 'error', message: seqErr.message || 'Sequential generation failed' })}\n\n`);
+                    res.write('data: [DONE]\n\n');
+                    flush();
+                    res.end();
+                    return;
                 }
-                
-                // Final parsing to ensure all slides are sent
-                console.log('📊 SERVER: Final parsing to ensure all slides are sent...');
-                console.log(`📊 SERVER: Streamed text length: ${streamedText.length} characters`);
-                console.log(`📊 SERVER: Streamed text sample: "${streamedText.substring(0, 500)}..."`);
-                console.log(`📊 SERVER: Streamed text ends with: "${streamedText.substring(Math.max(0, streamedText.length - 200))}"`);
-                
+            } else {
+                // OLD: Batch generation - all slides in one call (moved to batchSlideGenerator.js)
+                console.log(`🔄 Starting BATCH slide generation (old logic) with ${provider}...`);
+                await generateBatchSlides({
+                    text,
+                    numSlides,
+                    bedrockApiKey,
+                    res,
+                    req,
+                    updateUserTracking
+                });
+                return; // Batch generator handles the response
+            }
+            
+            // OLD BATCH CODE REMOVED - Now in batchSlideGenerator.js
+            // The old batch implementation has been moved to server/utils/batchSlideGenerator.js
+            
+        } else if (incremental && (provider === 'openai' || provider === 'openrouter' || provider === 'gemini')) {
+            // Add streaming for OpenAI, OpenRouter, and Gemini in future
+            // For now, fall through to non-streaming mode
+            console.log(`ℹ️ Streaming preview for ${provider} - using non-streaming mode (JSON parsing complexity)`);
+            res.setHeader('Content-Type', 'application/json');
+            
+            const userPrompt = await getSlideDesignPrompt(text, numSlides);
+            const responseText = await callAI(provider, apiKey, userPrompt);
+            console.log('  AI response received, length:', responseText.length);
+            
+            const slideData = parseAIResponse(responseText);
+            console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
+            
+            validateSlideData(slideData);
+            console.log('✅ Preview validation passed');
+            
+            // Track slide generation for authenticated users
+            if (req.oidc.isAuthenticated() && req.oidc.user) {
                 try {
-                    // Clean up the streamed text to extract valid JSON
-                    let cleanedText = streamedText;
-                    
-                    console.log(`📊 SERVER: Raw streamed text preview: "${streamedText.substring(0, 300)}..."`);
-                    
-                    // Try to reconstruct the JSON from the fragmented text
-                    // The issue is that Bedrock streaming gives us fragments that don't form valid JSON
-                    let reconstructedJson = '';
-                    
-                    // Look for the main presentation structure
-                    const themeStart = cleanedText.indexOf('"designTheme"');
-                    const slidesStart = cleanedText.indexOf('"slides"');
-                    
-                    if (themeStart !== -1 && slidesStart !== -1) {
-                        console.log(`📊 SERVER: Found theme at ${themeStart}, slides at ${slidesStart}`);
-                        
-                        // Find the start of the main object
-                        const mainObjectStart = cleanedText.lastIndexOf('{', Math.min(themeStart, slidesStart));
+                    const userId = req.oidc.user.sub || req.oidc.user.email;
+                    await updateUserTracking(userId, slideData.slides.length);
+                } catch (error) {
+                    console.error('Failed to track slide generation:', error);
+                }
+            }
+            
+            res.json(slideData);
+                    } else {
+            // NON-INCREMENTAL MODE (all at once)
+            res.setHeader('Content-Type', 'application/json');
+            
+            const userPrompt = await getSlideDesignPrompt(text, numSlides);
+            const responseText = await callAI(provider, apiKey, userPrompt);
+            console.log('  AI response received, length:', responseText.length);
+            
+            const slideData = parseAIResponse(responseText);
+            console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
+            
+            validateSlideData(slideData);
+            console.log('✅ Preview validation passed');
+            
+            // Track slide generation for authenticated users
+            if (req.oidc.isAuthenticated() && req.oidc.user) {
+                try {
+                    const userId = req.oidc.user.sub || req.oidc.user.email;
+                    await updateUserTracking(userId, slideData.slides.length);
+                } catch (error) {
+                    console.error('Failed to track slide generation:', error);
+                }
+            }
+            
+            res.json(slideData);
+        }
+        
+    } catch (error) {
+        console.error('❌ Preview error:', error.message);
+        console.error('   Stack:', error.stack);
+        
+        res.status(500).json({ 
+            error: 'Preview generation failed', 
+            message: error.message 
+        });
+    }
+});
+
+// Content Generation Endpoint
+app.get('/api/content', async (req, res) => {
+    const { prompt, numSlides, generateImages, provider, apiKey } = req.query;
+    
+    if (!prompt) {
+        return res.status(400).json({ error: 'Prompt is required' });
+    }
+    
+    try {
+        console.log('📝 Content generation request received');
+        console.log('  Prompt length:', prompt.length, 'characters');
+        console.log('  Provider:', provider);
+        console.log('  Requested slides:', numSlides || 'AI decides');
+        
+        const userPrompt = await getContentGenerationPrompt(prompt, numSlides, generateImages);
+        const responseText = await callAI(provider, apiKey, userPrompt);
+        console.log('  AI response received, length:', responseText.length);
+        
+        const slideData = parseAIResponse(responseText);
+        console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
+        
+        validateSlideData(slideData);
+        console.log('✅ Content generation validation passed');
+        
+        res.json(slideData);
+        
+                } catch (error) {
+        console.error('❌ Content generation error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// File Processing Endpoint
+app.post('/api/file', upload.array('files'), async (req, res) => {
+    const { provider, apiKey } = req.body;
+    const files = req.files;
+    
+    if (!files || files.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded' });
+    }
+    
+    try {
+        console.log('📁 File processing request received');
+        console.log('  Files:', files.length);
+        console.log('  Provider:', provider);
+        
+        const userPrompt = await getFileProcessingPrompt(files);
+        const responseText = await callAI(provider, apiKey, userPrompt);
+        console.log('  AI response received, length:', responseText.length);
+        
+        const slideData = parseAIResponse(responseText);
+        console.log('  Parsed successfully, slides:', slideData.slides?.length || 0);
+        
+        validateSlideData(slideData);
+        console.log('✅ File processing validation passed');
+        
+        res.json(slideData);
+        
+    } catch (error) {
+        console.error('❌ File processing error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Slide Modification Endpoint
+app.post('/api/modify-slides', async (req, res) => {
+    let { slideData, modificationPrompt, currentSlides, modificationRequest, apiKey, provider = 'anthropic' } = req.body;
+    
+    // Support both old and new parameter names
+    const slides = slideData?.slides || currentSlides;
+    const prompt = modificationPrompt || modificationRequest;
+    
+    if (!slides || !prompt) {
+        return res.status(400).json({ error: 'Slide data and modification prompt are required' });
+    }
+    
+    try {
+        console.log('✏️ Slide modification request received');
+        console.log('  Slides:', slides.length);
+        console.log('  Provider:', provider);
+        
+        const userPrompt = await getSlideModificationPrompt(slides, prompt);
+        const responseText = await callAI(provider, apiKey, userPrompt);
+        console.log('  AI response received, length:', responseText.length);
+        
+        const modifiedData = parseAIResponse(responseText);
+        console.log('  Parsed successfully, slides:', modifiedData.slides?.length || 0);
+        
+        validateSlideData(modifiedData);
+        console.log('✅ Slide modification validation passed');
+        
+        res.json(modifiedData);
+        
+    } catch (error) {
+        console.error('❌ Slide modification error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PowerPoint Generation Endpoint
+app.post('/api/generate', async (req, res) => {
+    let { text, apiKey, provider = 'anthropic', slideData, streamProgress = false } = req.body;
+    
+    console.log('\n' + '='.repeat(80));
+    console.log('POWERPOINT GENERATION REQUEST');
+    console.log('='.repeat(80));
+    
+    if (!text && !slideData) {
+        return res.status(400).json({ error: 'Text content or slide data is required' });
+    }
+    
+    try {
+        const sessionId = createSessionId();
+        const workDir = path.join(__dirname, 'workspace', sessionId);
+        
+        console.log(`📁 Working directory: ${workDir}`);
+        await setupWorkspace(workDir);
+        
+        let slides;
+        if (slideData) {
+            slides = slideData.slides || slideData;
+            console.log(`📊 Using provided slide data: ${slides.length} slides`);
+        } else {
+            console.log(`📝 Generating slides from text: ${text.length} characters`);
+            const userPrompt = await getContentGenerationPrompt(text);
+            const responseText = await callAI(provider, apiKey, userPrompt);
+            const parsedData = parseAIResponse(responseText);
+            slides = parsedData.slides;
+        }
+        
+        validateSlideData({ slides });
+        console.log(`✅ Generated ${slides.length} slides`);
+        
+        // Generate CSS and HTML
+        const css = generateCSS(slides[0]?.designTheme || {});
+        const html = generateSlideHTML(slides, css);
+        
+        // Save HTML file
+        const htmlPath = path.join(workDir, 'presentation.html');
+        await fs.writeFile(htmlPath, html, 'utf8');
+        console.log(`💾 Saved HTML: ${htmlPath}`);
+        
+        // Generate conversion script
+        const script = generateConversionScript(htmlPath, workDir);
+        const scriptPath = path.join(workDir, 'convert.js');
+        await fs.writeFile(scriptPath, script, 'utf8');
+        console.log(`📜 Saved conversion script: ${scriptPath}`);
+        
+        // Run conversion
+        console.log('🔄 Starting PowerPoint conversion...');
+        await runScript(workDir, 'convert.js');
+        
+        // Find generated PPTX file
+        const pptxFiles = await fs.readdir(workDir).then(files => 
+            files.filter(f => f.endsWith('.pptx'))
+        );
+        
+        if (pptxFiles.length === 0) {
+            throw new Error('No PPTX file generated');
+        }
+        
+        const pptxPath = path.join(workDir, pptxFiles[0]);
+        console.log(`✅ Generated PowerPoint: ${pptxPath}`);
+        
+        // Send file to client
+        await sendFileDownload(res, pptxPath, 'presentation.pptx');
+        
+        // Schedule cleanup
+        scheduleCleanup(workDir);
+        
+    } catch (error) {
+        console.error('❌ PowerPoint generation error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Template Generation Endpoint
+app.post('/api/generate-with-template', upload.single('templateFile'), async (req, res) => {
+    let { text, apiKey, provider = 'anthropic', slideData: slideDataStr } = req.body;
+    const templateFile = req.file;
+    
+    if (!text || !templateFile) {
+        return res.status(400).json({ error: 'Text and template file are required' });
+    }
+    
+    try {
+        const sessionId = createSessionId();
+        const workDir = path.join(__dirname, 'workspace', sessionId);
+        
+        console.log(`📁 Working directory: ${workDir}`);
+        await setupWorkspace(workDir);
+        
+        // Copy template file to workspace
+        const templatePath = path.join(workDir, 'template.pptx');
+        await fs.copyFile(templateFile.path, templatePath);
+        console.log(`📄 Template copied: ${templatePath}`);
+        
+        let slides;
+        if (slideDataStr) {
+            const slideData = JSON.parse(slideDataStr);
+            slides = slideData.slides || slideData;
+            console.log(`📊 Using provided slide data: ${slides.length} slides`);
+                    } else {
+            console.log(`📝 Generating slides from text: ${text.length} characters`);
+            const userPrompt = await getContentGenerationPrompt(text);
+            const responseText = await callAI(provider, apiKey, userPrompt);
+            const parsedData = parseAIResponse(responseText);
+            slides = parsedData.slides;
+        }
+        
+        validateSlideData({ slides });
+        console.log(`✅ Generated ${slides.length} slides`);
+        
+        // Generate CSS and HTML
+        const css = generateCSS(slides[0]?.designTheme || {});
+        const html = generateSlideHTML(slides, css);
+        
+        // Save HTML file
+        const htmlPath = path.join(workDir, 'presentation.html');
+        await fs.writeFile(htmlPath, html, 'utf8');
+        console.log(`💾 Saved HTML: ${htmlPath}`);
+        
+        // Generate conversion script with template
+        const script = generateConversionScript(htmlPath, workDir, templatePath);
+        const scriptPath = path.join(workDir, 'convert.js');
+        await fs.writeFile(scriptPath, script, 'utf8');
+        console.log(`📜 Saved conversion script: ${scriptPath}`);
+        
+        // Run conversion
+        console.log('🔄 Starting PowerPoint conversion with template...');
+        await runScript(workDir, 'convert.js');
+        
+        // Find generated PPTX file
+        const pptxFiles = await fs.readdir(workDir).then(files => 
+            files.filter(f => f.endsWith('.pptx') && f !== 'template.pptx')
+        );
+        
+        if (pptxFiles.length === 0) {
+            throw new Error('No PPTX file generated');
+        }
+        
+        const pptxPath = path.join(workDir, pptxFiles[0]);
+        console.log(`✅ Generated PowerPoint with template: ${pptxPath}`);
+        
+        // Send file to client
+        await sendFileDownload(res, pptxPath, 'presentation.pptx');
+        
+        // Schedule cleanup
+        scheduleCleanup(workDir);
+        
+    } catch (error) {
+        console.error('❌ Template generation error:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Sharing Endpoints
+app.post('/api/share-presentation', async (req, res) => {
+    try {
+        const { slideData, title, sessionId } = req.body;
+        
+        if (!slideData || !slideData.slides) {
+            return res.status(400).json({ error: 'Invalid slide data' });
+        }
+        
+        // Generate unique share ID
+        const shareId = generateShareId();
+        
+        // Store presentation data
+        const presentationData = {
+            slideData,
+            title: title || 'Shared Presentation',
+            sessionId,
+            createdAt: new Date().toISOString(),
+            shareId
+        };
+        
+        // Save to database or file system
+        await saveSharedPresentation(shareId, presentationData);
+        
+        // Return shareable link
+        const shareUrl = `${req.protocol}://${req.get('host')}/api/shared-presentation/${shareId}`;
+        
+        res.json({
+            success: true,
+            shareId,
+            shareUrl,
+            message: 'Presentation shared successfully'
+        });
+        
+    } catch (error) {
+        console.error('❌ Share presentation error:', error.message);
+        res.status(500).json({ error: 'Failed to create shareable link' });
+    }
+});
+
+app.get('/api/shared-presentation/:shareId', async (req, res) => {
+    try {
+        const { shareId } = req.params;
+        
+        // Load shared presentation data
+        const presentationData = await loadSharedPresentation(shareId);
+        
+        if (!presentationData) {
+            return res.status(404).json({ error: 'Presentation not found' });
+        }
+        
+        res.json({
+            success: true,
+            slideData: presentationData.slideData,
+            title: presentationData.title,
+            createdAt: presentationData.createdAt
+        });
+        
+    } catch (error) {
+        console.error('❌ Load shared presentation error:', error.message);
+        res.status(500).json({ error: 'Failed to load presentation' });
+    }
+});
+
+// User Management Endpoints
+app.get('/api/user', async (req, res) => {
+    try {
+        // Check if Auth0 middleware is available
+        if (!req.oidc) {
+            console.error('❌ Auth0 middleware not available - req.oidc is undefined');
+            return res.json({
+                authenticated: false,
+                error: 'Auth0 middleware not available'
+            });
+        }
+        
+        // Check if user is authenticated
+        if (req.oidc.isAuthenticated()) {
+            const user = req.oidc.user;
+            console.log('✅ User authenticated:', user.email);
+            
+            // Get user subscription status
+            let subscriptionData = null;
+            try {
+                subscriptionData = await getUserSubscriptionStatus(user.sub || user.email);
+            } catch (error) {
+                console.error('Failed to get subscription status:', error);
+            }
+            
+            res.json({
+                authenticated: true,
+                user: {
+                    id: user.sub,
+                    email: user.email,
+                    name: user.name,
+                    picture: user.picture
+                },
+                subscription: subscriptionData
+            });
+                                } else {
+            console.log('❌ User not authenticated');
+            res.json({
+                authenticated: false
+            });
+        }
+    } catch (error) {
+        console.error('❌ User endpoint error:', error);
+        res.status(500).json({
+            authenticated: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+// Subscription Management Endpoints
+app.get('/api/subscription', async (req, res) => {
+    try {
+        if (!req.oidc || !req.oidc.isAuthenticated()) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        
+        const userId = req.oidc.user.sub || req.oidc.user.email;
+        const subscriptionData = await getUserSubscriptionStatus(userId);
+        
+        res.json(subscriptionData);
+        
+    } catch (error) {
+        console.error('❌ Subscription status error:', error);
+        res.status(500).json({ error: 'Failed to get subscription status' });
+    }
+});
+
+// Payment Endpoints
+app.post('/api/payment', async (req, res) => {
+    try {
+        if (!req.oidc || !req.oidc.isAuthenticated()) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        
+        const { paymentMethod, amount, currency = 'THB' } = req.body;
+        const userId = req.oidc.user.sub || req.oidc.user.email;
+        
+        if (!paymentMethod || !amount) {
+            return res.status(400).json({ error: 'Payment method and amount are required' });
+        }
+        
+        // Process payment based on method
+        let paymentResult;
+        if (paymentMethod === 'promptpay') {
+            paymentResult = await processPromptPayPayment(userId, amount, currency);
+        } else if (paymentMethod === 'stripe') {
+            paymentResult = await processStripePayment(userId, amount, currency);
+                    } else {
+            return res.status(400).json({ error: 'Unsupported payment method' });
+        }
+        
+        res.json({
+            success: true,
+            paymentId: paymentResult.paymentId,
+            status: paymentResult.status,
+            message: 'Payment processed successfully'
+        });
+        
+    } catch (error) {
+        console.error('❌ Payment error:', error);
+        res.status(500).json({ error: 'Payment processing failed' });
+    }
+});
+
+// Health Check Endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 Open http://localhost:${PORT} to view the app`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔄 Sequential generation: ${process.env.USE_SEQUENTIAL_SLIDES === 'true' ? 'ENABLED' : 'DISABLED'}`);
+});
                         
                         if (mainObjectStart !== -1) {
                             // Try to find the end by looking for the last complete structure
@@ -1548,11 +1854,6 @@ app.post('/api/preview', async (req, res) => {
                 
                 res.write('data: [DONE]\n\n');
                 res.end();
-                
-            } catch (streamError) {
-                console.error('❌ SERVER: Stream error:', streamError);
-                throw streamError;
-            }
             
         } else if (incremental && (provider === 'openai' || provider === 'openrouter' || provider === 'gemini')) {
             // Add streaming for OpenAI, OpenRouter, and Gemini in future

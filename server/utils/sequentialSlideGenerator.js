@@ -184,7 +184,7 @@ async function generateSequentialSlides({
             designTheme = slideData.designTheme;
             console.log(`🎨 Theme extracted: ${designTheme.name}`);
             if (onTheme) {
-                onTheme(designTheme);
+                onTheme({ theme: designTheme, totalSlides: numSlides });
             }
         }
         
@@ -193,7 +193,13 @@ async function generateSequentialSlides({
         
         // Call progress callback
         if (onProgress) {
-            onProgress(slideIndex, numSlides, slideData);
+            onProgress({
+                type: 'slide',
+                slide: slideData,
+                index: slideIndex,
+                current: slideIndex + 1,
+                total: numSlides
+            });
         }
         
         console.log(`✅ Slide ${slideIndex + 1} generated: ${slideData.title || slideData.type}`);
