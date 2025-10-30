@@ -1579,13 +1579,6 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📱 Open http://localhost:${PORT} to view the app`);
-    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔄 Sequential generation: ${process.env.USE_SEQUENTIAL_SLIDES === 'true' ? 'ENABLED' : 'DISABLED'}`);
-});
 // GENERATION PROGRESS POLLING ENDPOINT
 // ========================================
 
@@ -2020,7 +2013,7 @@ app.use((err, req, res, next) => {
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     // Wait for async initialization to complete before logging
     setTimeout(() => {
         console.log(`\n${'='.repeat(80)}`);
