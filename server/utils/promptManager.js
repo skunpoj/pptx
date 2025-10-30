@@ -359,7 +359,7 @@ ${isTitleSlide ?
     '- Include specific details, examples, or data points if mentioned in content\n' +
     '- Avoid repeating content from previous slides\n' +
     '- Choose appropriate layout: "bullets", "two-column", "three-column", "framework", or "process-flow"\n' +
-    '- If content contains numerical data or trends, consider using "chart" layout with chart specifications\n\n`
+    '- If content contains numerical data or trends, consider using "chart" layout with chart specifications\n\n'
 }
 
 OUTPUT FORMAT (JSON only):
