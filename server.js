@@ -40,6 +40,7 @@ const {
     generateConversionScript 
 } = require('./server/utils/generators');
 const { initializeTracking, updateUserTracking, getUserSlideCount } = require('./server/utils/userTracking');
+const { checkUserSubscriptionStatus } = require('./server/utils/stripeService');
 const {
     initializeStorage,
     savePresentation,
@@ -70,9 +71,16 @@ const config = {
   baseURL: process.env.AUTH0_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://genis.ai' : `http://localhost:${PORT}`),
   clientID: 'N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9',
   issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com',
+  clientSecret: process.env.AUTH0_CLIENT_SECRET, // Optional for PKCE flow, but may be needed
   routes: {
     callback: '/callback',  // Proper callback route
     postLogoutRedirect: '/'
+  },
+  // Session configuration
+  session: {
+    rolling: true,
+    rollingDuration: 24 * 60 * 60 * 1000, // 24 hours
+    absoluteDuration: 7 * 24 * 60 * 60 * 1000 // 7 days
   }
 };
 
@@ -110,13 +118,8 @@ app.get('/cancel', (req, res) => {
     res.redirect(`/?payment=cancelled`);
 });
 
-// Auth0 Callback Handler
-app.get('/callback', (req, res) => {
-    console.log('🔄 Auth0 callback received');
-    // The express-openid-connect middleware handles the callback automatically
-    // This route is just for logging and any additional processing
-    res.redirect('/');
-});
+// Note: Auth0 callback is automatically handled by express-openid-connect middleware
+// The middleware creates routes for /login, /logout, and /callback automatically
 
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -129,7 +132,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Auth check endpoint for frontend
+// Auth check endpoint for frontend (merged with subscription endpoint)
 app.get('/api/user', async (req, res) => {
   try {
     // Check if Auth0 middleware is available
@@ -142,26 +145,49 @@ app.get('/api/user', async (req, res) => {
       });
     }
     
-  const userData = {
-    authenticated: req.oidc.isAuthenticated(),
-    user: req.oidc.user || null
-  };
-  
-  // Add slide count for authenticated users
-  if (userData.authenticated && userData.user) {
-    try {
-      const userId = userData.user.sub || userData.user.email;
-      console.log(`🔍 Getting slide count for user: ${userId}`);
-      const slideCount = await getUserSlideCount(userId);
-      console.log(`📊 Slide count retrieved: ${slideCount}`);
-      userData.user.slideCount = slideCount;
-    } catch (error) {
-      console.error('Failed to get user slide count:', error);
-      userData.user.slideCount = 0;
+    // Check if user is authenticated
+    if (req.oidc.isAuthenticated()) {
+      const user = req.oidc.user;
+      console.log('✅ User authenticated:', user.email);
+      
+      const userId = user.sub || user.email;
+      
+      // Get slide count for authenticated users
+      let slideCount = 0;
+      try {
+        console.log(`🔍 Getting slide count for user: ${userId}`);
+        slideCount = await getUserSlideCount(userId);
+        console.log(`📊 Slide count retrieved: ${slideCount}`);
+      } catch (error) {
+        console.error('Failed to get user slide count:', error);
+      }
+      
+      // Get user subscription status
+      let subscriptionData = null;
+      try {
+        subscriptionData = await checkUserSubscriptionStatus(userId);
+      } catch (error) {
+        console.error('Failed to get subscription status:', error);
+      }
+      
+      res.json({
+        authenticated: true,
+        user: {
+          id: user.sub,
+          email: user.email,
+          name: user.name,
+          picture: user.picture,
+          slideCount: slideCount
+        },
+        subscription: subscriptionData
+      });
+    } else {
+      console.log('❌ User not authenticated');
+      res.json({
+        authenticated: false,
+        user: null
+      });
     }
-  }
-  
-  res.json(userData);
   } catch (error) {
     console.error('❌ Error in /api/user endpoint:', error);
     res.status(500).json({
@@ -1466,55 +1492,7 @@ app.get('/api/shared-presentation/:shareId', async (req, res) => {
     }
 });
 
-// User Management Endpoints
-app.get('/api/user', async (req, res) => {
-    try {
-        // Check if Auth0 middleware is available
-        if (!req.oidc) {
-            console.error('❌ Auth0 middleware not available - req.oidc is undefined');
-            return res.json({
-                authenticated: false,
-                error: 'Auth0 middleware not available'
-            });
-        }
-        
-        // Check if user is authenticated
-        if (req.oidc.isAuthenticated()) {
-            const user = req.oidc.user;
-            console.log('✅ User authenticated:', user.email);
-            
-            // Get user subscription status
-            let subscriptionData = null;
-            try {
-                subscriptionData = await getUserSubscriptionStatus(user.sub || user.email);
-            } catch (error) {
-                console.error('Failed to get subscription status:', error);
-            }
-            
-            res.json({
-                authenticated: true,
-                user: {
-                    id: user.sub,
-                    email: user.email,
-                    name: user.name,
-                    picture: user.picture
-                },
-                subscription: subscriptionData
-            });
-                                } else {
-            console.log('❌ User not authenticated');
-            res.json({
-                authenticated: false
-            });
-        }
-    } catch (error) {
-        console.error('❌ User endpoint error:', error);
-        res.status(500).json({
-            authenticated: false,
-            error: 'Internal server error'
-        });
-    }
-});
+// Duplicate /api/user endpoint removed - merged with endpoint above
 
 // Subscription Management Endpoints
 app.get('/api/subscription', async (req, res) => {
@@ -1524,7 +1502,7 @@ app.get('/api/subscription', async (req, res) => {
         }
         
         const userId = req.oidc.user.sub || req.oidc.user.email;
-        const subscriptionData = await getUserSubscriptionStatus(userId);
+        const subscriptionData = await checkUserSubscriptionStatus(userId);
         
         res.json(subscriptionData);
         
