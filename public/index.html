@@ -253,7 +253,7 @@ Our Products
         </style>
 
         <!-- AI IDEA GENERATOR & THEME SELECTOR - Below modify slides section, above settings -->
-        <div class="ai-theme-grid" id="aiThemeGrid">
+        <div class="ai-theme-grid protected-disabled" id="aiThemeGrid">
             <!-- Login Overlay -->
             <div class="login-overlay" id="aiThemeOverlay">
                 <div class="login-overlay-content">
@@ -961,9 +961,7 @@ Our Products
                     // Enable protected sections
                     if (aiThemeGrid) {
                         aiThemeGrid.classList.remove('protected-disabled');
-                    }
-                    if (themeSelector) {
-                        themeSelector.disabled = false;
+                        console.log('✅ Unlocked AI Idea Generator and Color Theme sections');
                     }
                     
                     // Check subscription status (will hide payment buttons if user has active subscription)

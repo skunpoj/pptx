@@ -821,15 +821,39 @@ app.post('/api/preview', async (req, res) => {
     }
     
     try {
-        // Feature flag: Set USE_SEQUENTIAL_SLIDES=true in env to use sequential generation, false for batch (old logic)
-        const USE_SEQUENTIAL_GENERATION = process.env.USE_SEQUENTIAL_SLIDES === 'true' || false;
+        // Method selection: batch (default) or sequential
+        // Can be set via:
+        // 1. Environment variable: GENERATION_METHOD=batch|sequential
+        // 2. Request parameter: { method: 'batch'|'sequential' }
+        // 3. Legacy flag: USE_SEQUENTIAL_SLIDES=true (for backward compatibility)
+        const envMethod = process.env.GENERATION_METHOD?.toLowerCase();
+        const requestMethod = req.body.method?.toLowerCase();
+        const legacySequentialFlag = process.env.USE_SEQUENTIAL_SLIDES === 'true';
+        
+        // Determine which method to use (priority: request > env > legacy flag > default batch)
+        let generationMethod = 'batch'; // default
+        if (requestMethod === 'sequential' || requestMethod === 'batch') {
+            generationMethod = requestMethod;
+        } else if (envMethod === 'sequential' || envMethod === 'batch') {
+            generationMethod = envMethod;
+        } else if (legacySequentialFlag) {
+            generationMethod = 'sequential';
+        }
+        
+        const USE_SEQUENTIAL_GENERATION = generationMethod === 'sequential' && numSlides && numSlides > 0;
         
         console.log('📊 Preview request received');
         console.log('  Content length:', text.length, 'characters');
         console.log('  Provider:', provider);
         console.log('  Incremental:', incremental);
         console.log('  Requested slides:', numSlides || 'AI decides');
-        console.log('  Generation mode:', USE_SEQUENTIAL_GENERATION ? 'SEQUENTIAL (new)' : 'BATCH (old)');
+        console.log('  Generation method:', generationMethod.toUpperCase(), `(${USE_SEQUENTIAL_GENERATION ? 'SEQUENTIAL - multiple API calls' : 'BATCH - single API call'})`);
+        console.log('  Method selection:', {
+            request: requestMethod || 'not specified',
+            env: envMethod || 'not specified',
+            legacy: legacySequentialFlag ? 'enabled' : 'disabled',
+            final: generationMethod
+        });
         
         // INCREMENTAL MODE: TRUE STREAMING from AI
         if (incremental) {
@@ -1036,16 +1060,26 @@ app.post('/api/preview', async (req, res) => {
                 throw new Error('Bedrock API key not found');
             }
             
-            // Choose generation method based on flag
-            if (USE_SEQUENTIAL_GENERATION && numSlides && numSlides > 0) {
-                // NEW: Sequential generation - one slide at a time with SSE progress
-                console.log(`🔄 Starting SEQUENTIAL slide generation (new logic) with ${provider}...`);
+            // Choose generation method
+            if (USE_SEQUENTIAL_GENERATION) {
+                // Method 2: Sequential generation - one slide at a time with separate API calls
+                console.log(`🔄 Starting SEQUENTIAL slide generation (Method: ${generationMethod}) with ${provider}...`);
+                console.log(`  📊 Using multiple API calls (one per slide) to avoid JSON concatenation issues`);
 
                 // Initialize SSE
                 res.setHeader('Content-Type', 'text/event-stream');
                 res.setHeader('Cache-Control', 'no-cache');
                 res.setHeader('Connection', 'keep-alive');
                 res.setHeader('X-Accel-Buffering', 'no');
+
+                // Send method info to client
+                res.write(`data: ${JSON.stringify({ 
+                    type: 'provider_info',
+                    provider: provider,
+                    method: 'sequential',
+                    numSlides: numSlides || 'AI decides',
+                    timestamp: Date.now()
+                })}\n\n`);
 
                 const flush = () => {
                     if (typeof res.flush === 'function') res.flush();
@@ -1091,8 +1125,10 @@ app.post('/api/preview', async (req, res) => {
                     return;
                 }
             } else {
-                // OLD: Batch generation - all slides in one call (moved to batchSlideGenerator.js)
-                console.log(`🔄 Starting BATCH slide generation (old logic) with ${provider}...`);
+                // Method 1: Batch generation - all slides in one API call
+                console.log(`🔄 Starting BATCH slide generation (Method: ${generationMethod}) with ${provider}...`);
+                console.log(`  📊 Using single API call with incremental JSON parsing`);
+                
                 await generateBatchSlides({
                     text,
                     numSlides,

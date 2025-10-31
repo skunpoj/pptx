@@ -208,7 +208,7 @@ body {
     gap: 0.5rem;
     margin-bottom: 0.5rem;
     align-items: start;
-    position: relative;
+    position: relative; /* Required for overlay positioning */
 }
 
 /* Modification Grid - Modify Slides and Generate Button */

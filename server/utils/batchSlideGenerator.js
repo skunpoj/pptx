@@ -36,6 +36,7 @@ async function generateBatchSlides({ text, numSlides, bedrockApiKey, res, req, u
     res.write(`data: ${JSON.stringify({ 
         type: 'provider_info',
         provider: 'bedrock',
+        method: 'batch', // Method 1: Batch generation
         numSlides: numSlides || 'AI decides',
         timestamp: Date.now()
     })}\n\n`);
@@ -178,40 +179,71 @@ async function generateBatchSlides({ text, numSlides, bedrockApiKey, res, req, u
                 }
             }
             
-            // Periodic parsing to extract slides as they become available
-            if (streamedText.length > 1000 && (streamedText.includes('"slides"') || streamedText.includes('"type":') || streamedText.includes('"title":')) && streamedText.includes('}')) {
+            // Incremental JSON parsing to extract slides as they become available
+            // Parse periodically when we have enough content
+            if (streamedText.length > 500 && streamedText.includes('"slides"')) {
                 try {
-                    const jsonStart = streamedText.indexOf('{');
-                    if (jsonStart !== -1) {
-                        let presentationStart = -1;
-                        let presentationEnd = -1;
+                    // Helper function to extract complete JSON object with proper string handling
+                    function extractCompleteJSONObject(text, startIndex = 0) {
+                        const firstBrace = text.indexOf('{', startIndex);
+                        if (firstBrace === -1) return null;
                         
-                        const themeIndex = streamedText.indexOf('"designTheme"');
-                        const slidesIndex = streamedText.indexOf('"slides"');
+                        let braceCount = 0;
+                        let inString = false;
+                        let escapeNext = false;
+                        let inStringDelimiter = null; // Track whether we're in single or double quote
                         
-                        if (themeIndex !== -1 && slidesIndex !== -1) {
-                            presentationStart = streamedText.lastIndexOf('{', Math.min(themeIndex, slidesIndex));
+                        for (let i = firstBrace; i < text.length; i++) {
+                            const char = text[i];
                             
-                            if (presentationStart !== -1) {
-                                let braceCount = 0;
-                                for (let i = presentationStart; i < streamedText.length; i++) {
-                                    if (streamedText[i] === '{') braceCount++;
-                                    if (streamedText[i] === '}') braceCount--;
-                                    if (braceCount === 0) {
-                                        presentationEnd = i;
-                                        break;
-                                    }
+                            if (escapeNext) {
+                                escapeNext = false;
+                                continue;
+                            }
+                            
+                            if (char === '\\') {
+                                escapeNext = true;
+                                continue;
+                            }
+                            
+                            if ((char === '"' || char === "'") && !escapeNext) {
+                                if (!inString) {
+                                    inString = true;
+                                    inStringDelimiter = char;
+                                } else if (char === inStringDelimiter) {
+                                    inString = false;
+                                    inStringDelimiter = null;
+                                }
+                                continue;
+                            }
+                            
+                            if (inString) continue;
+                            
+                            if (char === '{') braceCount++;
+                            if (char === '}') {
+                                braceCount--;
+                                if (braceCount === 0) {
+                                    return {
+                                        json: text.substring(firstBrace, i + 1),
+                                        endIndex: i + 1
+                                    };
                                 }
                             }
                         }
                         
-                        if (presentationStart !== -1 && presentationEnd !== -1) {
-                            const jsonStr = streamedText.substring(presentationStart, presentationEnd + 1);
-                            const fullData = parseAIResponse(jsonStr);
+                        return null; // Incomplete JSON
+                    }
+                    
+                    // Try to extract main presentation object
+                    const jsonResult = extractCompleteJSONObject(streamedText);
+                    
+                    if (jsonResult && jsonResult.json) {
+                        try {
+                            const fullData = parseAIResponse(jsonResult.json);
                             
                             // Send theme if not sent yet
                             if (!themeSent && fullData.designTheme) {
-                                console.log(`  🎨 SERVER: Theme extracted: ${fullData.designTheme.name}`);
+                                console.log(`  🎨 SERVER: Theme extracted incrementally: ${fullData.designTheme.name}`);
                                 res.write(`data: ${JSON.stringify({ 
                                     type: 'theme',
                                     theme: fullData.designTheme,
@@ -222,27 +254,36 @@ async function generateBatchSlides({ text, numSlides, bedrockApiKey, res, req, u
                                 themeSent = true;
                             }
                             
-                            // Send new slides
-                            if (fullData.slides && fullData.slides.length > slidesSent) {
+                            // Extract and send new slides incrementally
+                            if (fullData.slides && Array.isArray(fullData.slides)) {
+                                // Check for new complete slides in the array
                                 for (let i = slidesSent; i < fullData.slides.length; i++) {
                                     const slide = fullData.slides[i];
-                                    console.log(`  ✓ SERVER: Slide ${i + 1}: ${slide.title}`);
                                     
-                                    res.write(`data: ${JSON.stringify({ 
-                                        type: 'slide', 
-                                        slide: slide,
-                                        index: i,
-                                        current: i + 1,
-                                        total: fullData.slides.length
-                                    })}\n\n`);
-                                    if (res.flush) res.flush();
+                                    // Only send if slide is valid and complete
+                                    if (slide && (slide.title || slide.type)) {
+                                        console.log(`  ✓ SERVER: Slide ${i + 1} extracted incrementally: ${slide.title || slide.type}`);
+                                        
+                                        res.write(`data: ${JSON.stringify({ 
+                                            type: 'slide', 
+                                            slide: slide,
+                                            index: i,
+                                            current: i + 1,
+                                            total: fullData.slides.length
+                                        })}\n\n`);
+                                        if (res.flush) res.flush();
+                                        slidesSent = i + 1;
+                                    }
                                 }
-                                slidesSent = fullData.slides.length;
                             }
+                        } catch (parseError) {
+                            // JSON structure not complete yet, continue streaming
+                            // This is expected during incremental parsing
                         }
                     }
                 } catch (e) {
                     // JSON not complete yet, continue streaming
+                    // This is expected - we're trying to parse incrementally
                 }
             }
         }

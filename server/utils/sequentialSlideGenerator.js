@@ -102,10 +102,62 @@ async function generateSequentialSlides({
             throw lastError || new Error(`All Bedrock models failed for slide ${slideIndex + 1}`);
         }
         
-        // Read complete stream response
+        // Read stream response with incremental parsing
         const reader = bedrockResponse.body.getReader();
         const decoder = new TextDecoder();
         let streamedText = '';
+        let slideData = null;
+        
+        // Helper function to extract complete JSON object with proper string handling
+        function extractCompleteJSONObject(text, startIndex = 0) {
+            const firstBrace = text.indexOf('{', startIndex);
+            if (firstBrace === -1) return null;
+            
+            let braceCount = 0;
+            let inString = false;
+            let escapeNext = false;
+            let inStringDelimiter = null;
+            
+            for (let i = firstBrace; i < text.length; i++) {
+                const char = text[i];
+                
+                if (escapeNext) {
+                    escapeNext = false;
+                    continue;
+                }
+                
+                if (char === '\\') {
+                    escapeNext = true;
+                    continue;
+                }
+                
+                if ((char === '"' || char === "'") && !escapeNext) {
+                    if (!inString) {
+                        inString = true;
+                        inStringDelimiter = char;
+                    } else if (char === inStringDelimiter) {
+                        inString = false;
+                        inStringDelimiter = null;
+                    }
+                    continue;
+                }
+                
+                if (inString) continue;
+                
+                if (char === '{') braceCount++;
+                if (char === '}') {
+                    braceCount--;
+                    if (braceCount === 0) {
+                        return {
+                            json: text.substring(firstBrace, i + 1),
+                            endIndex: i + 1
+                        };
+                    }
+                }
+            }
+            
+            return null; // Incomplete JSON
+        }
         
         try {
             while (true) {
@@ -136,7 +188,33 @@ async function generateSequentialSlides({
                         try {
                             const data = JSON.parse(jsonStr);
                             if (data.delta?.text) {
-                                streamedText += data.delta.text;
+                                const text = data.delta.text;
+                                streamedText += text;
+                                
+                                // Send raw_text to client for real-time feedback
+                                if (onProgress) {
+                                    onProgress({
+                                        type: 'raw_text',
+                                        text: text,
+                                        timestamp: Date.now(),
+                                        slideIndex: slideIndex,
+                                        currentSlide: slideIndex + 1,
+                                        totalSlides: numSlides
+                                    });
+                                }
+                                
+                                // Try to parse complete slide JSON incrementally
+                                if (streamedText.length > 50 && !slideData) {
+                                    const jsonResult = extractCompleteJSONObject(streamedText);
+                                    if (jsonResult && jsonResult.json) {
+                                        try {
+                                            slideData = JSON.parse(jsonResult.json);
+                                            console.log(`✅ Slide ${slideIndex + 1} JSON parsed incrementally (${jsonResult.json.length} chars)`);
+                                        } catch (e) {
+                                            // JSON not complete yet, continue
+                                        }
+                                    }
+                                }
                             }
                         } catch (e) {
                             // Ignore parse errors for individual chunks
@@ -148,36 +226,18 @@ async function generateSequentialSlides({
             reader.releaseLock();
         }
         
-        // Parse complete slide JSON
-        console.log(`📊 Parsing slide ${slideIndex + 1} JSON (${streamedText.length} chars)...`);
-        
-        // Clean up streamed text
-        let cleanedText = streamedText;
-        
-        // Try to extract valid JSON
-        const jsonStart = cleanedText.indexOf('{');
-        if (jsonStart === -1) {
-            throw new Error(`No JSON found in response for slide ${slideIndex + 1}`);
-        }
-        
-        // Find the end of the JSON object
-        let braceCount = 0;
-        let jsonEnd = -1;
-        for (let i = jsonStart; i < cleanedText.length; i++) {
-            if (cleanedText[i] === '{') braceCount++;
-            if (cleanedText[i] === '}') braceCount--;
-            if (braceCount === 0) {
-                jsonEnd = i;
-                break;
+        // If incremental parsing didn't work, try full parsing
+        if (!slideData) {
+            console.log(`📊 Parsing slide ${slideIndex + 1} JSON from complete stream (${streamedText.length} chars)...`);
+            
+            const jsonResult = extractCompleteJSONObject(streamedText);
+            if (!jsonResult || !jsonResult.json) {
+                throw new Error(`No valid JSON found in response for slide ${slideIndex + 1}`);
             }
+            
+            slideData = JSON.parse(jsonResult.json);
+            console.log(`✅ Slide ${slideIndex + 1} JSON parsed from complete stream`);
         }
-        
-        if (jsonEnd === -1) {
-            throw new Error(`Incomplete JSON for slide ${slideIndex + 1}`);
-        }
-        
-        const jsonStr = cleanedText.substring(jsonStart, jsonEnd + 1);
-        const slideData = JSON.parse(jsonStr);
         
         // Extract theme from first slide if present
         if (slideIndex === 0 && slideData.designTheme) {

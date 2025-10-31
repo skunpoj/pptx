@@ -684,38 +684,93 @@ async function handleIncrementalStream(response) {
                     appendStreamingText('\n📦 Processing accumulated JSON from raw_text events...\n');
                     
                     try {
-                        // Clean the JSON buffer - remove malformed fragments
-                        let cleanedJson = jsonBuffer
-                            // Remove any non-JSON prefixes
-                            .replace(/^[^{[]*/, '')
-                            // Remove any non-JSON suffixes
-                            .replace(/[^}\]]*$/, '')
-                            // Fix common corruption: remove inserted event markers
-                            .replace(/📦\s*data:\s*\{[^}]*\}/g, '')
-                            .replace(/data:\s*\{[^}]*\}/g, '')
-                            // Fix broken quotes from concatenation
-                            .replace(/"([^"]*)"\s*📦/g, '"$1"')
-                            // Fix broken graphics markers
-                            .replace(/"graphics":\s*true/g, '"graphics": {}')
-                            .replace(/"backgroundSh([^"]*?)"/g, (match) => {
-                                // Try to fix broken backgroundShapes
-                                return '"backgroundShapes": []';
-                            })
-                            // Remove incomplete property declarations
-                            .replace(/,\s*"([^"]*?)":\s*([^,}\]]*?),?\s*$/gm, '')
-                            // Fix trailing commas
-                            .replace(/,(\s*[}\]])/g, '$1')
-                            .trim();
-                        
-                        // Try to extract valid JSON object
-                        const jsonMatch = cleanedJson.match(/(\{[\s\S]*\})/);
-                        if (jsonMatch) {
-                            cleanedJson = jsonMatch[1];
+                        // Helper function to extract complete JSON object using brace counting
+                        function extractCompleteJSON(text) {
+                            const firstBrace = text.indexOf('{');
+                            if (firstBrace === -1) return null;
+                            
+                            let braceCount = 0;
+                            let inString = false;
+                            let escapeNext = false;
+                            
+                            for (let i = firstBrace; i < text.length; i++) {
+                                const char = text[i];
+                                
+                                if (escapeNext) {
+                                    escapeNext = false;
+                                    continue;
+                                }
+                                
+                                if (char === '\\') {
+                                    escapeNext = true;
+                                    continue;
+                                }
+                                
+                                if (char === '"') {
+                                    inString = !inString;
+                                    continue;
+                                }
+                                
+                                if (inString) continue;
+                                
+                                if (char === '{') braceCount++;
+                                if (char === '}') {
+                                    braceCount--;
+                                    if (braceCount === 0) {
+                                        return text.substring(firstBrace, i + 1);
+                                    }
+                                }
+                            }
+                            
+                            return null; // Incomplete JSON
                         }
                         
-                        console.log(`📦 Cleaned JSON length: ${cleanedJson.length} chars`);
+                        // First, try to extract complete JSON object
+                        let extractedJson = extractCompleteJSON(jsonBuffer);
                         
-                        const batchData = JSON.parse(cleanedJson);
+                        // If extraction failed, clean and try again
+                        if (!extractedJson) {
+                            // Clean the JSON buffer - remove malformed fragments
+                            let cleanedJson = jsonBuffer
+                                // Remove any non-JSON prefixes
+                                .replace(/^[^{[]*/, '')
+                                // Remove any non-JSON suffixes (but keep closing braces)
+                                .replace(/([}\]])[^}\]]*$/, '$1')
+                                // Fix common corruption: remove inserted event markers
+                                .replace(/📦\s*data:\s*\{[^}]*\}/g, '')
+                                .replace(/data:\s*\{[^}]*\}/g, '')
+                                // Fix broken quotes from concatenation
+                                .replace(/"([^"]*)"\s*📦/g, '"$1"')
+                                // Fix broken graphics markers
+                                .replace(/"graphics":\s*true/g, '"graphics": {}')
+                                .replace(/"backgroundSh([^"]*?)"/g, (match) => {
+                                    return '"backgroundShapes": []';
+                                })
+                                // Remove incomplete property declarations at end
+                                .replace(/,\s*"([^"]*?)":\s*([^,}\]]*?),?\s*$/gm, '')
+                                // Fix trailing commas
+                                .replace(/,(\s*[}\]])/g, '$1')
+                                .trim();
+                            
+                            extractedJson = extractCompleteJSON(cleanedJson);
+                            
+                            // Last resort: try regex match
+                            if (!extractedJson) {
+                                const jsonMatch = cleanedJson.match(/(\{[\s\S]*?\})/);
+                                if (jsonMatch) {
+                                    extractedJson = jsonMatch[1];
+                                }
+                            }
+                        }
+                        
+                        if (!extractedJson) {
+                            throw new Error('Could not extract complete JSON object from buffer');
+                        }
+                        
+                        console.log(`📦 Extracted JSON length: ${extractedJson.length} chars`);
+                        console.log(`📦 JSON preview: ${extractedJson.substring(0, 200)}...`);
+                        
+                        const batchData = JSON.parse(extractedJson);
                         
                         if (batchData.slides && batchData.slides.length > 0) {
                             console.log(`✅ Parsed ${batchData.slides.length} slides from accumulated JSON`);
@@ -857,17 +912,34 @@ async function handleIncrementalStream(response) {
                     try {
                         const data = JSON.parse(jsonStr);
                         
-                        // PROVIDER INFO EVENT - Show actual provider being used
+                        // PROVIDER INFO EVENT - Show actual provider and method being used
                         if (data.type === 'provider_info') {
                             console.log('🔍 Actual provider being used:', data.provider);
+                            console.log('📊 Generation method:', data.method || 'batch');
                             const textBox = document.getElementById('streamingTextBox');
                             if (textBox) {
                                 const providerSpan = document.createElement('div');
                                 providerSpan.style.color = '#28a745';
                                 providerSpan.style.fontWeight = 'bold';
-                                providerSpan.textContent = `🔍 Actual provider: ${data.provider} (Expected slides: ${data.numSlides})`;
+                                
+                                const methodInfo = data.method === 'sequential' 
+                                    ? ' (Method: Sequential - multiple API calls)' 
+                                    : ' (Method: Batch - single API call)';
+                                
+                                providerSpan.textContent = `🔍 Provider: ${data.provider}${methodInfo} | Expected slides: ${data.numSlides}`;
                                 textBox.appendChild(providerSpan);
                                 textBox.scrollTop = textBox.scrollHeight;
+                            }
+                            
+                            // Also show method in progress div if it exists
+                            if (progressDiv) {
+                                const methodText = data.method === 'sequential' 
+                                    ? ' | Sequential generation (one slide per API call)'
+                                    : ' | Batch generation (all slides in one API call)';
+                                const existingText = progressDiv.textContent || progressDiv.innerHTML;
+                                if (!existingText.includes('Method:')) {
+                                    progressDiv.innerHTML = existingText + '<br><small style="opacity:0.7">' + methodText + '</small>';
+                                }
                             }
                         }
                         
