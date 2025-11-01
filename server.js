@@ -118,13 +118,27 @@ if (!process.env.AUTH0_BASE_URL && process.env.NODE_ENV === 'production') {
 // Auth router attaches /login, /logout, and /callback routes to the baseURL
 // MUST be before static files and other routes
 try {
+  // Add middleware to log login/logout attempts
+  app.use((req, res, next) => {
+    if (req.path === '/login' || req.path === '/logout' || req.path === '/callback') {
+      console.log(`🔐 Auth route accessed: ${req.path}`, {
+        method: req.method,
+        url: req.url,
+        query: req.query
+      });
+    }
+    next();
+  });
+  
   app.use(auth(config));
   console.log('✅ Auth0 middleware initialized successfully');
   console.log(`   Base URL: ${config.baseURL}`);
+  console.log(`   Login URL: ${config.baseURL}/login`);
   console.log(`   Callback: ${config.baseURL}${config.routes.callback || '/callback'}`);
   console.log(`   Logout redirect: ${config.baseURL}${config.routes.postLogoutRedirect || '/'}`);
   console.log(`   Issuer: ${config.issuerBaseURL}`);
   console.log(`   Client ID: ${config.clientID}`);
+  console.log(`   Client Secret: ${config.clientSecret ? '✅ Set' : '❌ Missing'}`);
   console.log(`   Authorization params:`, config.authorizationParams);
 } catch (error) {
   console.error('❌ Auth0 middleware initialization failed:', error);
@@ -196,6 +210,10 @@ app.get('/api/user', async (req, res) => {
     // Check if user is authenticated
     const isAuthenticated = req.oidc.isAuthenticated();
     console.log('🔍 Auth check - isAuthenticated:', isAuthenticated);
+    console.log('🔍 Session info:', {
+      hasSession: !!req.oidc.idTokenClaims,
+      hasUser: !!req.oidc.user
+    });
     
     if (isAuthenticated) {
       const user = req.oidc.user;

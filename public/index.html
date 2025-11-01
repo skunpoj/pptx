@@ -932,8 +932,21 @@ Our Products
                 if (data.authenticated && data.user) {
                     // User is logged in
                     console.log('✅ User authenticated, updating UI...');
-                    authBtn.href = '/logout';
-                    authBtn.querySelector('span').textContent = '🔓 Logout';
+                    console.log('   User data:', { name: data.user.name, email: data.user.email, hasPicture: !!data.user.picture });
+                    
+                    // Update login button to logout
+                    if (authBtn) {
+                        authBtn.href = '/logout';
+                        const authBtnSpan = authBtn.querySelector('span');
+                        if (authBtnSpan) {
+                            authBtnSpan.textContent = '🔓 Logout';
+                            console.log('✅ Login button updated to Logout');
+                        } else {
+                            console.error('❌ Login button span not found!');
+                        }
+                    } else {
+                        console.error('❌ authBtn element not found!');
+                    }
                     
                     // Display user info - always show userInfo container when authenticated
                     if (data.user.picture) {
@@ -982,8 +995,27 @@ Our Products
                     // Enable protected sections
                     if (aiThemeGrid) {
                         aiThemeGrid.classList.remove('protected-disabled');
-                        console.log('✅ Unlocked AI Idea Generator and Color Theme sections');
+                        console.log('✅ Unlocked AI Idea Generator section');
                     }
+                    
+                    // Also unlock themeSelector (it's outside aiThemeGrid)
+                    if (themeSelector) {
+                        themeSelector.classList.remove('protected-disabled');
+                        // Remove any overlay from themeSelector
+                        const themeOverlay = themeSelector.querySelector('.login-overlay');
+                        if (themeOverlay) {
+                            themeOverlay.style.display = 'none';
+                        }
+                        console.log('✅ Unlocked Color Theme section');
+                    }
+                    
+                    // Hide login overlay in aiThemeGrid
+                    const aiThemeOverlay = document.getElementById('aiThemeOverlay');
+                    if (aiThemeOverlay) {
+                        aiThemeOverlay.style.display = 'none';
+                    }
+                    
+                    console.log('✅ All protected sections unlocked');
                     
                     // Check subscription status (will hide payment buttons if user has active subscription)
                     checkSubscriptionStatus();
@@ -991,8 +1023,21 @@ Our Products
                 } else {
                     // User is not logged in
                     console.log('❌ User not authenticated');
-                    authBtn.href = '/login';
-                    authBtn.querySelector('span').textContent = '🔐 Login';
+                    console.log('   Auth data:', data);
+                    
+                    // Update logout button to login
+                    if (authBtn) {
+                        authBtn.href = '/login';
+                        const authBtnSpan = authBtn.querySelector('span');
+                        if (authBtnSpan) {
+                            authBtnSpan.textContent = '🔐 Login';
+                            console.log('✅ Logout button updated to Login');
+                        } else {
+                            console.error('❌ Login button span not found!');
+                        }
+                    } else {
+                        console.error('❌ authBtn element not found!');
+                    }
                     userInfo.style.display = 'none';
                     userInfo.style.visibility = 'hidden';
                     userAvatar.style.display = 'none';
@@ -1030,6 +1075,15 @@ Our Products
                     if (aiThemeGrid) {
                         aiThemeGrid.classList.add('protected-disabled');
                     }
+                    if (themeSelector) {
+                        themeSelector.classList.add('protected-disabled');
+                    }
+                    
+                    // Show login overlay in aiThemeGrid
+                    const aiThemeOverlay = document.getElementById('aiThemeOverlay');
+                    if (aiThemeOverlay) {
+                        aiThemeOverlay.style.display = 'block';
+                    }
                 }
             } catch (error) {
                 console.error('❌ Auth check failed:', error);
@@ -1046,9 +1100,139 @@ Our Products
                 }
                 // On error, disable sections
                 const aiThemeGrid = document.getElementById('aiThemeGrid');
+                const themeSelector = document.getElementById('themeSelector');
                 if (aiThemeGrid) {
                     aiThemeGrid.classList.add('protected-disabled');
                 }
+                if (themeSelector) {
+                    themeSelector.classList.add('protected-disabled');
+                }
+                
+                // Show login overlay
+                const aiThemeOverlay = document.getElementById('aiThemeOverlay');
+                if (aiThemeOverlay) {
+                    aiThemeOverlay.style.display = 'block';
+                }
+            }
+        });
+        
+        // Re-check authentication after returning from Auth0 callback
+        // This ensures UI updates when user comes back from login
+        window.addEventListener('pageshow', async function(event) {
+            // Check if we're coming back from Auth0 (page might be cached)
+            if (event.persisted || window.location.pathname === '/callback' || window.location.search.includes('code=')) {
+                console.log('🔄 Page restored or returning from Auth0, re-checking authentication...');
+                
+                // Wait a bit for session to be established
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch('/api/user');
+                        const data = await response.json();
+                        console.log('🔄 Re-check auth response:', data);
+                        
+                        const authBtn = document.getElementById('authBtn');
+                        const userInfo = document.getElementById('userInfo');
+                        const userAvatar = document.getElementById('userAvatar');
+                        const userName = document.getElementById('userName');
+                        const aiThemeGrid = document.getElementById('aiThemeGrid');
+                        const themeSelector = document.getElementById('themeSelector');
+                        const aiThemeOverlay = document.getElementById('aiThemeOverlay');
+                        
+                        if (data.authenticated && data.user) {
+                            // Update login button
+                            if (authBtn) {
+                                authBtn.href = '/logout';
+                                const span = authBtn.querySelector('span');
+                                if (span) span.textContent = '🔓 Logout';
+                            }
+                            
+                            // Update user info
+                            if (data.user.picture) {
+                                if (userAvatar) {
+                                    userAvatar.src = data.user.picture;
+                                    userAvatar.style.display = 'block';
+                                    userAvatar.style.visibility = 'visible';
+                                }
+                            }
+                            if (data.user.name || data.user.email) {
+                                if (userName) {
+                                    userName.textContent = data.user.name || data.user.email;
+                                    userName.style.display = 'block';
+                                    userName.style.visibility = 'visible';
+                                }
+                            }
+                            if (userInfo) {
+                                userInfo.style.display = 'flex';
+                                userInfo.style.visibility = 'visible';
+                            }
+                            
+                            // Unlock protected sections
+                            if (aiThemeGrid) {
+                                aiThemeGrid.classList.remove('protected-disabled');
+                            }
+                            if (themeSelector) {
+                                themeSelector.classList.remove('protected-disabled');
+                                const themeOverlay = themeSelector.querySelector('.login-overlay');
+                                if (themeOverlay) {
+                                    themeOverlay.style.display = 'none';
+                                }
+                            }
+                            if (aiThemeOverlay) {
+                                aiThemeOverlay.style.display = 'none';
+                            }
+                            
+                            // Show payment buttons
+                            const paymentButtonsRow = document.getElementById('paymentButtonsRow');
+                            if (paymentButtonsRow) {
+                                paymentButtonsRow.style.display = 'flex';
+                            }
+                            
+                            console.log('✅ Authentication state updated after callback');
+                        } else {
+                            // User not authenticated
+                            if (authBtn) {
+                                authBtn.href = '/login';
+                                const span = authBtn.querySelector('span');
+                                if (span) span.textContent = '🔐 Login';
+                            }
+                            if (userInfo) {
+                                userInfo.style.display = 'none';
+                                userInfo.style.visibility = 'hidden';
+                            }
+                            if (aiThemeGrid) {
+                                aiThemeGrid.classList.add('protected-disabled');
+                            }
+                            if (themeSelector) {
+                                themeSelector.classList.add('protected-disabled');
+                            }
+                            if (aiThemeOverlay) {
+                                aiThemeOverlay.style.display = 'block';
+                            }
+                        }
+                    } catch (error) {
+                        console.error('❌ Error re-checking auth after callback:', error);
+                    }
+                }, 500); // Wait 500ms for session to be established
+            }
+        });
+        
+        // Also check when page becomes visible (user returns to tab)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                // Page became visible, re-check auth
+                fetch('/api/user')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.authenticated && data.user) {
+                            const authBtn = document.getElementById('authBtn');
+                            if (authBtn) {
+                                authBtn.href = '/logout';
+                                const span = authBtn.querySelector('span');
+                                if (span) span.textContent = '🔓 Logout';
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error checking auth on visibility change:', err));
             }
         });
         
