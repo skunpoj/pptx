@@ -1025,13 +1025,19 @@ Our Products
             }
             
             // Check authentication with retry logic
-            const checkAuthWithRetry = async (retries = 3, delay = 500) => {
+            const checkAuthWithRetry = async (retries = 3, delay = 500, useAuthCheck = false) => {
                 for (let i = 0; i < retries; i++) {
                     try {
-                        const response = await fetch('/api/user', {
+                        // Try /auth-check first for more detailed debugging
+                        const endpoint = useAuthCheck && i === 0 ? '/auth-check' : '/api/user';
+                        const response = await fetch(endpoint, {
                             method: 'GET',
                             credentials: 'include', // Important: include cookies
-                            cache: 'no-cache'
+                            cache: 'no-cache',
+                            headers: {
+                                'Cache-Control': 'no-cache',
+                                'Pragma': 'no-cache'
+                            }
                         });
                         
                         if (!response.ok) {
@@ -1039,7 +1045,7 @@ Our Products
                         }
                         
                         const data = await response.json();
-                        console.log(`🔍 Auth check attempt ${i + 1}/${retries}:`, data);
+                        console.log(`🔍 Auth check attempt ${i + 1}/${retries} (${endpoint}):`, data);
                         
                         // If authenticated, return immediately
                         if (data.authenticated && data.user) {
@@ -1054,6 +1060,7 @@ Our Products
                             delay *= 1.5; // Exponential backoff
                         } else {
                             // Last retry failed
+                            console.error('❌ All retries exhausted, still not authenticated');
                             return data;
                         }
                     } catch (error) {
@@ -1069,7 +1076,7 @@ Our Products
             
             try {
                 const data = (authCallback || hasCode)
-                    ? await checkAuthWithRetry(8, 500) // More retries after callback with longer delay
+                    ? await checkAuthWithRetry(10, 800, true) // More retries after callback with longer delay, use /auth-check first
                     : await checkAuthWithRetry(1, 0);  // Single check on normal load
                 
                 console.log('🔍 Final auth response:', data);
@@ -1987,7 +1994,7 @@ Our Products
                 const subscriptionWarningBtn = document.getElementById('subscriptionWarningBtn');
                 const promptPayContainer = document.getElementById('promptPayContainer');
                 const creditCardContainer = document.getElementById('creditCardContainer');
-                const stripeButtonContainer = document.getElementById('stripeButtonContainer');
+                // stripeButtonContainer already declared above in this scope
                 
                 if (subscriptionWarningBtn) {
                     console.log('✅ Showing warning button (error fallback)');

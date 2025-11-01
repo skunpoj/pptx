@@ -181,23 +181,29 @@ async function generateSequentialSlides({
                     console.log(`   Raw chunk sample (first 200 chars): "${chunk.substring(0, 200)}"`);
                 }
                 
-                // Bedrock ConverseStream returns HTTP/2 Event Stream format with binary framing
-                // Each line may contain: binary_prefix + headers + JSON payload
-                // Example: "WH:event-type contentBlockDelta :content-type application/json :message-type event{"contentBlockIndex":0,"delta":{"text":"..."}}"
-                //
-                // Strategy: Find JSON objects (starting with {) and extract them
-                const lines = chunk.split('\n');
+                // Bedrock ConverseStream returns HTTP/2 Event Stream format
+                // Strategy: Look for JSON objects by finding {"contentBlockIndex" or {"contentBlockDelta"
+                // This is more reliable than looking for any { because of binary framing
                 
-                for (const line of lines) {
-                    // Look for JSON object in the line (starts with {)
-                    const jsonStart = line.indexOf('{');
+                // Look for JSON in the chunk (could span across newlines)
+                const chunkText = chunk;
+                
+                // Try to find JSON objects - look for contentBlockIndex pattern
+                let searchStart = 0;
+                
+                while (searchStart < chunkText.length) {
+                    // Look for JSON objects that contain delta/text
+                    let jsonStart = chunkText.indexOf('{"contentBlockIndex"', searchStart);
                     if (jsonStart === -1) {
-                        // No JSON in this line, skip
-                        continue;
+                        // Also try contentBlockDelta format
+                        jsonStart = chunkText.indexOf('{"contentBlockDelta"', searchStart);
                     }
                     
+                    // If no JSON found, break
+                    if (jsonStart === -1) break;
+                    
                     // Extract JSON from this position
-                    const jsonCandidate = line.substring(jsonStart);
+                    const jsonCandidate = chunkText.substring(jsonStart);
                     
                     // Try to parse the JSON (might be complete or partial)
                     try {
@@ -205,11 +211,14 @@ async function generateSequentialSlides({
                         let jsonStr = jsonCandidate;
                         
                         // If it doesn't start with {, something's wrong
-                        if (!jsonStr.startsWith('{')) continue;
+                        if (!jsonStr.startsWith('{')) {
+                            searchStart = searchStart + 1;
+                            continue;
+                        }
                         
                         // Find the end of the JSON object using brace counting
-                        let braceCount = 0;
-                        let jsonEnd = -1;
+                    let braceCount = 0;
+                    let jsonEnd = -1;
                         let inString = false;
                         let escapeNext = false;
                         
@@ -236,63 +245,183 @@ async function generateSequentialSlides({
                             if (char === '{') braceCount++;
                             if (char === '}') {
                                 braceCount--;
-                                if (braceCount === 0) {
-                                    jsonEnd = i;
-                                    break;
-                                }
-                            }
+                        if (braceCount === 0) {
+                            jsonEnd = i;
+                            break;
+                        }
+                    }
                         }
                         
                         // If we found a complete JSON object, parse it
                         if (jsonEnd !== -1 && jsonEnd > 0) {
                             jsonStr = jsonStr.substring(0, jsonEnd + 1);
-                            const data = JSON.parse(jsonStr);
-                            eventCount++;
                             
-                            if (eventCount <= 3 || eventCount % 20 === 0) {
-                                console.log(`   📊 Slide ${slideIndex + 1} - Event ${eventCount}, keys:`, Object.keys(data));
+                            if (chunkCount <= 3 || eventCount < 3) {
+                                console.log(`   🔍 Slide ${slideIndex + 1} - Extracted JSON (${jsonStr.length} chars): "${jsonStr.substring(0, 150)}${jsonStr.length > 150 ? '...' : ''}"`);
                             }
                             
-                            // Extract text from contentBlockDelta events
-                            if (data.contentBlockDelta?.delta?.text) {
-                                const text = data.contentBlockDelta.delta.text;
-                                streamedText += text;
+                        try {
+                            const data = JSON.parse(jsonStr);
+                                eventCount++;
                                 
-                                if (eventCount <= 3 || eventCount % 20 === 0) {
-                                    console.log(`   ✅ Slide ${slideIndex + 1} - Extracted text (${text.length} chars): "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
-                                    console.log(`   📊 Total streamed text so far: ${streamedText.length} chars`);
-                                }
-                                
-                                // Send raw_text to client for real-time feedback
-                                if (onProgress) {
-                                    onProgress({
-                                        type: 'raw_text',
-                                        text: text,
-                                        timestamp: Date.now(),
-                                        slideIndex: slideIndex,
-                                        currentSlide: slideIndex + 1,
-                                        totalSlides: numSlides
+                                if (eventCount <= 5) {
+                                    console.log(`   📊 Slide ${slideIndex + 1} - Event ${eventCount}, keys:`, Object.keys(data));
+                                    console.log(`   📊 Event ${eventCount} structure:`, {
+                                        hasDelta: !!data.delta,
+                                        hasContentBlockDelta: !!data.contentBlockDelta,
+                                        deltaType: typeof data.delta,
+                                        deltaKeys: data.delta ? Object.keys(data.delta) : null,
+                                        deltaText: data.delta?.text ? `"${data.delta.text.substring(0, 30)}..."` : data.delta?.text,
+                                        deltaTextType: typeof data.delta?.text,
+                                        fullDelta: JSON.stringify(data.delta || {}).substring(0, 100),
+                                        contentBlockDeltaKeys: data.contentBlockDelta ? Object.keys(data.contentBlockDelta) : null,
+                                        fullDataSample: JSON.stringify(data).substring(0, 200)
                                     });
                                 }
                                 
-                                // Try to parse complete slide JSON incrementally
-                                if (streamedText.length > 50 && !slideData) {
-                                    const jsonResult = extractCompleteJSONObject(streamedText);
-                                    if (jsonResult && jsonResult.json) {
-                                        try {
-                                            slideData = JSON.parse(jsonResult.json);
-                                            console.log(`✅ Slide ${slideIndex + 1} JSON parsed incrementally (${jsonResult.json.length} chars)`);
-                                        } catch (e) {
-                                            // JSON not complete yet, continue
-                                        }
+                                // Extract text from delta events
+                                // Bedrock Event Stream JSON format: {"contentBlockIndex":0,"delta":{"text":"..."}}
+                                // OR: {"contentBlockDelta":{"delta":{"text":"..."},"contentBlockIndex":0}}
+                                let text = null;
+                                
+                                // Try both possible structures
+                                // Bedrock format: {"contentBlockIndex":0,"delta":{"text":"..."}}
+                                if (data.delta && data.delta !== null && typeof data.delta === 'object' && 'text' in data.delta && data.delta.text) {
+                                    // Direct delta structure: {"contentBlockIndex":0,"delta":{"text":"..."}}
+                                    text = String(data.delta.text);
+                                    if (eventCount <= 3) {
+                                        console.log(`   ✅ Found text via data.delta.text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+                                    }
+                                } else if (data.contentBlockDelta?.delta?.text) {
+                                    // Nested contentBlockDelta structure: {"contentBlockDelta":{"delta":{"text":"..."}}}
+                                    text = String(data.contentBlockDelta.delta.text);
+                                    if (eventCount <= 3) {
+                                        console.log(`   ✅ Found text via data.contentBlockDelta.delta.text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+                                    }
+                                } else {
+                                    // Debug why text wasn't found - log more details
+                                    if (eventCount <= 5) {
+                                        console.log(`   ⚠️ No text found for event ${eventCount}. Debug:`, {
+                                            hasDelta: !!data.delta,
+                                            deltaIsNull: data.delta === null,
+                                            deltaIsObject: data.delta && typeof data.delta === 'object',
+                                            deltaIsNotNullObject: data.delta !== null && typeof data.delta === 'object',
+                                            hasTextProperty: data.delta && 'text' in data.delta,
+                                            deltaValue: data.delta,
+                                            deltaTextValue: data.delta?.text,
+                                            deltaTextType: typeof data.delta?.text,
+                                            deltaTextLength: data.delta?.text?.length,
+                                            hasContentBlockDelta: !!data.contentBlockDelta,
+                                            allKeys: Object.keys(data),
+                                            fullDataSample: JSON.stringify(data)
+                                        });
                                     }
                                 }
-                            } else {
-                                if (eventCount <= 3 || eventCount % 20 === 0) {
-                                    console.log(`   ⏭️ Slide ${slideIndex + 1} - Skipping non-text event (has contentBlockDelta: ${!!data.contentBlockDelta}, has delta: ${!!data.contentBlockDelta?.delta}, has text: ${!!data.contentBlockDelta?.delta?.text})`);
+                                
+                                if (text) {
+                                    streamedText += text;
+                                    
+                                    if (eventCount <= 3 || eventCount % 20 === 0) {
+                                        console.log(`   ✅ Slide ${slideIndex + 1} - Extracted text (${text.length} chars): "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+                                        console.log(`   📊 Total streamed text so far: ${streamedText.length} chars`);
+                                    }
+                                    
+                                    // Send raw_text to client for real-time feedback
+                                    if (onProgress) {
+                                        onProgress({
+                                            type: 'raw_text',
+                                            text: text,
+                                            timestamp: Date.now(),
+                                            slideIndex: slideIndex,
+                                            currentSlide: slideIndex + 1,
+                                            totalSlides: numSlides
+                                        });
+                                    }
+                                    
+                                    // Try to parse complete slide JSON incrementally
+                                    if (streamedText.length > 50 && !slideData) {
+                                        const jsonResult = extractCompleteJSONObject(streamedText);
+                                        if (jsonResult && jsonResult.json) {
+                                            try {
+                                                slideData = JSON.parse(jsonResult.json);
+                                                console.log(`✅ Slide ${slideIndex + 1} JSON parsed incrementally (${jsonResult.json.length} chars)`);
+                                            } catch (e) {
+                                                // JSON not complete yet, continue
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if (eventCount <= 3) {
+                                        console.log(`   ⏭️ Slide ${slideIndex + 1} - No text extracted from event ${eventCount}`);
+                                    }
                                 }
+                                
+                                // Move search start past this JSON object to look for next one
+                                if (jsonEnd !== -1) {
+                                    searchStart = jsonStart + jsonEnd + 1;
+                                } else {
+                                    searchStart = jsonStart + 1;
+                                }
+                                
+                            } catch (parseError) {
+                                if (eventCount <= 5 || chunkCount <= 3) {
+                                    console.log(`   ⚠️ Slide ${slideIndex + 1} - Failed to parse extracted JSON: ${parseError.message}`);
+                                    console.log(`   JSON string: "${jsonStr.substring(0, 200)}"`);
+                                }
+                                // Continue to next potential JSON
+                                searchStart = jsonStart + 1;
                             }
+                        } else {
+                            // Incomplete JSON - might span chunks
+                            if (chunkCount <= 3 && eventCount === 0) {
+                                console.log(`   ⏭️ Slide ${slideIndex + 1} - Incomplete JSON detected, waiting for more chunks`);
+                            }
+                            break; // Wait for next chunk to complete this JSON
                         }
+                    } else {
+                        // No JSON found in this chunk
+                        if (chunkCount <= 3) {
+                            console.log(`   ⏭️ Slide ${slideIndex + 1} - No JSON objects found in chunk ${chunkCount}`);
+                        }
+                        break;
+                    }
+                }
+                
+                // After processing chunk, check if we have any text extracted
+                if (streamedText.length > 0 && (chunkCount <= 5 || chunkCount % 10 === 0)) {
+                    console.log(`   ✅ Slide ${slideIndex + 1} - After chunk ${chunkCount}: ${streamedText.length} chars accumulated`);
+                }
+                
+                // Try incremental parsing after accumulating text
+                if (streamedText.length > 50 && !slideData) {
+                    const jsonResult = extractCompleteJSONObject(streamedText);
+                    if (jsonResult && jsonResult.json) {
+                        try {
+                            slideData = JSON.parse(jsonResult.json);
+                            console.log(`✅ Slide ${slideIndex + 1} JSON parsed incrementally (${jsonResult.json.length} chars)`);
+                        } catch (e) {
+                            // JSON not complete yet, continue
+                        }
+                    }
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+        
+        // If incremental parsing didn't work, try full parsing
+        if (!slideData) {
+            console.log(`📊 Parsing slide ${slideIndex + 1} JSON from complete stream (${streamedText.length} chars)...`);
+            console.log(`📊 Streamed text preview (first 500 chars): ${streamedText.substring(0, 500)}`);
+                        }
+                        
+                        // Move search start past this JSON object to look for next one
+                        if (jsonEnd !== -1) {
+                            searchStart = jsonStart + jsonEnd + 1;
+                        } else {
+                            // Incomplete JSON, break and wait for more chunks
+                break;
+            }
                         // If jsonEnd === -1, the JSON is incomplete (spans chunks) - that's OK, we'll get the rest later
                     } catch (parseError) {
                         // Partial JSON or parsing failed - that's OK for streaming
@@ -301,6 +430,8 @@ async function generateSequentialSlides({
                             console.log(`   ⚠️ Slide ${slideIndex + 1} - Failed to parse JSON (might be partial): ${parseError.message}`);
                             console.log(`   JSON candidate sample: "${jsonCandidate.substring(0, 200)}"`);
                         }
+                        // Move search start to try next potential JSON
+                        searchStart = jsonStart + 1;
                     }
                 }
             }

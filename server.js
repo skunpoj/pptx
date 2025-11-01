@@ -85,12 +85,16 @@ if (!process.env.AUTH0_CLIENT_SECRET) {
   throw new Error('AUTH0_CLIENT_SECRET environment variable is required - Regular Web Applications must have a client secret');
 }
 
+// Compute baseURL first to determine if we should use secure cookies
+const computedBaseURL = process.env.AUTH0_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://genis.ai' : `http://localhost:${PORT}`);
+const useSecureCookies = computedBaseURL.startsWith('https://') || process.env.NODE_ENV === 'production';
+
 // Auth0 Configuration
 const config = {
   authRequired: false,
   auth0Logout: true,
   secret: process.env.AUTH0_SECRET || 'a long, randomly-generated string stored in env - CHANGE IN PRODUCTION',
-  baseURL: process.env.AUTH0_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://genis.ai' : `http://localhost:${PORT}`),
+  baseURL: computedBaseURL,
   clientID: 'N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9',
   clientSecret: process.env.AUTH0_CLIENT_SECRET, // REQUIRED - Regular Web Applications need client secret
   issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com',
@@ -111,7 +115,8 @@ const config = {
     name: 'appSession',
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      // Always use secure cookies if baseURL is HTTPS (prevents warning about insecure cookies over HTTPS)
+      secure: useSecureCookies,
       sameSite: 'Lax', // Must be capitalized: Lax, Strict, or None
       path: '/',
       domain: undefined // Let it default - don't restrict domain
@@ -159,6 +164,15 @@ try {
   
   // Add middleware AFTER Auth0 to log authentication state (for debugging)
   app.use((req, res, next) => {
+    // Intercept response to check Set-Cookie headers
+    const originalSetHeader = res.setHeader;
+    res.setHeader = function(name, value) {
+      if (name.toLowerCase() === 'set-cookie' && (req.path === '/callback' || req.path === '/')) {
+        console.log('🍪 Set-Cookie header being set:', Array.isArray(value) ? value : [value]);
+      }
+      return originalSetHeader.call(this, name, value);
+    };
+    
     // Only log for callback and /api/user requests
     if (req.path === '/callback' || req.path === '/api/user' || req.path === '/') {
       if (req.oidc) {
@@ -168,8 +182,20 @@ try {
             isAuthenticated: isAuth,
             hasUser: !!req.oidc.user,
             hasIdToken: !!req.oidc.idTokenClaims,
+            cookieHeader: req.headers.cookie ? req.headers.cookie.substring(0, 150) : 'none',
             cookies: Object.keys(req.cookies || {}),
             sessionCookie: req.cookies?.['appSession'] || 'none'
+          });
+          
+          // Log response headers after callback
+          res.on('finish', () => {
+            console.log('📤 Callback response sent, status:', res.statusCode);
+            const setCookieHeaders = res.getHeader('set-cookie');
+            if (setCookieHeaders) {
+              console.log('🍪 Response Set-Cookie headers:', setCookieHeaders);
+            } else {
+              console.warn('⚠️ No Set-Cookie header in callback response!');
+            }
           });
         }
       } else {
@@ -222,6 +248,34 @@ app.get('/cancel', (req, res) => {
 // Note: Auth0 callback is automatically handled by express-openid-connect middleware
 // The middleware creates routes for /login, /logout, and /callback automatically
 // IMPORTANT: Do NOT add explicit /login or /callback routes here as they will interfere with the middleware
+
+// Add a route to manually check auth state (called after callback)
+app.get('/auth-check', (req, res) => {
+  console.log('🔍 /auth-check called');
+  console.log('   req.oidc exists:', !!req.oidc);
+  console.log('   isAuthenticated:', req.oidc?.isAuthenticated() || false);
+  console.log('   hasUser:', !!req.oidc?.user);
+  console.log('   Cookie header:', req.headers.cookie ? req.headers.cookie.substring(0, 100) : 'none');
+  
+  if (req.oidc && req.oidc.isAuthenticated()) {
+    res.json({
+      authenticated: true,
+      user: req.oidc.user,
+      success: true
+    });
+  } else {
+    res.json({
+      authenticated: false,
+      user: null,
+      success: false,
+      debug: {
+        hasOidc: !!req.oidc,
+        cookieHeader: req.headers.cookie ? 'exists' : 'none',
+        cookies: req.cookies || {}
+      }
+    });
+  }
+});
 
 // Test endpoint to check cookies and session
 app.get('/test-cookies', (req, res) => {
