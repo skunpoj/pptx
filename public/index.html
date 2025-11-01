@@ -917,10 +917,71 @@ Our Products
             checkPaymentStatus();
             
             // Check authentication and subscription status
+            // First check if we're returning from auth callback
+            const urlParams = new URLSearchParams(window.location.search);
+            const authCallback = urlParams.get('auth') === 'callback';
+            
+            if (authCallback) {
+                console.log('🔄 Detected auth callback, waiting for session...');
+                // Clean up URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            
+            // Check authentication with retry logic
+            const checkAuthWithRetry = async (retries = 3, delay = 500) => {
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const response = await fetch('/api/user', {
+                            method: 'GET',
+                            credentials: 'include', // Important: include cookies
+                            cache: 'no-cache'
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log(`🔍 Auth check attempt ${i + 1}/${retries}:`, data);
+                        
+                        // If authenticated, return immediately
+                        if (data.authenticated && data.user) {
+                            console.log('✅ Authentication confirmed');
+                            return data;
+                        }
+                        
+                        // If not authenticated and this isn't the last retry, wait and retry
+                        if (i < retries - 1) {
+                            console.log(`⏳ Not authenticated yet, retrying in ${delay}ms...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 1.5; // Exponential backoff
+                        } else {
+                            // Last retry failed
+                            return data;
+                        }
+                    } catch (error) {
+                        console.error(`❌ Auth check error (attempt ${i + 1}):`, error);
+                        if (i < retries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+            };
+            
             try {
-                const response = await fetch('/api/user');
-                const data = await response.json();
-                console.log('🔍 Auth response:', data);
+                const data = authCallback 
+                    ? await checkAuthWithRetry(5, 300) // More retries after callback
+                    : await checkAuthWithRetry(1, 0);  // Single check on normal load
+                
+                console.log('🔍 Final auth response:', data);
+                console.log('   authenticated:', data.authenticated);
+                console.log('   has user:', !!data.user);
+                console.log('   user data:', data.user);
+                
+                // Also log cookies for debugging
+                console.log('🍪 Cookies:', document.cookie);
                 
                 const authBtn = document.getElementById('authBtn');
                 const userInfo = document.getElementById('userInfo');

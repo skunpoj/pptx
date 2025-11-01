@@ -107,7 +107,14 @@ const config = {
   session: {
     rolling: true,
     rollingDuration: 24 * 60 * 60 * 1000, // 24 hours
-    absoluteDuration: 7 * 24 * 60 * 60 * 1000 // 7 days
+    absoluteDuration: 7 * 24 * 60 * 60 * 1000, // 7 days
+    name: 'appSession',
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      sameSite: 'lax',
+      path: '/'
+    }
   }
 };
 
@@ -183,6 +190,21 @@ app.get('/cancel', (req, res) => {
 // The middleware creates routes for /login, /logout, and /callback automatically
 // IMPORTANT: Do NOT add explicit /login or /callback routes here as they will interfere with the middleware
 
+// Test endpoint to check cookies and session
+app.get('/test-cookies', (req, res) => {
+  res.json({
+    cookies: req.cookies || {},
+    headers: {
+      cookie: req.headers.cookie || 'none',
+      'user-agent': req.headers['user-agent']
+    },
+    hasOidc: !!req.oidc,
+    isAuthenticated: req.oidc?.isAuthenticated() || false,
+    hasUser: !!req.oidc?.user,
+    sessionKeys: req.oidc ? Object.keys(req.oidc) : []
+  });
+});
+
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.raw({ type: 'application/octet-stream', limit: '50mb' }));
@@ -212,8 +234,21 @@ app.get('/api/user', async (req, res) => {
     console.log('🔍 Auth check - isAuthenticated:', isAuthenticated);
     console.log('🔍 Session info:', {
       hasSession: !!req.oidc.idTokenClaims,
-      hasUser: !!req.oidc.user
+      hasUser: !!req.oidc.user,
+      hasAccessToken: !!req.oidc.accessToken,
+      cookies: Object.keys(req.cookies || {}),
+      sessionCookie: req.cookies?.['appSession'] || 'none'
     });
+    
+    // Log more details if authenticated
+    if (isAuthenticated && req.oidc.user) {
+      console.log('✅ User object:', {
+        sub: req.oidc.user.sub,
+        email: req.oidc.user.email,
+        name: req.oidc.user.name,
+        hasPicture: !!req.oidc.user.picture
+      });
+    }
     
     if (isAuthenticated) {
       const user = req.oidc.user;
