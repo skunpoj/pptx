@@ -920,6 +920,8 @@ Our Products
             try {
                 const response = await fetch('/api/user');
                 const data = await response.json();
+                console.log('🔍 Auth response:', data);
+                
                 const authBtn = document.getElementById('authBtn');
                 const userInfo = document.getElementById('userInfo');
                 const userAvatar = document.getElementById('userAvatar');
@@ -929,19 +931,38 @@ Our Products
                 
                 if (data.authenticated && data.user) {
                     // User is logged in
+                    console.log('✅ User authenticated, updating UI...');
                     authBtn.href = '/logout';
                     authBtn.querySelector('span').textContent = '🔓 Logout';
                     
-                    // Display user info
+                    // Display user info - always show userInfo container when authenticated
                     if (data.user.picture) {
                         userAvatar.src = data.user.picture;
                         userAvatar.style.display = 'block';
+                        userAvatar.style.visibility = 'visible';
+                        console.log('✅ User avatar set:', data.user.picture);
+                    } else {
+                        // Hide avatar if no picture, but still show user info
+                        userAvatar.style.display = 'none';
+                        console.log('⚠️ No user avatar picture available');
                     }
+                    
                     if (data.user.name) {
                         userName.textContent = data.user.name;
                         userName.style.display = 'block';
+                        userName.style.visibility = 'visible';
+                        console.log('✅ User name set:', data.user.name);
+                    } else if (data.user.email) {
+                        userName.textContent = data.user.email;
+                        userName.style.display = 'block';
+                        userName.style.visibility = 'visible';
+                        console.log('✅ User email set (no name):', data.user.email);
                     }
+                    
+                    // Always show userInfo container when authenticated
                     userInfo.style.display = 'flex';
+                    userInfo.style.visibility = 'visible';
+                    console.log('✅ User info displayed');
                     
                     // Show payment buttons row for logged-in users (will be hidden by checkSubscriptionStatus if user has active subscription)
                     const paymentButtonsRow = document.getElementById('paymentButtonsRow');
@@ -969,9 +990,13 @@ Our Products
                     
                 } else {
                     // User is not logged in
+                    console.log('❌ User not authenticated');
                     authBtn.href = '/login';
                     authBtn.querySelector('span').textContent = '🔐 Login';
                     userInfo.style.display = 'none';
+                    userInfo.style.visibility = 'hidden';
+                    userAvatar.style.display = 'none';
+                    userName.style.display = 'none';
                     
                     // HIDE payment buttons row for non-logged-in users
                     const paymentButtonsRow = document.getElementById('paymentButtonsRow');
@@ -1007,7 +1032,18 @@ Our Products
                     }
                 }
             } catch (error) {
-                console.error('Auth check failed:', error);
+                console.error('❌ Auth check failed:', error);
+                // On error, assume not authenticated
+                const authBtn = document.getElementById('authBtn');
+                const userInfo = document.getElementById('userInfo');
+                if (authBtn) {
+                    authBtn.href = '/login';
+                    authBtn.querySelector('span').textContent = '🔐 Login';
+                }
+                if (userInfo) {
+                    userInfo.style.display = 'none';
+                    userInfo.style.visibility = 'hidden';
+                }
                 // On error, disable sections
                 const aiThemeGrid = document.getElementById('aiThemeGrid');
                 if (aiThemeGrid) {

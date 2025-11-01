@@ -73,8 +73,8 @@ const config = {
   issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com',
   clientSecret: process.env.AUTH0_CLIENT_SECRET, // Optional for PKCE flow, but may be needed
   routes: {
-    callback: '/callback',  // Proper callback route
-    postLogoutRedirect: '/'
+    callback: '/callback',  // Callback URL: https://genis.ai/callback
+    postLogoutRedirect: '/' // Logout URL: https://genis.ai
   },
   // Session configuration
   session: {
@@ -92,10 +92,11 @@ if (!process.env.AUTH0_SECRET && process.env.NODE_ENV === 'production') {
 // Auth router attaches /login, /logout, and /callback routes to the baseURL
 // MUST be before static files and other routes
 try {
-app.use(auth(config));
+  app.use(auth(config));
   console.log('✅ Auth0 middleware initialized successfully');
   console.log(`   Base URL: ${config.baseURL}`);
-  console.log(`   Callback: ${config.baseURL}${config.routes.callback || '/'}`);
+  console.log(`   Callback: ${config.baseURL}${config.routes.callback || '/callback'}`);
+  console.log(`   Logout redirect: ${config.baseURL}${config.routes.postLogoutRedirect || '/'}`);
 } catch (error) {
   console.error('❌ Auth0 middleware initialization failed:', error);
   throw error;
@@ -146,9 +147,17 @@ app.get('/api/user', async (req, res) => {
     }
     
     // Check if user is authenticated
-    if (req.oidc.isAuthenticated()) {
+    const isAuthenticated = req.oidc.isAuthenticated();
+    console.log('🔍 Auth check - isAuthenticated:', isAuthenticated);
+    
+    if (isAuthenticated) {
       const user = req.oidc.user;
-      console.log('✅ User authenticated:', user.email);
+      console.log('✅ User authenticated:', {
+        email: user.email,
+        name: user.name,
+        sub: user.sub,
+        hasPicture: !!user.picture
+      });
       
       const userId = user.sub || user.email;
       
@@ -170,17 +179,26 @@ app.get('/api/user', async (req, res) => {
         console.error('Failed to get subscription status:', error);
       }
       
-      res.json({
+      const userData = {
         authenticated: true,
         user: {
           id: user.sub,
-          email: user.email,
-          name: user.name,
-          picture: user.picture,
+          email: user.email || user.nickname || 'User',
+          name: user.name || user.nickname || user.email || 'User',
+          picture: user.picture || null,
           slideCount: slideCount
         },
         subscription: subscriptionData
+      };
+      
+      console.log('📤 Sending user data:', {
+        authenticated: userData.authenticated,
+        hasUser: !!userData.user,
+        userName: userData.user?.name,
+        hasPicture: !!userData.user?.picture
       });
+      
+      res.json(userData);
     } else {
       console.log('❌ User not authenticated');
       res.json({
@@ -190,6 +208,7 @@ app.get('/api/user', async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Error in /api/user endpoint:', error);
+    console.error('   Stack:', error.stack);
     res.status(500).json({
       authenticated: false,
       user: null,
@@ -821,7 +840,7 @@ app.post('/api/preview', async (req, res) => {
     }
     
     try {
-        // Method selection: batch (default) or sequential
+        // Method selection: sequential (default) or batch
         // Can be set via:
         // 1. Environment variable: GENERATION_METHOD=batch|sequential
         // 2. Request parameter: { method: 'batch'|'sequential' }
@@ -830,8 +849,8 @@ app.post('/api/preview', async (req, res) => {
         const requestMethod = req.body.method?.toLowerCase();
         const legacySequentialFlag = process.env.USE_SEQUENTIAL_SLIDES === 'true';
         
-        // Determine which method to use (priority: request > env > legacy flag > default batch)
-        let generationMethod = 'batch'; // default
+        // Determine which method to use (priority: request > env > legacy flag > default sequential)
+        let generationMethod = 'sequential'; // default - Method 2: sequential (multiple API calls)
         if (requestMethod === 'sequential' || requestMethod === 'batch') {
             generationMethod = requestMethod;
         } else if (envMethod === 'sequential' || envMethod === 'batch') {
@@ -840,19 +859,30 @@ app.post('/api/preview', async (req, res) => {
             generationMethod = 'sequential';
         }
         
-        const USE_SEQUENTIAL_GENERATION = generationMethod === 'sequential' && numSlides && numSlides > 0;
+        // For sequential generation, we need a slide count
+        // If numSlides is 0 or not provided, default to 6 for sequential method
+        let effectiveNumSlides = numSlides;
+        if (generationMethod === 'sequential' && (!numSlides || numSlides === 0)) {
+            effectiveNumSlides = 6; // Default to 6 slides for sequential generation
+            console.log(`  ℹ️ numSlides not provided (${numSlides}), defaulting to ${effectiveNumSlides} for sequential generation`);
+        }
+        
+        // Use sequential if method is sequential AND we have a valid slide count
+        const USE_SEQUENTIAL_GENERATION = generationMethod === 'sequential' && effectiveNumSlides && effectiveNumSlides > 0;
         
         console.log('📊 Preview request received');
         console.log('  Content length:', text.length, 'characters');
         console.log('  Provider:', provider);
         console.log('  Incremental:', incremental);
         console.log('  Requested slides:', numSlides || 'AI decides');
+        console.log('  Effective slides:', effectiveNumSlides || numSlides || 'AI decides');
         console.log('  Generation method:', generationMethod.toUpperCase(), `(${USE_SEQUENTIAL_GENERATION ? 'SEQUENTIAL - multiple API calls' : 'BATCH - single API call'})`);
         console.log('  Method selection:', {
             request: requestMethod || 'not specified',
             env: envMethod || 'not specified',
             legacy: legacySequentialFlag ? 'enabled' : 'disabled',
-            final: generationMethod
+            final: generationMethod,
+            effectiveSlides: effectiveNumSlides || numSlides || 'AI decides'
         });
         
         // INCREMENTAL MODE: TRUE STREAMING from AI
@@ -1077,7 +1107,7 @@ app.post('/api/preview', async (req, res) => {
                     type: 'provider_info',
                     provider: provider,
                     method: 'sequential',
-                    numSlides: numSlides || 'AI decides',
+                    numSlides: effectiveNumSlides || numSlides || 'AI decides',
                     timestamp: Date.now()
                 })}\n\n`);
 
@@ -1088,7 +1118,7 @@ app.post('/api/preview', async (req, res) => {
                 try {
                     const { slides, designTheme } = await generateSequentialSlides({
                         userContent: text,
-                        numSlides,
+                        numSlides: effectiveNumSlides, // Use effective slide count
                         bedrockApiKey,
                         onTheme: (themePayload) => {
                             try {
