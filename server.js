@@ -63,17 +63,37 @@ const stripeRoutes = require('./server/routes/stripe');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Validate Auth0 configuration BEFORE creating config
+// express-openid-connect requires clientSecret for Regular Web Applications
+if (!process.env.AUTH0_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ ERROR: AUTH0_SECRET is required in production environment!');
+    console.error('   Generate one with: openssl rand -hex 32');
+    throw new Error('AUTH0_SECRET environment variable is required');
+  } else {
+    console.warn('⚠️ WARNING: AUTH0_SECRET not set - using fallback (not secure for production)');
+  }
+}
+
+// clientSecret is REQUIRED for Regular Web Applications (express-openid-connect requirement)
+if (!process.env.AUTH0_CLIENT_SECRET) {
+  console.error('❌ ERROR: AUTH0_CLIENT_SECRET is REQUIRED!');
+  console.error('   express-openid-connect requires clientSecret for Regular Web Applications');
+  console.error('   Get it from Auth0 Dashboard → Applications → Your App → Settings → Client Secret');
+  console.error('   Application: N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9');
+  console.error('   Dashboard: https://manage.auth0.com');
+  throw new Error('AUTH0_CLIENT_SECRET environment variable is required - Regular Web Applications must have a client secret');
+}
+
 // Auth0 Configuration
 const config = {
   authRequired: false,
   auth0Logout: true,
-  secret: process.env.AUTH0_SECRET, // Required: session encryption secret (generate with: openssl rand -hex 32)
+  secret: process.env.AUTH0_SECRET || 'a long, randomly-generated string stored in env - CHANGE IN PRODUCTION',
   baseURL: process.env.AUTH0_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://genis.ai' : `http://localhost:${PORT}`),
   clientID: 'N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9',
+  clientSecret: process.env.AUTH0_CLIENT_SECRET, // REQUIRED - Regular Web Applications need client secret
   issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com',
-  // Explicitly use PKCE (Proof Key for Code Exchange) - doesn't require clientSecret
-  // Setting clientAuthMethod to 'none' forces PKCE usage instead of client_secret_basic
-  clientAuthMethod: 'none', // Use PKCE - no clientSecret required
   routes: {
     callback: '/callback',  // Callback URL: https://genis.ai/callback
     postLogoutRedirect: '/' // Logout URL: https://genis.ai
@@ -90,18 +110,6 @@ const config = {
     absoluteDuration: 7 * 24 * 60 * 60 * 1000 // 7 days
   }
 };
-
-// Validate Auth0 configuration
-if (!process.env.AUTH0_SECRET) {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('❌ ERROR: AUTH0_SECRET is required in production environment!');
-    console.error('   Generate one with: openssl rand -hex 32');
-    throw new Error('AUTH0_SECRET environment variable is required');
-  } else {
-    console.warn('⚠️ WARNING: AUTH0_SECRET not set - using fallback (not secure for production)');
-    config.secret = 'a long, randomly-generated string stored in env - CHANGE IN PRODUCTION';
-  }
-}
 
 if (!process.env.AUTH0_BASE_URL && process.env.NODE_ENV === 'production') {
   console.warn('⚠️ WARNING: AUTH0_BASE_URL not set in production environment!');
