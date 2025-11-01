@@ -159,28 +159,54 @@ async function generateSequentialSlides({
             return null; // Incomplete JSON
         }
         
+        let chunkCount = 0;
+        let eventCount = 0;
+        
         try {
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) {
                     console.log(`✅ Stream completed for slide ${slideIndex + 1}`);
+                    console.log(`   Total chunks received: ${chunkCount}`);
+                    console.log(`   Total events processed: ${eventCount}`);
+                    console.log(`   Streamed text length: ${streamedText.length} chars`);
                     break;
                 }
                 
+                chunkCount++;
                 const chunk = decoder.decode(value, { stream: true });
+                
+                if (chunkCount <= 5 || chunkCount % 10 === 0) {
+                    console.log(`📦 Slide ${slideIndex + 1} - Chunk ${chunkCount}: ${chunk.length} bytes`);
+                    console.log(`   Raw chunk sample (first 200 chars): "${chunk.substring(0, 200)}"`);
+                }
                 
                 // Bedrock ConverseStream returns JSON Lines format (one JSON object per line)
                 // Parse each line separately
                 const lines = chunk.split('\n').filter(line => line.trim());
                 
+                if (chunkCount <= 5 || chunkCount % 10 === 0) {
+                    console.log(`   Found ${lines.length} lines in chunk`);
+                }
+                
                 for (const line of lines) {
                     try {
                         const data = JSON.parse(line);
+                        eventCount++;
+                        
+                        if (eventCount <= 3 || eventCount % 20 === 0) {
+                            console.log(`   📊 Slide ${slideIndex + 1} - Event ${eventCount}, keys:`, Object.keys(data));
+                        }
                         
                         // Extract text from contentBlockDelta events
                         if (data.contentBlockDelta?.delta?.text) {
                             const text = data.contentBlockDelta.delta.text;
                             streamedText += text;
+                            
+                            if (eventCount <= 3 || eventCount % 20 === 0) {
+                                console.log(`   ✅ Slide ${slideIndex + 1} - Extracted text (${text.length} chars): "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+                                console.log(`   📊 Total streamed text so far: ${streamedText.length} chars`);
+                            }
                             
                             // Send raw_text to client for real-time feedback
                             if (onProgress) {
@@ -206,10 +232,18 @@ async function generateSequentialSlides({
                                     }
                                 }
                             }
+                        } else {
+                            if (eventCount <= 3 || eventCount % 20 === 0) {
+                                console.log(`   ⏭️ Slide ${slideIndex + 1} - Skipping non-text event (has contentBlockDelta: ${!!data.contentBlockDelta}, has delta: ${!!data.contentBlockDelta?.delta}, has text: ${!!data.contentBlockDelta?.delta?.text})`);
+                            }
                         }
-                    } catch (e) {
-                        // Ignore parse errors - might be partial JSON or non-JSON lines (headers, etc.)
-                        // This is expected in streaming responses
+                    } catch (parseError) {
+                        // Log parse errors for debugging - might be partial JSON or non-JSON lines
+                        if (eventCount <= 5 || chunkCount <= 5) {
+                            console.log(`   ⚠️ Slide ${slideIndex + 1} - Failed to parse line (might be partial JSON or header): ${parseError.message}`);
+                            console.log(`   Line sample: "${line.substring(0, 200)}"`);
+                        }
+                        // This is expected for streaming responses - some lines might be headers or partial JSON
                     }
                 }
             }
