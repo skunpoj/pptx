@@ -76,6 +76,11 @@ const config = {
     callback: '/callback',  // Callback URL: https://genis.ai/callback
     postLogoutRedirect: '/' // Logout URL: https://genis.ai
   },
+  // Authorization parameters - explicitly set to ensure login redirects properly
+  authorizationParams: {
+    response_type: 'code',
+    scope: 'openid profile email'
+  },
   // Session configuration
   session: {
     rolling: true,
@@ -97,9 +102,29 @@ try {
   console.log(`   Base URL: ${config.baseURL}`);
   console.log(`   Callback: ${config.baseURL}${config.routes.callback || '/callback'}`);
   console.log(`   Logout redirect: ${config.baseURL}${config.routes.postLogoutRedirect || '/'}`);
+  console.log(`   Issuer: ${config.issuerBaseURL}`);
+  console.log(`   Client ID: ${config.clientID}`);
+  console.log(`   Authorization params:`, config.authorizationParams);
 } catch (error) {
   console.error('❌ Auth0 middleware initialization failed:', error);
   throw error;
+}
+
+// Add debugging route to test Auth0 configuration (only for development)
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/test-auth', (req, res) => {
+    res.json({
+      auth0Configured: !!req.oidc,
+      isAuthenticated: req.oidc?.isAuthenticated() || false,
+      user: req.oidc?.user || null,
+      config: {
+        baseURL: config.baseURL,
+        clientID: config.clientID,
+        issuerBaseURL: config.issuerBaseURL,
+        callbackURL: `${config.baseURL}${config.routes.callback}`
+      }
+    });
+  });
 }
 
 // Stripe Success Page Handler
@@ -121,6 +146,7 @@ app.get('/cancel', (req, res) => {
 
 // Note: Auth0 callback is automatically handled by express-openid-connect middleware
 // The middleware creates routes for /login, /logout, and /callback automatically
+// IMPORTANT: Do NOT add explicit /login or /callback routes here as they will interfere with the middleware
 
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
