@@ -67,11 +67,14 @@ const PORT = process.env.PORT || 3000;
 const config = {
   authRequired: false,
   auth0Logout: true,
-  secret: process.env.AUTH0_SECRET || 'a long, randomly-generated string stored in env', // Should use openssl rand -hex 32
+  secret: process.env.AUTH0_SECRET, // Required: session encryption secret (generate with: openssl rand -hex 32)
   baseURL: process.env.AUTH0_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://genis.ai' : `http://localhost:${PORT}`),
   clientID: 'N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9',
   issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com',
-  clientSecret: process.env.AUTH0_CLIENT_SECRET, // Optional for PKCE flow, but may be needed
+  // PKCE (Proof Key for Code Exchange) is used by default - doesn't require clientSecret
+  // This is the recommended approach for Regular Web Applications and more secure
+  // Only set clientSecret if Auth0 application requires client_secret_basic method
+  // clientSecret: process.env.AUTH0_CLIENT_SECRET, // Only needed for client_secret_basic
   routes: {
     callback: '/callback',  // Callback URL: https://genis.ai/callback
     postLogoutRedirect: '/' // Logout URL: https://genis.ai
@@ -90,8 +93,19 @@ const config = {
 };
 
 // Validate Auth0 configuration
-if (!process.env.AUTH0_SECRET && process.env.NODE_ENV === 'production') {
-  console.warn('⚠️ WARNING: AUTH0_SECRET not set in production environment!');
+if (!process.env.AUTH0_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ ERROR: AUTH0_SECRET is required in production environment!');
+    console.error('   Generate one with: openssl rand -hex 32');
+    throw new Error('AUTH0_SECRET environment variable is required');
+  } else {
+    console.warn('⚠️ WARNING: AUTH0_SECRET not set - using fallback (not secure for production)');
+    config.secret = 'a long, randomly-generated string stored in env - CHANGE IN PRODUCTION';
+  }
+}
+
+if (!process.env.AUTH0_BASE_URL && process.env.NODE_ENV === 'production') {
+  console.warn('⚠️ WARNING: AUTH0_BASE_URL not set in production environment!');
 }
 
 // Auth router attaches /login, /logout, and /callback routes to the baseURL
