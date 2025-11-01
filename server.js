@@ -71,10 +71,9 @@ const config = {
   baseURL: process.env.AUTH0_BASE_URL || (process.env.NODE_ENV === 'production' ? 'https://genis.ai' : `http://localhost:${PORT}`),
   clientID: 'N9YYsWNFFnMjz7bHy0i70usqjP1HJRO9',
   issuerBaseURL: 'https://dev-cmf6hmnjvaezfw1g.us.auth0.com',
-  // PKCE (Proof Key for Code Exchange) is used by default - doesn't require clientSecret
-  // This is the recommended approach for Regular Web Applications and more secure
-  // Only set clientSecret if Auth0 application requires client_secret_basic method
-  // clientSecret: process.env.AUTH0_CLIENT_SECRET, // Only needed for client_secret_basic
+  // Explicitly use PKCE (Proof Key for Code Exchange) - doesn't require clientSecret
+  // Setting clientAuthMethod to 'none' forces PKCE usage instead of client_secret_basic
+  clientAuthMethod: 'none', // Use PKCE - no clientSecret required
   routes: {
     callback: '/callback',  // Callback URL: https://genis.ai/callback
     postLogoutRedirect: '/' // Logout URL: https://genis.ai
