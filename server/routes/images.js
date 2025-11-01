@@ -24,11 +24,17 @@ router.post('/generate', async (req, res) => {
         return res.status(400).json({ error: 'descriptions array is required' });
     }
     
+    // If no API key provided, default to Bedrock Nova Canvas (uses AWS credentials from env)
+    let effectiveProvider = provider;
+    let effectiveApiKey = apiKey;
+    
     if (!apiKey) {
-        return res.status(400).json({ error: 'API key is required' });
+        console.log('ℹ️ No API key provided for image generation, using default backend provider: Bedrock Nova Canvas');
+        effectiveProvider = 'bedrock';
+        effectiveApiKey = ''; // Bedrock uses AWS credentials from environment, not API key
     }
     
-    console.log(`🖼️  Image generation request: ${descriptions.length} images (streaming: ${stream})`);
+    console.log(`🖼️  Image generation request: ${descriptions.length} images (provider: ${effectiveProvider}, streaming: ${stream})`);
     
     // STREAMING MODE: Send images as they're generated!
     if (stream) {
@@ -48,16 +54,19 @@ router.post('/generate', async (req, res) => {
                     let imageData = null;
                     
                     // Route to different image generation providers
-                    if (provider === 'huggingface') {
-                        imageData = await generateWithHuggingFace(desc.description, apiKey);
-                    } else if (provider === 'dalle' || provider === 'openai') {
-                        imageData = await generateWithDALLE(desc.description, apiKey);
-                    } else if (provider === 'stability') {
-                        imageData = await generateWithStability(desc.description, apiKey);
-                    } else if (provider === 'gemini') {
-                        imageData = await generateWithGemini(desc.description, apiKey);
+                    if (effectiveProvider === 'bedrock') {
+                        // Bedrock Nova Canvas - uses AWS credentials from environment, no API key needed
+                        imageData = await generateWithBedrock(desc.description);
+                    } else if (effectiveProvider === 'huggingface') {
+                        imageData = await generateWithHuggingFace(desc.description, effectiveApiKey);
+                    } else if (effectiveProvider === 'dalle' || effectiveProvider === 'openai') {
+                        imageData = await generateWithDALLE(desc.description, effectiveApiKey);
+                    } else if (effectiveProvider === 'stability') {
+                        imageData = await generateWithStability(desc.description, effectiveApiKey);
+                    } else if (effectiveProvider === 'gemini') {
+                        imageData = await generateWithGemini(desc.description, effectiveApiKey);
                     } else {
-                        throw new Error(`Unsupported provider: ${provider}`);
+                        throw new Error(`Unsupported provider: ${effectiveProvider}`);
                     }
                     
                     successCount++;
@@ -72,7 +81,9 @@ router.post('/generate', async (req, res) => {
                             description: desc.description,
                             url: imageData.url,
                             thumbnail: imageData.thumbnail || imageData.url,
-                            provider: provider,
+                            provider: effectiveProvider === 'bedrock' ? 'bedrock-nova-canvas' : effectiveProvider,
+                            model: imageData.model || null,
+                            seed: imageData.seed || null,
                             timestamp: Date.now()
                         },
                         current: i + 1,
@@ -133,16 +144,19 @@ router.post('/generate', async (req, res) => {
                     let imageData = null;
                     
                     // Route to different image generation providers
-                    if (provider === 'huggingface') {
-                        imageData = await generateWithHuggingFace(desc.description, apiKey);
-                    } else if (provider === 'dalle' || provider === 'openai') {
-                        imageData = await generateWithDALLE(desc.description, apiKey);
-                    } else if (provider === 'stability') {
-                        imageData = await generateWithStability(desc.description, apiKey);
-                    } else if (provider === 'gemini') {
-                        imageData = await generateWithGemini(desc.description, apiKey);
+                    if (effectiveProvider === 'bedrock') {
+                        // Bedrock Nova Canvas - uses AWS credentials from environment, no API key needed
+                        imageData = await generateWithBedrock(desc.description);
+                    } else if (effectiveProvider === 'huggingface') {
+                        imageData = await generateWithHuggingFace(desc.description, effectiveApiKey);
+                    } else if (effectiveProvider === 'dalle' || effectiveProvider === 'openai') {
+                        imageData = await generateWithDALLE(desc.description, effectiveApiKey);
+                    } else if (effectiveProvider === 'stability') {
+                        imageData = await generateWithStability(desc.description, effectiveApiKey);
+                    } else if (effectiveProvider === 'gemini') {
+                        imageData = await generateWithGemini(desc.description, effectiveApiKey);
                     } else {
-                        throw new Error(`Unsupported provider: ${provider}`);
+                        throw new Error(`Unsupported provider: ${effectiveProvider}`);
                     }
                     
                     generatedImages.push({
@@ -150,7 +164,9 @@ router.post('/generate', async (req, res) => {
                         description: desc.description,
                         url: imageData.url,
                         thumbnail: imageData.thumbnail || imageData.url,
-                        provider: provider,
+                        provider: effectiveProvider === 'bedrock' ? 'bedrock-nova-canvas' : effectiveProvider,
+                        model: imageData.model || null,
+                        seed: imageData.seed || null,
                         timestamp: Date.now()
                     });
                     
