@@ -169,56 +169,47 @@ async function generateSequentialSlides({
                 
                 const chunk = decoder.decode(value, { stream: true });
                 
-                // Extract text from Bedrock EventStream format
-                const jsonStart = chunk.indexOf('{"contentBlockIndex"');
-                if (jsonStart !== -1) {
-                    let braceCount = 0;
-                    let jsonEnd = -1;
-                    for (let i = jsonStart; i < chunk.length; i++) {
-                        if (chunk[i] === '{') braceCount++;
-                        if (chunk[i] === '}') braceCount--;
-                        if (braceCount === 0) {
-                            jsonEnd = i;
-                            break;
-                        }
-                    }
-                    
-                    if (jsonEnd !== -1) {
-                        const jsonStr = chunk.substring(jsonStart, jsonEnd + 1);
-                        try {
-                            const data = JSON.parse(jsonStr);
-                            if (data.delta?.text) {
-                                const text = data.delta.text;
-                                streamedText += text;
-                                
-                                // Send raw_text to client for real-time feedback
-                                if (onProgress) {
-                                    onProgress({
-                                        type: 'raw_text',
-                                        text: text,
-                                        timestamp: Date.now(),
-                                        slideIndex: slideIndex,
-                                        currentSlide: slideIndex + 1,
-                                        totalSlides: numSlides
-                                    });
-                                }
-                                
-                                // Try to parse complete slide JSON incrementally
-                                if (streamedText.length > 50 && !slideData) {
-                                    const jsonResult = extractCompleteJSONObject(streamedText);
-                                    if (jsonResult && jsonResult.json) {
-                                        try {
-                                            slideData = JSON.parse(jsonResult.json);
-                                            console.log(`✅ Slide ${slideIndex + 1} JSON parsed incrementally (${jsonResult.json.length} chars)`);
-                                        } catch (e) {
-                                            // JSON not complete yet, continue
-                                        }
+                // Bedrock ConverseStream returns JSON Lines format (one JSON object per line)
+                // Parse each line separately
+                const lines = chunk.split('\n').filter(line => line.trim());
+                
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        
+                        // Extract text from contentBlockDelta events
+                        if (data.contentBlockDelta?.delta?.text) {
+                            const text = data.contentBlockDelta.delta.text;
+                            streamedText += text;
+                            
+                            // Send raw_text to client for real-time feedback
+                            if (onProgress) {
+                                onProgress({
+                                    type: 'raw_text',
+                                    text: text,
+                                    timestamp: Date.now(),
+                                    slideIndex: slideIndex,
+                                    currentSlide: slideIndex + 1,
+                                    totalSlides: numSlides
+                                });
+                            }
+                            
+                            // Try to parse complete slide JSON incrementally
+                            if (streamedText.length > 50 && !slideData) {
+                                const jsonResult = extractCompleteJSONObject(streamedText);
+                                if (jsonResult && jsonResult.json) {
+                                    try {
+                                        slideData = JSON.parse(jsonResult.json);
+                                        console.log(`✅ Slide ${slideIndex + 1} JSON parsed incrementally (${jsonResult.json.length} chars)`);
+                                    } catch (e) {
+                                        // JSON not complete yet, continue
                                     }
                                 }
                             }
-                        } catch (e) {
-                            // Ignore parse errors for individual chunks
                         }
+                    } catch (e) {
+                        // Ignore parse errors - might be partial JSON or non-JSON lines (headers, etc.)
+                        // This is expected in streaming responses
                     }
                 }
             }
@@ -229,14 +220,31 @@ async function generateSequentialSlides({
         // If incremental parsing didn't work, try full parsing
         if (!slideData) {
             console.log(`📊 Parsing slide ${slideIndex + 1} JSON from complete stream (${streamedText.length} chars)...`);
+            console.log(`📊 Streamed text preview (first 500 chars): ${streamedText.substring(0, 500)}`);
             
+            // Try to extract complete JSON object
             const jsonResult = extractCompleteJSONObject(streamedText);
             if (!jsonResult || !jsonResult.json) {
-                throw new Error(`No valid JSON found in response for slide ${slideIndex + 1}`);
+                // Log more details for debugging
+                console.error(`❌ Failed to extract JSON for slide ${slideIndex + 1}`);
+                console.error(`   Streamed text length: ${streamedText.length}`);
+                console.error(`   Contains '{': ${streamedText.includes('{')}`);
+                console.error(`   Contains 'type': ${streamedText.includes('"type"') || streamedText.includes("'type'")}`);
+                console.error(`   Contains 'title': ${streamedText.includes('"title"') || streamedText.includes("'title'")}`);
+                console.error(`   First 200 chars: ${streamedText.substring(0, 200)}`);
+                console.error(`   Last 200 chars: ${streamedText.substring(Math.max(0, streamedText.length - 200))}`);
+                
+                throw new Error(`No valid JSON found in response for slide ${slideIndex + 1}. Streamed ${streamedText.length} characters but couldn't extract valid JSON object.`);
             }
             
-            slideData = JSON.parse(jsonResult.json);
-            console.log(`✅ Slide ${slideIndex + 1} JSON parsed from complete stream`);
+            try {
+                slideData = JSON.parse(jsonResult.json);
+                console.log(`✅ Slide ${slideIndex + 1} JSON parsed from complete stream (${jsonResult.json.length} chars)`);
+            } catch (parseError) {
+                console.error(`❌ Failed to parse extracted JSON for slide ${slideIndex + 1}:`, parseError.message);
+                console.error(`   Extracted JSON preview (first 500 chars): ${jsonResult.json.substring(0, 500)}`);
+                throw new Error(`Invalid JSON in response for slide ${slideIndex + 1}: ${parseError.message}`);
+            }
         }
         
         // Extract theme from first slide if present
