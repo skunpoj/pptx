@@ -112,7 +112,7 @@ const config = {
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-      sameSite: 'lax',
+      sameSite: 'Lax', // Must be capitalized: Lax, Strict, or None
       path: '/'
     }
   }
