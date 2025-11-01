@@ -1011,11 +1011,17 @@ Our Products
             // First check if we're returning from auth callback
             const urlParams = new URLSearchParams(window.location.search);
             const authCallback = urlParams.get('auth') === 'callback';
+            const hasCode = urlParams.has('code') || window.location.pathname === '/callback';
             
-            if (authCallback) {
+            if (authCallback || hasCode) {
                 console.log('🔄 Detected auth callback, waiting for session...');
-                // Clean up URL
-                window.history.replaceState({}, document.title, window.location.pathname);
+                console.log('   URL:', window.location.href);
+                // Clean up URL after a delay to ensure session is set
+                setTimeout(() => {
+                    if (urlParams.get('auth') === 'callback' || urlParams.has('code')) {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
+                }, 100);
             }
             
             // Check authentication with retry logic
@@ -1062,8 +1068,8 @@ Our Products
             };
             
             try {
-                const data = authCallback 
-                    ? await checkAuthWithRetry(5, 300) // More retries after callback
+                const data = (authCallback || hasCode)
+                    ? await checkAuthWithRetry(8, 500) // More retries after callback with longer delay
                     : await checkAuthWithRetry(1, 0);  // Single check on normal load
                 
                 console.log('🔍 Final auth response:', data);
@@ -1201,10 +1207,43 @@ Our Products
         // This ensures UI updates when user comes back from login
         window.addEventListener('pageshow', async function(event) {
             // Check if we're coming back from Auth0 (page might be cached)
-            if (event.persisted || window.location.pathname === '/callback' || window.location.search.includes('code=')) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const hasCode = urlParams.has('code') || window.location.pathname === '/callback';
+            
+            if (event.persisted || hasCode || urlParams.get('auth') === 'callback') {
                 console.log('🔄 Page restored or returning from Auth0, re-checking authentication...');
+                console.log('   URL:', window.location.href);
+                console.log('   Event persisted:', event.persisted);
                 
-                // Wait a bit for session to be established
+                // Wait a bit longer for session to be established
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch('/api/user', {
+                            credentials: 'include',
+                            cache: 'no-cache',
+                            headers: {
+                                'Cache-Control': 'no-cache'
+                            }
+                        });
+                        const data = await response.json();
+                        console.log('🔄 Re-check auth response:', data);
+                        updateAuthUI(data);
+                        
+                        // Clean up URL after check
+                        if (hasCode || urlParams.get('auth') === 'callback') {
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }
+                    } catch (error) {
+                        console.error('❌ Error re-checking auth after callback:', error);
+                    }
+                }, 1000); // Wait 1 second for session to be established
+            }
+        });
+        
+        // Also check on hashchange (in case Auth0 uses hash fragments)
+        window.addEventListener('hashchange', async function() {
+            if (window.location.hash.includes('code=') || window.location.hash.includes('access_token=')) {
+                console.log('🔄 Hash change detected, checking authentication...');
                 setTimeout(async () => {
                     try {
                         const response = await fetch('/api/user', {
@@ -1212,12 +1251,11 @@ Our Products
                             cache: 'no-cache'
                         });
                         const data = await response.json();
-                        console.log('🔄 Re-check auth response:', data);
                         updateAuthUI(data);
                     } catch (error) {
-                        console.error('❌ Error re-checking auth after callback:', error);
+                        console.error('❌ Error checking auth after hash change:', error);
                     }
-                }, 500); // Wait 500ms for session to be established
+                }, 500);
             }
         });
         

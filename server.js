@@ -113,8 +113,17 @@ const config = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // HTTPS only in production
       sameSite: 'Lax', // Must be capitalized: Lax, Strict, or None
-      path: '/'
+      path: '/',
+      domain: undefined // Let it default - don't restrict domain
     }
+  },
+  // After callback hook - ensure session is fully established
+  afterCallback: (req, res, session, decodedState) => {
+    console.log('✅ After callback hook called');
+    console.log('   Session established:', !!session);
+    console.log('   Session keys:', session ? Object.keys(session) : 'none');
+    console.log('   Decoded state:', decodedState ? 'exists' : 'none');
+    return session;
   }
 };
 
@@ -147,6 +156,30 @@ try {
   console.log(`   Client ID: ${config.clientID}`);
   console.log(`   Client Secret: ${config.clientSecret ? '✅ Set' : '❌ Missing'}`);
   console.log(`   Authorization params:`, config.authorizationParams);
+  
+  // Add middleware AFTER Auth0 to log authentication state (for debugging)
+  app.use((req, res, next) => {
+    // Only log for callback and /api/user requests
+    if (req.path === '/callback' || req.path === '/api/user' || req.path === '/') {
+      if (req.oidc) {
+        const isAuth = req.oidc.isAuthenticated();
+        if (req.path === '/callback') {
+          console.log('🔄 Callback processed:', {
+            isAuthenticated: isAuth,
+            hasUser: !!req.oidc.user,
+            hasIdToken: !!req.oidc.idTokenClaims,
+            cookies: Object.keys(req.cookies || {}),
+            sessionCookie: req.cookies?.['appSession'] || 'none'
+          });
+        }
+      } else {
+        if (req.path === '/callback') {
+          console.error('❌ req.oidc is undefined in callback!');
+        }
+      }
+    }
+    next();
+  });
 } catch (error) {
   console.error('❌ Auth0 middleware initialization failed:', error);
   throw error;
@@ -201,7 +234,14 @@ app.get('/test-cookies', (req, res) => {
     hasOidc: !!req.oidc,
     isAuthenticated: req.oidc?.isAuthenticated() || false,
     hasUser: !!req.oidc?.user,
-    sessionKeys: req.oidc ? Object.keys(req.oidc) : []
+    sessionKeys: req.oidc ? Object.keys(req.oidc) : [],
+    oidcDetails: req.oidc ? {
+      hasUser: !!req.oidc.user,
+      hasIdTokenClaims: !!req.oidc.idTokenClaims,
+      hasAccessToken: !!req.oidc.accessToken,
+      userKeys: req.oidc.user ? Object.keys(req.oidc.user) : [],
+      idTokenKeys: req.oidc.idTokenClaims ? Object.keys(req.oidc.idTokenClaims) : []
+    } : null
   });
 });
 
@@ -236,9 +276,18 @@ app.get('/api/user', async (req, res) => {
       hasSession: !!req.oidc.idTokenClaims,
       hasUser: !!req.oidc.user,
       hasAccessToken: !!req.oidc.accessToken,
+      hasIdToken: !!req.oidc.idTokenClaims,
+      cookieHeader: req.headers.cookie ? req.headers.cookie.substring(0, 100) + '...' : 'none',
       cookies: Object.keys(req.cookies || {}),
       sessionCookie: req.cookies?.['appSession'] || 'none'
     });
+    
+    // Log the actual req.oidc object keys
+    if (req.oidc) {
+      console.log('🔍 req.oidc keys:', Object.keys(req.oidc));
+      console.log('🔍 req.oidc.user:', req.oidc.user ? 'exists' : 'null');
+      console.log('🔍 req.oidc.idTokenClaims:', req.oidc.idTokenClaims ? 'exists' : 'null');
+    }
     
     // Log more details if authenticated
     if (isAuthenticated && req.oidc.user) {
